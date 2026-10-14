@@ -2,7 +2,7 @@
   "profile_id": "mazda_cx30",
   "vehicle": "mazda_cx30",
   "label": "Mazda CX-30 (Discovery Stub)",
-  "schema": 1,
+  "schema": 2,
   "source": {
     "notes": "Empty discovery profile. Fill only from measured sessions — never copy NBT claims."
   },

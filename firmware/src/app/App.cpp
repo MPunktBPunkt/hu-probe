@@ -1,9 +1,14 @@
 #include "App.h"
 #include "BuildFlags.h"
+#include "core/ProbeClock.h"
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <ESPmDNS.h>
 #include <esp_system.h>
+
+#ifndef CAPTURE_HEALTH_INTERVAL_MS
+#define CAPTURE_HEALTH_INTERVAL_MS 5000
+#endif
 
 App& App::instance() {
     static App app;
@@ -33,6 +38,7 @@ void App::buildHeartbeat(JsonDocument& doc) {
     ios["tur_hz"] = a.instrument_.turHz();
     ios["scenario"] = a.config_.scenarioId;
     ios["vehicle"] = a.config_.vehicleId;
+    ios["dropped"] = EventBus::instance().dropped();
 }
 
 void App::setupWifi() {
@@ -88,11 +94,13 @@ void App::begin() {
 
 void App::emitStatus() {
     if (!session_.active()) return;
+    int64_t t = ProbeClock::nowUs();
     JsonDocument doc;
-    doc["v"] = 1;
+    doc["v"] = 2;
     doc["sid"] = session_.id();
     doc["seq"] = session_.nextSeq();
-    doc["t_ms"] = (int)millis();
+    doc["t_us"] = (long long)t;
+    doc["t_ms"] = ProbeClock::nowMsCompat(t);
     doc["ev"] = "status";
     doc["read_rate_kb_s"] = instrument_.readRateKbS();
     doc["tur_hz"] = instrument_.turHz();
@@ -100,6 +108,28 @@ void App::emitStatus() {
     doc["scenario"] = session_.scenario();
     doc["vehicle"] = session_.vehicle();
     EventBus::instance().publish(doc);
+}
+
+void App::emitCaptureHealth() {
+    if (!session_.active()) return;
+    int64_t t = ProbeClock::nowUs();
+    EventBus& bus = EventBus::instance();
+    JsonDocument doc;
+    doc["v"] = 2;
+    doc["sid"] = session_.id();
+    doc["seq"] = session_.nextSeq();
+    doc["t_us"] = (long long)t;
+    doc["t_ms"] = ProbeClock::nowMsCompat(t);
+    doc["ev"] = "capture_health";
+    doc["event_seq_first"] = session_.seqFirst();
+    doc["event_seq_last"] = session_.seq();
+    doc["dropped"] = bus.dropped();
+    doc["queue_pending"] = (uint32_t)bus.pending();
+    doc["queue_highwater"] = bus.highwater();
+    doc["tcp_connected"] = tcp_.connected();
+    doc["tcp_disconnects"] = bus.tcpDisconnects();
+    doc["ring_size"] = EVENT_RING_SIZE;
+    bus.publish(doc);
 }
 
 void App::loop() {
@@ -113,5 +143,9 @@ void App::loop() {
     if (now - lastStatusMs_ >= STATUS_INTERVAL_MS) {
         lastStatusMs_ = now;
         emitStatus();
+    }
+    if (now - lastCaptureHealthMs_ >= CAPTURE_HEALTH_INTERVAL_MS) {
+        lastCaptureHealthMs_ = now;
+        emitCaptureHealth();
     }
 }

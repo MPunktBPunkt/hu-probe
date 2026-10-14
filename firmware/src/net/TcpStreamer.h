@@ -18,4 +18,5 @@ private:
     ConfigStore* config_ = nullptr;
     WiFiClient client_;
     unsigned long lastConnectAttempt_ = 0;
+    bool wasConnected_ = false;
 };

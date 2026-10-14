@@ -2,26 +2,89 @@
   "profile_id": "bmw_nbt_evo",
   "vehicle": "bmw",
   "label": "BMW NBT Evo (Golden Probe)",
-  "schema": 1,
+  "schema": 2,
   "source": {
     "pidrive_profile": "tools/profiles/nbt_evo_2026-10-06.json",
-    "notes": "Aggregated from field measurements; used to validate hu-probe, not transferred to Mazda."
+    "epistemic": "FACT from PiDrive field evidence — not HU specification",
+    "notes": "Aggregated from field measurements; used to validate hu-probe. Never transferred to Mazda as assumption."
   },
   "expectations": {
-    "enum_s_approx": 1.0,
-    "tur_hz_approx": 1.0,
-    "queue_depth": 1,
-    "writes_expected": false,
-    "read_size_bytes_mode": 4096,
-    "gap_ms_p50_idle": 4,
-    "gap_ms_p50_armed": 5,
-    "eager_eof": true,
-    "prefetch_lead_s_approx": 15,
-    "busy_tone_s_approx": 65,
-    "stall_off_tone_s_approx": 6,
-    "menu_stall_sluggish_s_approx": 20,
-    "cache_hit_no_reads_on_replay": true,
-    "remount_full_reread": true
+    "enum_s_approx": {
+      "value": 1.0,
+      "class": "FACT",
+      "origin": "pidrive_field",
+      "caveats": ["firmware_rev_unknown", "medium_dependent"]
+    },
+    "tur_hz_approx": {
+      "value": 1.0,
+      "class": "FACT",
+      "origin": "pidrive_field"
+    },
+    "queue_depth": {
+      "value": 1,
+      "class": "FACT",
+      "origin": "pidrive_field"
+    },
+    "writes_expected": {
+      "value": false,
+      "class": "FACT",
+      "origin": "pidrive_field"
+    },
+    "read_size_bytes_mode": {
+      "value": 4096,
+      "class": "FACT",
+      "origin": "pidrive_field"
+    },
+    "gap_ms_p50_idle": {
+      "value": 4,
+      "class": "FACT",
+      "origin": "pidrive_field",
+      "caveats": ["prior_instrument_ms_quantized", "revalidate_with_t_us"]
+    },
+    "gap_ms_p50_armed": {
+      "value": 5,
+      "class": "FACT",
+      "origin": "pidrive_field",
+      "caveats": ["prior_instrument_ms_quantized", "revalidate_with_t_us"]
+    },
+    "eager_eof": {
+      "value": true,
+      "class": "FACT",
+      "origin": "pidrive_field"
+    },
+    "prefetch_lead_s_approx": {
+      "value": 15,
+      "class": "FACT",
+      "origin": "pidrive_field",
+      "caveats": ["state_dependent", "cache_history_unknown"]
+    },
+    "busy_tone_s_approx": {
+      "value": 65,
+      "class": "FACT",
+      "origin": "pidrive_field",
+      "caveats": ["operator_ear_marker", "not_HU_spec"]
+    },
+    "stall_off_tone_s_approx": {
+      "value": 6,
+      "class": "FACT",
+      "origin": "pidrive_field",
+      "caveats": ["operator_ear_marker", "not_HU_spec"]
+    },
+    "menu_stall_sluggish_s_approx": {
+      "value": 20,
+      "class": "FACT",
+      "origin": "pidrive_field"
+    },
+    "cache_hit_no_reads_on_replay": {
+      "value": true,
+      "class": "FACT",
+      "origin": "pidrive_field"
+    },
+    "remount_full_reread": {
+      "value": true,
+      "class": "FACT",
+      "origin": "pidrive_field"
+    }
   },
   "fingerprint_template": {
     "xfer_hist": {"512": "rare", "4096": "dominant", "8192_plus": "absent"},
@@ -29,5 +92,5 @@
     "resume": "out_of_order_window_then_sequential",
     "identity_sensitivity": "open_gate_HU-A2"
   },
-  "open_gates": ["HU-A1", "HU-A2", "HU-A7", "HU-A9", "HU-A11"]
+  "open_gates": ["HU-PROBE-GATE-01", "HU-A1", "HU-A2", "HU-A7", "HU-A9", "HU-A11"]
 }

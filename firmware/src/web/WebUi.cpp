@@ -165,7 +165,16 @@ void WebUi::handleMarker() {
 }
 
 void WebUi::handleSimulateRead() {
-    // Labor-Pfad ohne echtes USB: erzeugt ein read-Event für Collector-Tests.
-    if (inst_) inst_->onRead(1953, 4096, 3800, "sim", "file");
-    server_.send(200, "application/json", "{\"ok\":true}");
+    // Labor-Pfad: volle BOT-Kette (CBW/DATA/CSW) für Schema-/Collector-Tests.
+    if (!inst_) {
+        server_.send(200, "application/json", "{\"ok\":false}");
+        return;
+    }
+    static uint32_t simTag = 1;
+    uint32_t tag = simTag++;
+    inst_->onUsb("attach", 0, "out", 50, "sim");
+    inst_->onBotCbw(tag, "2800000007a10000000800", "read10", 1953, 8, 4096, 0x80);
+    inst_->onBotData(tag, "in", 4096, 4096, 3800, 1953, "sim", "file");
+    inst_->onBotCsw(tag, 0, 0);
+    server_.send(200, "application/json", "{\"ok\":true,\"schema\":2}");
 }

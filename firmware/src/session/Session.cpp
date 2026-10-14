@@ -1,4 +1,5 @@
 #include "Session.h"
+#include "core/ProbeClock.h"
 #include "net/EventBus.h"
 #include <time.h>
 
@@ -7,6 +8,7 @@ void Session::begin() {
     id_ = "";
     phase_ = "idle";
     seq_ = 0;
+    seqFirst_ = 0;
 }
 
 bool Session::start(const String& vehicle, const String& scenario, const String& profileId) {
@@ -34,10 +36,13 @@ bool Session::start(const String& vehicle, const String& scenario, const String&
     active_ = true;
 
     JsonDocument doc;
-    doc["v"] = 1;
+    int64_t t = ProbeClock::nowUs();
+    doc["v"] = 2;
     doc["sid"] = id_;
     doc["seq"] = nextSeq();
-    doc["t_ms"] = (int)(millis() - startedMs_);
+    seqFirst_ = seq_;
+    doc["t_us"] = (long long)t;
+    doc["t_ms"] = ProbeClock::nowMsCompat(t);
     doc["ev"] = "session";
     doc["action"] = "start";
     doc["vehicle"] = vehicle_;
@@ -50,10 +55,12 @@ bool Session::start(const String& vehicle, const String& scenario, const String&
 void Session::stop() {
     if (!active_) return;
     JsonDocument doc;
-    doc["v"] = 1;
+    int64_t t = ProbeClock::nowUs();
+    doc["v"] = 2;
     doc["sid"] = id_;
     doc["seq"] = nextSeq();
-    doc["t_ms"] = (int)(millis() - startedMs_);
+    doc["t_us"] = (long long)t;
+    doc["t_ms"] = ProbeClock::nowMsCompat(t);
     doc["ev"] = "session";
     doc["action"] = "stop";
     EventBus::instance().publish(doc);
@@ -65,10 +72,12 @@ void Session::setPhase(const String& phase, const String& note) {
     phase_ = phase;
     if (!active_) return;
     JsonDocument doc;
-    doc["v"] = 1;
+    int64_t t = ProbeClock::nowUs();
+    doc["v"] = 2;
     doc["sid"] = id_;
     doc["seq"] = nextSeq();
-    doc["t_ms"] = (int)(millis() - startedMs_);
+    doc["t_us"] = (long long)t;
+    doc["t_ms"] = ProbeClock::nowMsCompat(t);
     doc["ev"] = "phase";
     doc["phase"] = phase_;
     if (note.length()) doc["note"] = note;
@@ -78,10 +87,12 @@ void Session::setPhase(const String& phase, const String& note) {
 void Session::marker(const String& name, const String& note) {
     if (!active_) return;
     JsonDocument doc;
-    doc["v"] = 1;
+    int64_t t = ProbeClock::nowUs();
+    doc["v"] = 2;
     doc["sid"] = id_;
     doc["seq"] = nextSeq();
-    doc["t_ms"] = (int)(millis() - startedMs_);
+    doc["t_us"] = (long long)t;
+    doc["t_ms"] = ProbeClock::nowMsCompat(t);
     doc["ev"] = "marker";
     doc["name"] = name;
     if (note.length()) doc["note"] = note;
@@ -96,4 +107,9 @@ void Session::toStatusJson(JsonObject obj) const {
     obj["profile_id"] = profileId_;
     obj["phase"] = phase_;
     obj["seq"] = seq_;
+    obj["seq_first"] = seqFirst_;
+}
+
+uint32_t Session::seqFirst() const {
+    return seqFirst_;
 }

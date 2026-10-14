@@ -42,14 +42,17 @@ SoftAP-Setup: `ESP-HuProbe-Setup`.
 ## Dokumentation
 
 - [Konzept](docs/KONZEPT.md)
-- [Schema](docs/SCHEMA.md)
+- [Schema v2](docs/SCHEMA.md) — `t_us`, USB/BOT/SCSI, `capture_health`
+- [GATE-01 Measurement Integrity](docs/GATES.md)
 - [Szenarien](docs/SZENARIEN.md)
+- [Medienvariation](docs/MEDIA_VARIATION.md)
 
-## Status (v0.1.0)
+## Status (v0.1.1)
 
-- Konzept und Schema eingefroren
-- Firmware-Skelett: HubClient, ConfigStore, SoftAP, WebUI, MSC/Instrument-Stubs, TCP-Streamer
-- Collector: TCP `:9100`, Session-Ordner, minimale Web-UI
-- Profiles: BMW Golden (aus pidrive-Feldwissen), Mazda Stub
+- Schema v2 eingefroren (monotonic µs, BOT CBW/DATA/CSW, USB-Events, capture_health)
+- Firmware: ProbeClock (`esp_timer`), Drop/TCP-Accounting, Sim erzeugt BOT-Kette
+- MSC/TinyUSB noch Stub — **GATE-01 offen**
+- Collector unverändert „langweilig“
+- BMW-Profil: Expectations als `FACT` aus PiDrive-Feldwissen gekennzeichnet
 
-Als Nächstes: TinyUSB-MSC + ReadInstrument verdrahten, Fingerprint/Diff, Szenarien S0–S5.
+Als Nächstes: TinyUSB-MSC so verdrahten, dass GATE-01 geschlossen werden kann (kein Sim mehr).

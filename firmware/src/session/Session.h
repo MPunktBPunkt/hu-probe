@@ -17,6 +17,7 @@ public:
     void setPhase(const String& phase, const String& note = "");
     uint32_t nextSeq() { return ++seq_; }
     uint32_t seq() const { return seq_; }
+    uint32_t seqFirst() const;
     void marker(const String& name, const String& note = "");
     void toStatusJson(JsonObject obj) const;
 
@@ -28,5 +29,6 @@ private:
     String profileId_;
     String phase_ = "idle";
     uint32_t seq_ = 0;
+    uint32_t seqFirst_ = 0;
     unsigned long startedMs_ = 0;
 };

@@ -47,4 +47,10 @@ Fahrzeug-HU ──USB MSC──► ESP32-S3 hu-probe
 | Busy ~65 s vs Stall-off ~6 s | Szenario `busy_budget` + Marker |
 | Lifecycle Sleep/Ignition | Operator-Marker + VBUS/Phasen |
 
-Details: [SCHEMA.md](SCHEMA.md), [SZENARIEN.md](SZENARIEN.md).
+Details: [SCHEMA.md](SCHEMA.md) (v2), [SZENARIEN.md](SZENARIEN.md), [GATES.md](GATES.md), [MEDIA_VARIATION.md](MEDIA_VARIATION.md).
+
+## Measurement Integrity
+
+Vor Feldbetrieb: **[HU-PROBE-GATE-01](GATES.md)** — µs-Timestamps, USB/BOT/SCSI-Roh-Evidenz, Drop-/TCP-Accounting. Solange GATE-01 offen ist, ist die Firmware ein vorbereitetes Instrument, kein audit-fähiger Messpfad.
+
+Collector bleibt „langweilig“ (Transport + Session-Store). Intelligenz in `derived/` / Fingerprint / Diff.

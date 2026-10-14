@@ -22,7 +22,7 @@ class SessionStore:
         session_json = folder / "session.json"
         if not session_json.exists():
             payload = {
-                "schema": 1,
+                "schema": 2,
                 "session_id": sid,
                 "started_at": datetime.now(timezone.utc).astimezone().isoformat(),
                 "ended_at": None,
@@ -31,6 +31,18 @@ class SessionStore:
                 "scenario": (meta or {}).get("scenario"),
                 "fw_version": (meta or {}).get("fw_version"),
                 "fw_type": "hu-probe",
+                "fw_sha": None,
+                "clock": {
+                    "domain": "probe_monotonic_us",
+                    "source": "esp_timer",
+                },
+                "capture": {
+                    "dropped": 0,
+                    "queue_highwater": 0,
+                    "tcp_disconnects": 0,
+                    "complete": None,
+                },
+                "gates": ["HU-PROBE-GATE-01"],
                 "notes": "",
             }
             session_json.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -56,9 +68,25 @@ class SessionStore:
         if ev == "marker":
             with (folder / "markers.jsonl").open("a", encoding="utf-8") as f:
                 f.write(line)
-        elif ev == "status":
+        elif ev in ("status", "capture_health"):
             with (folder / "status.jsonl").open("a", encoding="utf-8") as f:
                 f.write(line)
+            if ev == "capture_health":
+                sj = folder / "session.json"
+                data = json.loads(sj.read_text(encoding="utf-8"))
+                cap = data.setdefault("capture", {})
+                cap["dropped"] = event.get("dropped", cap.get("dropped", 0))
+                cap["queue_highwater"] = max(
+                    int(cap.get("queue_highwater") or 0),
+                    int(event.get("queue_highwater") or 0),
+                )
+                cap["tcp_disconnects"] = event.get(
+                    "tcp_disconnects", cap.get("tcp_disconnects", 0)
+                )
+                dropped = int(cap.get("dropped") or 0)
+                disc = int(cap.get("tcp_disconnects") or 0)
+                cap["complete"] = dropped == 0 and disc == 0
+                sj.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
         elif ev == "session" and event.get("action") == "stop":
             sj = folder / "session.json"
             data = json.loads(sj.read_text(encoding="utf-8"))

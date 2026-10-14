@@ -25,6 +25,7 @@ private:
     void setupMdns();
     static void buildHeartbeat(JsonDocument& doc);
     void emitStatus();
+    void emitCaptureHealth();
 
     ConfigStore config_;
     HubClient hub_;
@@ -34,4 +35,5 @@ private:
     TcpStreamer tcp_;
     WebUi web_;
     unsigned long lastStatusMs_ = 0;
+    unsigned long lastCaptureHealthMs_ = 0;
 };

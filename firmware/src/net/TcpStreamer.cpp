@@ -5,12 +5,21 @@
 void TcpStreamer::begin(ConfigStore* config) {
     config_ = config;
     lastConnectAttempt_ = 0;
+    wasConnected_ = false;
 }
 
 void TcpStreamer::loop() {
     if (!config_ || !config_->enableCollector) return;
     if (WiFi.status() != WL_CONNECTED) return;
-    if (!client_.connected()) {
+
+    bool now = client_.connected();
+    if (wasConnected_ && !now) {
+        EventBus::instance().noteTcpDisconnect();
+        Serial.println("[TCP] disconnected");
+    }
+    wasConnected_ = now;
+
+    if (!now) {
         tryConnect();
         return;
     }
@@ -25,6 +34,8 @@ void TcpStreamer::tryConnect() {
                   config_->collectorHost.c_str(), config_->collectorPort);
     if (client_.connect(config_->collectorHost.c_str(), config_->collectorPort)) {
         Serial.println("[TCP] connected");
+        EventBus::instance().noteTcpConnect();
+        wasConnected_ = true;
         flushPending();
     }
 }
