@@ -9,7 +9,7 @@ class TcpStreamer {
 public:
     void begin(ConfigStore* config);
     void loop();
-    bool connected() { return client_.connected(); }
+    bool connected() const { return const_cast<WiFiClient&>(client_).connected(); }
 
 private:
     void tryConnect();

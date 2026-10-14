@@ -8,6 +8,7 @@
 #include "net/TcpStreamer.h"
 #include "net/EventBus.h"
 #include "web/WebUi.h"
+#include "ui/StatusLed.h"
 
 class App {
 public:
@@ -34,6 +35,7 @@ private:
     ReadInstrument instrument_;
     TcpStreamer tcp_;
     WebUi web_;
+    StatusLed led_;
     unsigned long lastStatusMs_ = 0;
     unsigned long lastCaptureHealthMs_ = 0;
 };

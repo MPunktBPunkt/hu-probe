@@ -49,11 +49,13 @@ void App::setupWifi() {
     WiFiManager wm;
     wm.setConfigPortalTimeout(WIFI_PORTAL_TIMEOUT_S);
     wm.setHostname(config_.deviceName.c_str());
+    led_.setWifiPortal(true);
     if (!wm.autoConnect(WIFI_AP_NAME)) {
         Serial.println("[WIFI] portal timeout — restart");
         delay(1000);
         ESP.restart();
     }
+    led_.setWifiPortal(false);
     Serial.printf("[WIFI] %s\n", WiFi.localIP().toString().c_str());
 }
 
@@ -74,6 +76,7 @@ void App::begin() {
     delay(200);
     Serial.println("\n[hu-probe] " FW_VERSION);
 
+    led_.begin();
     config_.begin();
     EventBus::instance().begin();
     session_.begin();
@@ -165,6 +168,7 @@ void App::loop() {
     web_.loop();
     msc_.loop();
     instrument_.tick();
+    led_.tick(session_, msc_, instrument_, tcp_, EventBus::instance());
 
     unsigned long now = millis();
     if (now - lastStatusMs_ >= STATUS_INTERVAL_MS) {

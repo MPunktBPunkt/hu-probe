@@ -48,14 +48,27 @@ SoftAP-Setup: `ESP-HuProbe-Setup`.
 - [Medienvariation](docs/MEDIA_VARIATION.md)
 - [Feldauswertung BMW S0](docs/feld/2026-10-14-bmw-s0-auswertung.md) · [Review-Triage](docs/feld/2026-10-14-review-triage.md)
 
-## Status (v0.2.9) — GATE-01B Class-Driver-Hooks
+## Status (v0.2.10) — GATE-01B + Status-LED
 
-- BMW-S0-Baseline (FW 0.2.2): 4 KiB Mode, Gap-p50 3724 µs, 6/8 Fenster = 22-Read — **durch 0.2.9-Feld ersetzen**
+- BMW-S0-Baseline (FW 0.2.2): 4 KiB Mode, Gap-p50 3724 µs, 6/8 Fenster = 22-Read — **durch 0.2.10-Feld ersetzen**
 - FW **0.2.8**: echte CBW/CDB/CSW aus TinyUSB (`bot_source=tinyusb`) + MSC-Class-Control
 - FW **0.2.9**: `--wrap=mscd_xfer_cb` + `usb_ev=bot_need_reset` ([Audit-Intake](docs/feld/2026-10-14-audit-instrument-sources.md))
+- FW **0.2.10**: On-board RGB Status-LED (Feld-Glance)
 - Lab vs Auto: `lab_debian` vs `bmw` · [Maßnahmen 01B](docs/feld/2026-10-14-massnahmen-01b.md)
 - GATE-01 **offen** (Standard-Control SET_ADDRESS/… noch lückenhaft; Wire-Paketebene UNKNOWN)
-- Auto: `./tools/ota_car_esp.sh` → Bin `firmware/dist/hu-probe.0.2.9.esp32s3.bin`
+- Auto: `./tools/ota_car_esp.sh` → Bin `firmware/dist/hu-probe.0.2.10.esp32s3.bin`
+
+### Status-LED (ESP32-S3 RGB)
+
+| Farbe | Bedeutung |
+|-------|-----------|
+| Gelb blink | WiFi-Portal / nicht verbunden |
+| Blau dim | WiFi OK, USB nicht gesteckt — wartet auf HU |
+| Cyan | USB gesteckt, Host da, wenig/keine Reads |
+| Grün | HU liest aktiv (Messung läuft) |
+| Orange blink | USB gesteckt, aber TCP zum Collector down |
+| Magenta blink | TinyUSB `NEED_RESET` (BOT stuck) |
+| Rot blink | Capture unhealthy (Drops / Sample-Overflow) |
 
 ```bash
 cd firmware && pio run -e huprobe-s3 -t upload

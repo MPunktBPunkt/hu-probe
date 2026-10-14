@@ -34,6 +34,8 @@ public:
 
     static bool realBotEnabled() { return true; }
     static uint32_t currentHostTag();
+    /** True after NEED_RESET until BOT_RESET / begin — for StatusLed. */
+    static bool needResetLatched() { return needResetArmed_; }
 
 private:
     static ReadInstrument* instrument_;

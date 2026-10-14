@@ -8,7 +8,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IP="${IP:-192.168.178.88}"
-FW_NAME="${FW_NAME:-hu-probe.0.2.9.esp32s3.bin}"
+FW_NAME="${FW_NAME:-hu-probe.0.2.10.esp32s3.bin}"
 FW_SRC="$ROOT/firmware/dist/$FW_NAME"
 COLLECTOR_PORT="${COLLECTOR_PORT:-9100}"
 WEB_PORT="${WEB_PORT:-8088}"
@@ -136,7 +136,7 @@ case "$mode" in
     if echo "$body" | grep -q 'hu-probe'; then
       ver="$(echo "$body" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("fw",""))' 2>/dev/null || true)"
       echo "    already hu-probe fw=$ver"
-      if [ "$ver" != "0.2.9" ] && [ -f "$FW_SRC" ]; then
+      if [ "$ver" != "0.2.10" ] && [ -f "$FW_SRC" ]; then
         flash_direct
         wait_huprobe
       fi
