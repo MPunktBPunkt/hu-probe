@@ -46,12 +46,14 @@ SoftAP-Setup: `ESP-HuProbe-Setup`.
 - [GATE-01 Measurement Integrity](docs/GATES.md)
 - [Szenarien](docs/SZENARIEN.md)
 - [Medienvariation](docs/MEDIA_VARIATION.md)
+- [Feldauswertung BMW S0](docs/feld/2026-10-14-bmw-s0-auswertung.md) · [Review-Triage](docs/feld/2026-10-14-review-triage.md)
 
-## Status (v0.2.2) — erster BMW-Feldlauf ausgewertet
+## Status (v0.2.3) — Review + Instrumenten-Fix
 
-- TinyUSB-MSC, Soft-/Physical-Replug, UDP-µs-Timing, Collector-JSONL
-- Feld-Session: [Auswertung 2026-10-14](docs/feld/2026-10-14-bmw-s0-auswertung.md) · Daten unter `sessions/20261014-081637_bmw_s0_plug_enum/`
-- GATE-01 noch offen (kein Roh-CBW/CDB); Demo-Medium 256 KiB begrenzt Streaming-Claims
+- Erster BMW-Feldlauf (FW 0.2.2): 4 KiB Mode, Gap-p50 3724 µs, 6/8 Replug-Fenster = 22-Read-Muster
+- FW **0.2.3**: Read-`t_us` = MSC-Capture-Zeit (nicht Drain) — OTA auf .88/.89 noch ausstehend
+- Tools: `tools/validate_session.py`, `tools/fingerprint_session.py`
+- GATE-01 offen; 256 KiB-Demo begrenzt Streaming-Claims; Mazda-Profil bleibt null
 
 ```bash
 cd firmware && pio run -e huprobe-s3 -t upload

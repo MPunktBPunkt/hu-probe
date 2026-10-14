@@ -10,15 +10,18 @@ void ReadInstrument::begin(Session* session) {
 }
 
 void ReadInstrument::stamp(JsonDocument& doc) {
-    int64_t t = ProbeClock::nowUs();
+    stampAt(doc, ProbeClock::nowUs());
+}
+
+void ReadInstrument::stampAt(JsonDocument& doc, int64_t tUs) {
     doc["v"] = 2;
     if (session_) {
         doc["sid"] = session_->id();
         doc["seq"] = session_->nextSeq();
     }
     // ArduinoJson stores as JSON number; safe within double mantissa for session lengths.
-    doc["t_us"] = (long long)t;
-    doc["t_ms"] = ProbeClock::nowMsCompat(t);
+    doc["t_us"] = (long long)tUs;
+    doc["t_ms"] = ProbeClock::nowMsCompat(tUs);
 }
 
 void ReadInstrument::onRead(uint32_t lba, uint32_t nBytes, uint32_t durUs,
@@ -28,18 +31,19 @@ void ReadInstrument::onRead(uint32_t lba, uint32_t nBytes, uint32_t durUs,
     if (lastDataEndUs_ > 0 && now >= lastDataEndUs_) {
         gapUs = (uint32_t)(now - lastDataEndUs_);
     }
-    onReadTimed(lba, nBytes, durUs, gapUs, tag, kind);
+    onReadTimed(now, lba, nBytes, durUs, gapUs, tag, kind);
     lastDataEndUs_ = now + (int64_t)durUs;
 }
 
-void ReadInstrument::onReadTimed(uint32_t lba, uint32_t nBytes, uint32_t durUs, uint32_t gapUs,
-                                 const char* tag, const char* kind) {
+void ReadInstrument::onReadTimed(int64_t tUs, uint32_t lba, uint32_t nBytes, uint32_t durUs,
+                                 uint32_t gapUs, const char* tag, const char* kind) {
     readCount_++;
     windowBytes_ += nBytes;
     if (!session_ || !session_->active()) return;
 
     JsonDocument doc;
-    stamp(doc);
+    // Preserve MSC-callback time from the sample ring (not drain/loop time).
+    stampAt(doc, tUs);
     doc["ev"] = "read";
     doc["lba"] = lba;
     doc["n"] = nBytes;

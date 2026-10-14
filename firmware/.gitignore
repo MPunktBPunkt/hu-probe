@@ -1,3 +1,6 @@
 .pio/
 .vscode/
 *.bin
+!dist/
+!dist/*.bin
+!src/msc/demo_fat.bin

@@ -43,7 +43,7 @@ public:
 
 private:
     struct Sample {
-        uint32_t tUs = 0;   // low 32 of probe clock (gaps use full int64 delta before store)
+        int64_t tUs = 0;  // MSC-callback capture time (must survive drain)
         uint32_t lba = 0;
         uint32_t n = 0;
         uint32_t durUs = 0;  // full µs — no uint16 cap (lab: gap hit 65535)

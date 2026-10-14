@@ -45,22 +45,24 @@
       "DATA": 55
     },
     "dur_us": {
+      "n": 240,
       "min": 2,
       "p50": 66,
       "p95": 164,
       "max": 278
     },
     "gap_us_all": {
+      "n": 240,
       "min": 658,
-      "p50": 3839,
-      "p95": 791634,
+      "p50": 3806,
+      "p95": 956689,
       "max": 140452116
     },
     "gap_us_pace_lt_10s": {
       "n": 233,
       "min": 658,
       "p50": 3724,
-      "p95": 746987,
+      "p95": 750075,
       "max": 7952062
     },
     "file": {
@@ -69,6 +71,24 @@
       "lba_min": 51,
       "lba_max": 83
     }
+  },
+  "host_detach_attach_us": {
+    "n": 11,
+    "min": 243848,
+    "max": 6011492,
+    "values": [
+      243848,
+      2373346,
+      3884482,
+      2929770,
+      2293598,
+      2413812,
+      3327651,
+      6011492,
+      4997641,
+      4441629,
+      3379400
+    ]
   },
   "per_plug_window": [
     {
@@ -83,7 +103,10 @@
       },
       "gap_p50_us": 3724,
       "t_us_first": 118791311,
-      "t_us_last": 124312092
+      "t_us_last": 124312092,
+      "attach_t_us": 117786794,
+      "detach_t_us": 181956837,
+      "reads_after_detach_orphan": 0
     },
     {
       "window": 1,
@@ -97,7 +120,10 @@
       },
       "gap_p50_us": 3691,
       "t_us_first": 185334364,
-      "t_us_last": 187117536
+      "t_us_last": 187117536,
+      "attach_t_us": 184330183,
+      "detach_t_us": 322679561,
+      "reads_after_detach_orphan": 0
     },
     {
       "window": 2,
@@ -111,7 +137,10 @@
       },
       "gap_p50_us": 3773,
       "t_us_first": 327570542,
-      "t_us_last": 329260203
+      "t_us_last": 329260203,
+      "attach_t_us": 326564043,
+      "detach_t_us": 362821840,
+      "reads_after_detach_orphan": 0
     },
     {
       "window": 3,
@@ -124,7 +153,46 @@
       },
       "gap_p50_us": 3589,
       "t_us_first": 367237546,
-      "t_us_last": 367241309
+      "t_us_last": 367241309,
+      "attach_t_us": 365751610,
+      "detach_t_us": 369515120,
+      "reads_after_detach_orphan": 0
+    },
+    {
+      "window": 4,
+      "reads": 0,
+      "bytes": 0,
+      "kinds": {},
+      "gap_p50_us": null,
+      "t_us_first": null,
+      "t_us_last": null,
+      "attach_t_us": 371808718,
+      "detach_t_us": 379069389,
+      "reads_after_detach_orphan": 0
+    },
+    {
+      "window": 5,
+      "reads": 0,
+      "bytes": 0,
+      "kinds": {},
+      "gap_p50_us": null,
+      "t_us_first": null,
+      "t_us_last": null,
+      "attach_t_us": 381483201,
+      "detach_t_us": 386161064,
+      "reads_after_detach_orphan": 0
+    },
+    {
+      "window": 6,
+      "reads": 0,
+      "bytes": 0,
+      "kinds": {},
+      "gap_p50_us": null,
+      "t_us_first": null,
+      "t_us_last": null,
+      "attach_t_us": 389488715,
+      "detach_t_us": 397019799,
+      "reads_after_detach_orphan": 0
     },
     {
       "window": 7,
@@ -138,7 +206,10 @@
       },
       "gap_p50_us": 3928,
       "t_us_first": 413530112,
-      "t_us_last": 413557347
+      "t_us_last": 413557347,
+      "attach_t_us": 403031291,
+      "detach_t_us": 410317099,
+      "reads_after_detach_orphan": 94
     },
     {
       "window": 8,
@@ -152,7 +223,10 @@
       },
       "gap_p50_us": 3839,
       "t_us_first": 418216357,
-      "t_us_last": 418222419
+      "t_us_last": 418222419,
+      "attach_t_us": 415314740,
+      "detach_t_us": 429023970,
+      "reads_after_detach_orphan": 0
     },
     {
       "window": 9,
@@ -166,7 +240,10 @@
       },
       "gap_p50_us": 3749,
       "t_us_first": 434469540,
-      "t_us_last": 436162568
+      "t_us_last": 436162568,
+      "attach_t_us": 433465599,
+      "detach_t_us": 439580433,
+      "reads_after_detach_orphan": 0
     },
     {
       "window": 10,
@@ -178,20 +255,23 @@
         "fat": 6,
         "file": 5
       },
-      "gap_p50_us": 3715,
+      "gap_p50_us": 3873,
       "t_us_first": 443964531,
-      "t_us_last": 448474674
+      "t_us_last": 448474674,
+      "attach_t_us": 442959833,
+      "detach_t_us": null,
+      "reads_after_detach_orphan": 0
     }
   ],
   "notes": [
-    "Demo medium is 256KiB FAT12 \u2014 not comparable to PiDrive 512KiB/8MiB slot streaming.",
-    "Dominant host xfer size in this session: see n_mode.",
-    "Physical OTG replugs observed; ESP briefly unreachable on VBUS loss."
+    "Windows indexed by host attach order; empty windows omitted unless --include-empty-windows.",
+    "Pre-0.2.3 sessions may stamp read t_us at drain time \u2014 prefer gap_us for pacing."
   ],
   "vs_bmw_nbt_evo_expectations": {
     "read_size_4096_dominant": true,
     "gap_ms_p50_near_4": 3.724,
     "eager_large_body_stream": false,
     "epistemic": "FACT from this hu-probe session only; medium geometry limits streaming claims."
-  }
+  },
+  "tool": "tools/fingerprint_session.py"
 }

@@ -234,7 +234,7 @@ int32_t MscGadget::onRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t 
     readCount_++;
 
     Sample s;
-    s.tUs = (uint32_t)t0;
+    s.tUs = t0;
     s.lba = lba;
     s.n = bufsize;
     s.durUs = dur;
@@ -249,7 +249,7 @@ int32_t MscGadget::onWrite(uint32_t lba, uint32_t offset, uint8_t* buffer, uint3
     (void)offset;
     (void)buffer;
     Sample s;
-    s.tUs = (uint32_t)ProbeClock::nowUs();
+        s.tUs = ProbeClock::nowUs();
     s.lba = lba;
     s.n = bufsize;
     s.scsi = 1;
@@ -281,7 +281,7 @@ void MscGadget::drainSamples() {
             instrument_->onScsi("write10");
         } else {
             // Nur timed read — volle BOT-Roh-Evidenz kommt mit TinyUSB-Wrap (GATE-01).
-            instrument_->onReadTimed(s.lba, s.n, s.durUs, s.gapUs, s.tag, s.kind);
+            instrument_->onReadTimed(s.tUs, s.lba, s.n, s.durUs, s.gapUs, s.tag, s.kind);
         }
     }
 }

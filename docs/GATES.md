@@ -2,7 +2,9 @@
 
 ## HU-PROBE-GATE-01 — Measurement Integrity
 
-**Status:** open (Schema v2 eingefroren; TinyUSB-Instrumentierung ausstehend)
+**Status:** open (Schema v2 eingefroren; Read-Aggregate im Feld OK; Roh-BOT/Deskriptoren/`fw_sha` ausstehend)
+
+Teilfortschritt (2026-10-14): monotonic `t_us`/`gap_us` (uint32), Session-`capture_health`, physische USB attach/detach — aber Seq-Lücke in erster Feldsession, Drain-`t_us` bis 0.2.2, kein Roh-CBW/CDB/CSW.
 
 Vor echtem Feldbetrieb und vor der Bewertung von HU-Fakten müssen folgende Punkte erfüllt sein. Ohne dieses Gate ist die Probe ein vorbereitetes Gerüst, kein wissenschaftlich brauchbares Messgerät.
 
