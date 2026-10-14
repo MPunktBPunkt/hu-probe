@@ -29,6 +29,14 @@
 #ifndef WIFI_TCP_STALL_PENDING
 #define WIFI_TCP_STALL_PENDING 32
 #endif
+/** After WiFi returns from coex soft-detach: hold USB off to flush TCP. */
+#ifndef WIFI_COEX_FLUSH_MS
+#define WIFI_COEX_FLUSH_MS 8000
+#endif
+/** Only full-chip restart if soft-detach still cannot bring WiFi back. */
+#ifndef WIFI_RESTART_AFTER_COEX_MS
+#define WIFI_RESTART_AFTER_COEX_MS 90000
+#endif
 
 App& App::instance() {
     static App app;
@@ -210,28 +218,56 @@ void App::superviseWifi() {
 
     if (assoc) {
         if (wifiDownSinceMs_ != 0) {
-            Serial.printf("[WIFI] recovered after %lu ms (attempts=%u)\n",
-                          (unsigned long)(now - wifiDownSinceMs_), wifiReconnectAttempts_);
+            Serial.printf("[WIFI] recovered after %lu ms (attempts=%u coex=%d)\n",
+                          (unsigned long)(now - wifiDownSinceMs_), wifiReconnectAttempts_,
+                          coexDetachedForWifi_ ? 1 : 0);
+            if (coexDetachedForWifi_) coexRecoveredAtMs_ = now;
         }
         wifiDownSinceMs_ = 0;
         wifiReconnectAttempts_ = 0;
+
+        // Lab unattended OTG: USB was soft-detached so WiFi could breathe — flush, then reattach.
+        if (coexDetachedForWifi_) {
+            unsigned long flushedFor =
+                (coexRecoveredAtMs_ == 0) ? 0 : (now - coexRecoveredAtMs_);
+            bool ringQuiet = bus.pending() < 16;
+            if (flushedFor >= WIFI_COEX_FLUSH_MS || (ringQuiet && flushedFor >= 2000)) {
+                Serial.printf("[WIFI] coex reattach after flush pending=%u\n",
+                              (unsigned)bus.pending());
+                msc_.softAttach();
+                coexDetachedForWifi_ = false;
+                coexRecoveredAtMs_ = 0;
+            }
+        }
         return;
     }
 
     if (wifiDownSinceMs_ == 0) {
         wifiDownSinceMs_ = now;
         Serial.println("[WIFI] lost — supervising reconnect");
+        // Drop D+ so host stops Bulk/SOF — physical OTG can stay plugged (lab overnight).
+        if (msc_.usbSoftAttached()) {
+            Serial.println("[WIFI] soft-detach USB for coex (no chip reset)");
+            msc_.softDetach(0);
+            coexDetachedForWifi_ = true;
+            coexRecoveredAtMs_ = 0;
+        }
     }
     unsigned long downFor = now - wifiDownSinceMs_;
     if (now - lastWifiReconnectMs_ >= WIFI_RECONNECT_EVERY_MS) {
         lastWifiReconnectMs_ = now;
         wifiReconnectAttempts_++;
-        Serial.printf("[WIFI] reconnect #%u (down %lu ms)\n", wifiReconnectAttempts_, downFor);
+        Serial.printf("[WIFI] reconnect #%u (down %lu ms coex=%d)\n", wifiReconnectAttempts_,
+                      downFor, coexDetachedForWifi_ ? 1 : 0);
         WiFi.disconnect(false, false);
         delay(50);
         WiFi.reconnect();
     }
-    if (downFor >= WIFI_RESTART_AFTER_MS && wifiReconnectAttempts_ >= 3) {
+    // Prefer soft-detach recovery; chip reset only if WiFi still dead after long coex window
+    // (OTG left in + ESP.restart() caused yellow/RST loops).
+    unsigned long restartAfter =
+        coexDetachedForWifi_ ? WIFI_RESTART_AFTER_COEX_MS : WIFI_RESTART_AFTER_MS;
+    if (downFor >= restartAfter && wifiReconnectAttempts_ >= 3) {
         Serial.println("[WIFI] unrecoverable — ESP.restart()");
         delay(200);
         ESP.restart();

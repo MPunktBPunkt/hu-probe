@@ -43,5 +43,8 @@ private:
     unsigned long lastHubWhileUsbMs_ = 0;
     unsigned long wifiDownSinceMs_ = 0;
     unsigned long lastWifiReconnectMs_ = 0;
+    unsigned long coexRecoveredAtMs_ = 0;
     uint8_t wifiReconnectAttempts_ = 0;
+    /** Soft-detached USB so WiFi can recover (lab unattended OTG). */
+    bool coexDetachedForWifi_ = false;
 };

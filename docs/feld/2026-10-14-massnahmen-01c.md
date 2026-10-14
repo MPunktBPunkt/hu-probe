@@ -17,7 +17,8 @@ Kein weiteres Fremd-Audit für Control/STALL nötig. Nächste Arbeit = **Code in
 | **P1** | State-Clear bei Mount (Replug ohne VBUS oft ohne Umount) | **done in 0.2.13** | Lab Kill 3 PASS |
 | **P2** | Lab-Triple 0.2.12+ (nach P0): Soft+Remount+`dd`, Gap+BOT, Kill-Kriterien Control | **done** | [lab 0.2.13](2026-10-14-lab-debian-s0-0.2.13.md) |
 | **P2** | Lange unbroken BMW-S0-Timeline | **blockiert** | OTG killt WiFi (~5–7 s); siehe [wifi-otg-0.2.15](2026-10-14-wifi-otg-0.2.15.md) |
-| **P2b** | USB↔WiFi-Coexistenz (über Drain/Hub hinaus) | **offen** | 0.2.14/15 Mitigation unzureichend |
+| **P2b** | USB↔WiFi-Coexistenz (über Drain/Hub hinaus) | **offen** | Desk-Karte + Lab-Method; 0.2.14/15 unzureichend |
+| **P2c** | Lab Soft-Detach-Coex bei WiFi-Loss | **done in 0.2.16** | OTG stecken lassen / unattended; nicht für BMW-Playback |
 | **P3** | S1 Eager-EOF / S2 Prefetch / S3 Cache | **offen** | Instrument reicht nach P0 |
 | **P4** | GATE-01 formal schließen (Dry-Run) | **offen** | Lab-Kill ok; formal Close + BMW-Timeline |
 | **P5** | Mazda | zuletzt | Stub bleibt |
