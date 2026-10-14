@@ -28,6 +28,8 @@ private:
     void emitStatus();
     void emitCaptureHealth();
     void superviseWifi();
+    /** Runs off Arduino loop — USB load was starving coex soft-detach (0.2.16). */
+    static void wifiCoexTask(void* arg);
 
     ConfigStore config_;
     HubClient hub_;
@@ -47,4 +49,5 @@ private:
     uint8_t wifiReconnectAttempts_ = 0;
     /** Soft-detached USB so WiFi can recover (lab unattended OTG). */
     bool coexDetachedForWifi_ = false;
+    TaskHandle_t wifiCoexTaskHandle_ = nullptr;
 };

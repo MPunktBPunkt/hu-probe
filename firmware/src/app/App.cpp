@@ -9,6 +9,8 @@
 #include <esp_system.h>
 #include <esp_wifi.h>
 #include <Preferences.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 #ifndef CAPTURE_HEALTH_INTERVAL_MS
 #define CAPTURE_HEALTH_INTERVAL_MS 5000
@@ -137,6 +139,21 @@ void App::begin() {
                    msc_.identitySerial(), msc_.volumeLabel());
     Serial.printf("[SESSION] auto-start %s fw=%s sha=%s\n", session_.id().c_str(), FW_VERSION,
                   FW_GIT_SHA);
+
+    // Above TinyUSB usbd (prio 24): Arduino loop was starved under OTG, coex never ran.
+    xTaskCreatePinnedToCore(wifiCoexTask, "wifiCoex", 4096, this, 25, &wifiCoexTaskHandle_, 0);
+    Serial.println("[WIFI] coex task prio=25 core=0");
+}
+
+void App::wifiCoexTask(void* arg) {
+    App* self = static_cast<App*>(arg);
+    for (;;) {
+        self->superviseWifi();
+        if (self->coexDetachedForWifi_) {
+            self->tcp_.loop();  // flush ring while USB is off
+        }
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
 }
 
 void App::emitStatus() {
@@ -275,7 +292,7 @@ void App::superviseWifi() {
 }
 
 void App::loop() {
-    superviseWifi();
+    // WiFi/coex soft-detach runs in wifiCoexTask (loop starves under USB Bulk).
     // Drain Capture-tUs BOT/read before loop-now status/health (keeps t_us non-decreasing).
     msc_.loop();
     instrument_.tick();
