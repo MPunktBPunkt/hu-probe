@@ -1,0 +1,33 @@
+{
+  "profile_id": "bmw_nbt_evo",
+  "vehicle": "bmw",
+  "label": "BMW NBT Evo (Golden Probe)",
+  "schema": 1,
+  "source": {
+    "pidrive_profile": "tools/profiles/nbt_evo_2026-10-06.json",
+    "notes": "Aggregated from field measurements; used to validate hu-probe, not transferred to Mazda."
+  },
+  "expectations": {
+    "enum_s_approx": 1.0,
+    "tur_hz_approx": 1.0,
+    "queue_depth": 1,
+    "writes_expected": false,
+    "read_size_bytes_mode": 4096,
+    "gap_ms_p50_idle": 4,
+    "gap_ms_p50_armed": 5,
+    "eager_eof": true,
+    "prefetch_lead_s_approx": 15,
+    "busy_tone_s_approx": 65,
+    "stall_off_tone_s_approx": 6,
+    "menu_stall_sluggish_s_approx": 20,
+    "cache_hit_no_reads_on_replay": true,
+    "remount_full_reread": true
+  },
+  "fingerprint_template": {
+    "xfer_hist": {"512": "rare", "4096": "dominant", "8192_plus": "absent"},
+    "kinds": ["file", "boot", "fat", "dir"],
+    "resume": "out_of_order_window_then_sequential",
+    "identity_sensitivity": "open_gate_HU-A2"
+  },
+  "open_gates": ["HU-A1", "HU-A2", "HU-A7", "HU-A9", "HU-A11"]
+}

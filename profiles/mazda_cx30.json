@@ -1,0 +1,31 @@
+{
+  "profile_id": "mazda_cx30",
+  "vehicle": "mazda_cx30",
+  "label": "Mazda CX-30 (Discovery Stub)",
+  "schema": 1,
+  "source": {
+    "notes": "Empty discovery profile. Fill only from measured sessions — never copy NBT claims."
+  },
+  "expectations": {
+    "enum_s_approx": null,
+    "tur_hz_approx": null,
+    "queue_depth": null,
+    "writes_expected": null,
+    "read_size_bytes_mode": null,
+    "gap_ms_p50_idle": null,
+    "eager_eof": null,
+    "prefetch_lead_s_approx": null,
+    "busy_tone_s_approx": null,
+    "stall_off_tone_s_approx": null,
+    "cache_hit_no_reads_on_replay": null,
+    "remount_full_reread": null
+  },
+  "fingerprint_template": {
+    "xfer_hist": {},
+    "kinds": [],
+    "resume": null,
+    "identity_sensitivity": null
+  },
+  "sessions": [],
+  "open_gates": ["all"]
+}

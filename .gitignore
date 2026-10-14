@@ -1,0 +1,30 @@
+# Build / deps
+.pio/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Secrets / local
+.env
+.env.*
+!.env.example
+
+# Sessions (Messdaten bleiben lokal)
+sessions/*
+!sessions/.gitkeep
+
+# Firmware artifacts
+firmware/.pio/
+*.bin
+!profiles/**

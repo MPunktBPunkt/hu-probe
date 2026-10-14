@@ -1,0 +1,99 @@
+#include "Session.h"
+#include "net/EventBus.h"
+#include <time.h>
+
+void Session::begin() {
+    active_ = false;
+    id_ = "";
+    phase_ = "idle";
+    seq_ = 0;
+}
+
+bool Session::start(const String& vehicle, const String& scenario, const String& profileId) {
+    if (active_) stop();
+    vehicle_ = vehicle;
+    scenario_ = scenario;
+    profileId_ = profileId;
+    seq_ = 0;
+    startedMs_ = millis();
+    phase_ = "enum";
+
+    char buf[64];
+    time_t now = time(nullptr);
+    struct tm tm;
+    if (now > 100000 && localtime_r(&now, &tm)) {
+        snprintf(buf, sizeof(buf), "%04d%02d%02d-%02d%02d%02d_%s_%s",
+                 tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                 tm.tm_hour, tm.tm_min, tm.tm_sec,
+                 vehicle.c_str(), scenario.c_str());
+    } else {
+        snprintf(buf, sizeof(buf), "%lu_%s_%s",
+                 (unsigned long)startedMs_, vehicle.c_str(), scenario.c_str());
+    }
+    id_ = buf;
+    active_ = true;
+
+    JsonDocument doc;
+    doc["v"] = 1;
+    doc["sid"] = id_;
+    doc["seq"] = nextSeq();
+    doc["t_ms"] = (int)(millis() - startedMs_);
+    doc["ev"] = "session";
+    doc["action"] = "start";
+    doc["vehicle"] = vehicle_;
+    doc["scenario"] = scenario_;
+    doc["profile_id"] = profileId_;
+    EventBus::instance().publish(doc);
+    return true;
+}
+
+void Session::stop() {
+    if (!active_) return;
+    JsonDocument doc;
+    doc["v"] = 1;
+    doc["sid"] = id_;
+    doc["seq"] = nextSeq();
+    doc["t_ms"] = (int)(millis() - startedMs_);
+    doc["ev"] = "session";
+    doc["action"] = "stop";
+    EventBus::instance().publish(doc);
+    active_ = false;
+    phase_ = "idle";
+}
+
+void Session::setPhase(const String& phase, const String& note) {
+    phase_ = phase;
+    if (!active_) return;
+    JsonDocument doc;
+    doc["v"] = 1;
+    doc["sid"] = id_;
+    doc["seq"] = nextSeq();
+    doc["t_ms"] = (int)(millis() - startedMs_);
+    doc["ev"] = "phase";
+    doc["phase"] = phase_;
+    if (note.length()) doc["note"] = note;
+    EventBus::instance().publish(doc);
+}
+
+void Session::marker(const String& name, const String& note) {
+    if (!active_) return;
+    JsonDocument doc;
+    doc["v"] = 1;
+    doc["sid"] = id_;
+    doc["seq"] = nextSeq();
+    doc["t_ms"] = (int)(millis() - startedMs_);
+    doc["ev"] = "marker";
+    doc["name"] = name;
+    if (note.length()) doc["note"] = note;
+    EventBus::instance().publish(doc);
+}
+
+void Session::toStatusJson(JsonObject obj) const {
+    obj["active"] = active_;
+    obj["session_id"] = id_;
+    obj["vehicle"] = vehicle_;
+    obj["scenario"] = scenario_;
+    obj["profile_id"] = profileId_;
+    obj["phase"] = phase_;
+    obj["seq"] = seq_;
+}
