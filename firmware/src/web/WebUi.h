@@ -23,6 +23,8 @@ private:
     void handleSessionStop();
     void handleMarker();
     void handleSimulateRead();
+    void handleUsbCycle();
+    void handleUsbRemount();
 
     WebServer server_{80};
     ConfigStore* cfg_ = nullptr;

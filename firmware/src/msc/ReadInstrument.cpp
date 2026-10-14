@@ -23,15 +23,19 @@ void ReadInstrument::stamp(JsonDocument& doc) {
 
 void ReadInstrument::onRead(uint32_t lba, uint32_t nBytes, uint32_t durUs,
                             const char* tag, const char* kind) {
-    readCount_++;
-    windowBytes_ += nBytes;
     int64_t now = ProbeClock::nowUs();
     uint32_t gapUs = 0;
     if (lastDataEndUs_ > 0 && now >= lastDataEndUs_) {
         gapUs = (uint32_t)(now - lastDataEndUs_);
     }
+    onReadTimed(lba, nBytes, durUs, gapUs, tag, kind);
     lastDataEndUs_ = now + (int64_t)durUs;
+}
 
+void ReadInstrument::onReadTimed(uint32_t lba, uint32_t nBytes, uint32_t durUs, uint32_t gapUs,
+                                 const char* tag, const char* kind) {
+    readCount_++;
+    windowBytes_ += nBytes;
     if (!session_ || !session_->active()) return;
 
     JsonDocument doc;

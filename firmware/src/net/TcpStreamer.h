@@ -9,7 +9,7 @@ class TcpStreamer {
 public:
     void begin(ConfigStore* config);
     void loop();
-    bool connected() const { return client_.connected(); }
+    bool connected() { return client_.connected(); }
 
 private:
     void tryConnect();

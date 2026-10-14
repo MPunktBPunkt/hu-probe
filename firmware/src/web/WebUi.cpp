@@ -30,7 +30,8 @@ static const char* PAGE =
     "<button onclick=start()>Start Session</button>"
     "<button class=sec onclick=stop()>Stop</button>"
     "<button class=sec onclick=mark()>Marker</button>"
-    "<button class=sec onclick=sim()>Sim Read</button>"
+    "<button class=sec onclick=cycle()>USB Soft-Cycle</button>"
+    "<button class=sec onclick=remount()>Media Remount</button>"
     "</div>"
     "<pre id=st>loading…</pre>"
     "<script>"
@@ -40,7 +41,10 @@ static const char* PAGE =
     "async function stop(){await fetch('/api/session/stop',{method:'POST'});refresh()}"
     "async function mark(){await fetch('/api/marker',{method:'POST',headers:{'Content-Type':'application/json'},"
     "body:JSON.stringify({name:'operator'})});refresh()}"
-    "async function sim(){await fetch('/api/debug/sim-read',{method:'POST'});refresh()}"
+    "async function cycle(){await fetch('/api/usb/cycle',{method:'POST',headers:{'Content-Type':'application/json'},"
+    "body:JSON.stringify({holdMs:600})});refresh()}"
+    "async function remount(){await fetch('/api/usb/remount',{method:'POST',headers:{'Content-Type':'application/json'},"
+    "body:JSON.stringify({bumpSerial:true})});refresh()}"
     "setInterval(refresh,1000);refresh()"
     "</script></body></html>";
 
@@ -61,6 +65,8 @@ void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
     server_.on("/api/session/stop", HTTP_POST, [this]() { handleSessionStop(); });
     server_.on("/api/marker", HTTP_POST, [this]() { handleMarker(); });
     server_.on("/api/debug/sim-read", HTTP_POST, [this]() { handleSimulateRead(); });
+    server_.on("/api/usb/cycle", HTTP_POST, [this]() { handleUsbCycle(); });
+    server_.on("/api/usb/remount", HTTP_POST, [this]() { handleUsbRemount(); });
     server_.begin();
     Serial.println("[WEB] :80");
 }
@@ -81,7 +87,17 @@ void WebUi::handleStatus() {
     doc["ip"] = WiFi.localIP().toString();
     doc["hub_ok"] = hub_ ? hub_->lastOk() : false;
     doc["tcp_ok"] = tcp_ ? tcp_->connected() : false;
-    doc["msc_mounted"] = msc_ ? msc_->mounted() : false;
+    if (msc_) {
+        doc["msc_ready"] = msc_->ready();
+        doc["msc_plugged"] = msc_->plugged();
+        doc["msc_media"] = msc_->mediaPresented();
+        doc["msc_soft_attached"] = msc_->usbSoftAttached();
+        doc["msc_serial"] = msc_->identitySerial();
+        doc["msc_reads"] = msc_->readCount();
+        doc["msc_sample_overflow"] = msc_->sampleOverflow();
+        doc["plug_count"] = msc_->plugCount();
+        doc["unplug_count"] = msc_->unplugCount();
+    }
     doc["read_rate_kb_s"] = inst_ ? inst_->readRateKbS() : 0;
     doc["tur_hz"] = inst_ ? inst_->turHz() : 0;
     doc["read_count"] = inst_ ? inst_->readCount() : 0;
@@ -165,7 +181,6 @@ void WebUi::handleMarker() {
 }
 
 void WebUi::handleSimulateRead() {
-    // Labor-Pfad: volle BOT-Kette (CBW/DATA/CSW) für Schema-/Collector-Tests.
     if (!inst_) {
         server_.send(200, "application/json", "{\"ok\":false}");
         return;
@@ -177,4 +192,41 @@ void WebUi::handleSimulateRead() {
     inst_->onBotData(tag, "in", 4096, 4096, 3800, 1953, "sim", "file");
     inst_->onBotCsw(tag, 0, 0);
     server_.send(200, "application/json", "{\"ok\":true,\"schema\":2}");
+}
+
+void WebUi::handleUsbCycle() {
+    uint16_t holdMs = 600;
+    if (server_.hasArg("plain")) {
+        JsonDocument doc;
+        if (!deserializeJson(doc, server_.arg("plain"))) {
+            if (!doc["holdMs"].isNull()) holdMs = doc["holdMs"].as<uint16_t>();
+        }
+    }
+    bool ok = msc_ && msc_->softCycle(holdMs);
+    JsonDocument out;
+    out["ok"] = ok;
+    out["action"] = "usb_cycle";
+    out["holdMs"] = holdMs;
+    out["note"] = "soft_usb=D+_pullup_not_VBUS";
+    String body;
+    serializeJson(out, body);
+    server_.send(ok ? 200 : 500, "application/json", body);
+}
+
+void WebUi::handleUsbRemount() {
+    bool bump = true;
+    if (server_.hasArg("plain")) {
+        JsonDocument doc;
+        if (!deserializeJson(doc, server_.arg("plain"))) {
+            if (!doc["bumpSerial"].isNull()) bump = doc["bumpSerial"].as<bool>();
+        }
+    }
+    if (msc_) msc_->remountMedia(bump);
+    JsonDocument out;
+    out["ok"] = true;
+    out["action"] = "media_remount";
+    out["serial"] = msc_ ? msc_->identitySerial() : "";
+    String body;
+    serializeJson(out, body);
+    server_.send(200, "application/json", body);
 }

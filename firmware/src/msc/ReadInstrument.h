@@ -9,6 +9,9 @@ public:
     void begin(Session* session);
     /** Komfort-Pfad (Sim / Aggregat). Für echte Evidenz: onBot*. */
     void onRead(uint32_t lba, uint32_t nBytes, uint32_t durUs, const char* tag, const char* kind);
+    /** Aus MSC-Sample-Ring: gap bereits gemessen (USB-cb Zeitbasis). */
+    void onReadTimed(uint32_t lba, uint32_t nBytes, uint32_t durUs, uint32_t gapUs,
+                     const char* tag, const char* kind);
     /** Deprecated Kurzform — nur Stub/Sim. */
     void onScsi(const char* op);
     void onUsb(const char* usbEv, uint8_t ep, const char* dir, uint32_t durUs,

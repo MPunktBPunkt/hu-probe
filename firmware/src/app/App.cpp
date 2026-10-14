@@ -74,7 +74,8 @@ void App::begin() {
     EventBus::instance().begin();
     session_.begin();
     instrument_.begin(&session_);
-    msc_.begin();
+    // MSC first so the HU sees a stick even while WiFi portal runs.
+    msc_.begin(&session_, &instrument_);
 
     setupWifi();
     setupMdns();
@@ -90,6 +91,10 @@ void App::begin() {
     tcp_.begin(&config_);
     web_.begin(&config_, &session_, &instrument_, &msc_, &hub_, &tcp_);
     hub_.sendNow();
+
+    // Auto-session for field use: plug → measure without opening the UI first.
+    session_.start(config_.vehicleId, config_.scenarioId, config_.profileId);
+    Serial.printf("[SESSION] auto-start %s\n", session_.id().c_str());
 }
 
 void App::emitStatus() {

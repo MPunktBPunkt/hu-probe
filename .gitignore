@@ -29,4 +29,5 @@ sessions/*
 # Firmware artifacts
 firmware/.pio/
 *.bin
+!firmware/dist/*.bin
 !profiles/**

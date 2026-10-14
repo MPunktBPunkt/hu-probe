@@ -47,12 +47,12 @@ SoftAP-Setup: `ESP-HuProbe-Setup`.
 - [Szenarien](docs/SZENARIEN.md)
 - [Medienvariation](docs/MEDIA_VARIATION.md)
 
-## Status (v0.1.1)
+## Status (v0.2.0) — erster Feldtest
 
-- Schema v2 eingefroren (monotonic µs, BOT CBW/DATA/CSW, USB-Events, capture_health)
-- Firmware: ProbeClock (`esp_timer`), Drop/TCP-Accounting, Sim erzeugt BOT-Kette
-- MSC/TinyUSB noch Stub — **GATE-01 offen**
-- Collector unverändert „langweilig“
-- BMW-Profil: Expectations als `FACT` aus PiDrive-Feldwissen gekennzeichnet
+- **Echte TinyUSB-MSC** (Demo-FAT), Soft-USB-Cycle, Media-Remount
+- Auto-Session, WebUI mit Cycle/Remount, Read-Timing (`t_us`/`gap_us`)
+- GATE-01 noch offen (kein Roh-CBW/CDB) — siehe [FIELD_TEST_v0.2.md](docs/FIELD_TEST_v0.2.md)
 
-Als Nächstes: TinyUSB-MSC so verdrahten, dass GATE-01 geschlossen werden kann (kein Sim mehr).
+```bash
+cd firmware && pio run -e huprobe-s3 -t upload
+```
