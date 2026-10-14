@@ -1,0 +1,44 @@
+{
+  "schema": 2,
+  "session_id": "20261014-182234_lab_debian_s0_plug_enum",
+  "started_at": "2026-10-14T18:22:35.117701+02:00",
+  "ended_at": null,
+  "vehicle": "lab_debian",
+  "profile_id": "lab_debian",
+  "scenario": "s0_plug_enum",
+  "fw_version": "0.2.11",
+  "fw_type": "hu-probe",
+  "fw_sha": "1f1629b27dcb",
+  "mac": "68:b6:b3:29:33:9c",
+  "clock": {
+    "domain": "probe_monotonic_us",
+    "source": "esp_timer"
+  },
+  "capture": {
+    "dropped": 0,
+    "queue_highwater": 83,
+    "tcp_disconnects": 0,
+    "published": 418,
+    "stream_lost": 0,
+    "tcp_tx_fail": 0,
+    "msc_sample_overflow": 0,
+    "recv_seq_gaps": [],
+    "recv_events": 419,
+    "parse_errors": 1,
+    "complete": true
+  },
+  "gates": [
+    "HU-PROBE-GATE-01"
+  ],
+  "notes": "",
+  "fw_build_id": "1f1629b27dcb-20261014T151109Z",
+  "usb_host_kind": "linux_debian",
+  "usb_host_role": "lab_reference",
+  "probe_identity": {
+    "mac": "68:b6:b3:29:33:9c",
+    "usb_serial": "HP0001",
+    "volume_label": "HUPROBE",
+    "board": "ESP32-S3",
+    "hw_type": "esp32s3"
+  }
+}

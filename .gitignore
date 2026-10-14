@@ -39,6 +39,12 @@ sessions/*
 !sessions/2296_bmw_s0_plug_enum/**
 !sessions/2334_bmw_s0_plug_enum/
 !sessions/2334_bmw_s0_plug_enum/**
+!sessions/20261014-181901_lab_debian_s0_plug_enum/
+!sessions/20261014-181901_lab_debian_s0_plug_enum/**
+!sessions/20261014-182045_lab_debian_s0_plug_enum/
+!sessions/20261014-182045_lab_debian_s0_plug_enum/**
+!sessions/20261014-182234_lab_debian_s0_plug_enum/
+!sessions/20261014-182234_lab_debian_s0_plug_enum/**
 sessions/**/collector.*
 
 # Firmware artifacts (release bins under firmware/dist/ are tracked)
