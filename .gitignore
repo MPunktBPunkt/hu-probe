@@ -8,6 +8,8 @@ __pycache__/
 dist/
 build/
 .pytest_cache/
+collector/.venv/
+collector/*.egg-info/
 
 # IDE / OS
 .idea/
