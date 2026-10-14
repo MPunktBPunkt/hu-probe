@@ -54,7 +54,7 @@ SoftAP-Setup: `ESP-HuProbe-Setup`.
 - FW **0.2.7**: BOT-Synth-Kette CBW→DATA→read→CSW (t_us monoton), `fw_sha`/`probe_identity`
 - Lab vs Auto: `lab_debian` vs `bmw` · [Lab 0.2.7](docs/feld/2026-10-14-lab-debian-s0-0.2.7.md) · Tools: `lab_s0_run.sh`
 - GATE-01 **offen** (Stufe B = echter Bus-CBW + Control-Sniff) · Mazda-Profil null
-- Lab-ESP `.88` aktuell 0.2.7 · Bin unter `firmware/dist/`
+- Lab-ESP `.88`: FW 0.2.7 geflasht, WiFi zeitweise tot · [Stand vor Auto](docs/feld/2026-10-14-stand-vor-auto.md) · Bin unter `firmware/dist/`
 
 ```bash
 cd firmware && pio run -e huprobe-s3 -t upload

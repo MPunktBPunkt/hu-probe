@@ -33,7 +33,7 @@ Messbar mit FW 0.2.7:
 
 Nicht messbar ohne GATE-01B: Roh-CBW vom Bus, Control-Transfers als Host-Sniff.
 
-**Blocker jetzt:** nach Soft-Cycle/dd-Serie WiFi tot (MSC weiter sichtbar, Ping `.88` tot). Braucht **echten VBUS-/Power-Cycle** (USB ziehen oder EN), Hub-`authorized` reicht nicht.
+**Blocker (Stand 13:55):** Lab `.88` nach Soft-Cycle/dd WiFi-tot (MSC sichtbar). Hub-`authorized` reicht nicht; kurz ~13:20 wieder online (unbrauchbare Session `2092` verworfen), danach erneut offline. Neuaufnahme Lab aufgeschoben — Auto-Feld hat Vorrang.
 
 ## Parameter (bis Power-Cycle / Neuaufnahme)
 
