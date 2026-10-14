@@ -48,15 +48,13 @@ SoftAP-Setup: `ESP-HuProbe-Setup`.
 - [Medienvariation](docs/MEDIA_VARIATION.md)
 - [Feldauswertung BMW S0](docs/feld/2026-10-14-bmw-s0-auswertung.md) · [Review-Triage](docs/feld/2026-10-14-review-triage.md)
 
-## Status (v0.2.11) — BMW-S0 Feld + WiFi-Auto-Recovery
+## Status (v0.2.12) — Capture-tUs Fix + WiFi-Restart schneller
 
-- Feld 2026-10-14: [Auswertung](docs/feld/2026-10-14-bmw-s0-0.2.11-auswertung.md) — tinyusb BOT, Gap-p50 **~3,6–3,7 ms**, 4 KiB Reads; WiFi stirbt unter Last, **0.2.11 rettet sich selbst**
-- FW **0.2.8–0.2.9**: TinyUSB CBW/CSW + Class-Driver-Hooks
-- FW **0.2.10**: On-board RGB Status-LED
-- FW **0.2.11**: Deferred BOT-Emit + WiFi-Supervise ([WiFi-Death-Notiz](docs/feld/2026-10-14-wifi-death-0.2.11.md))
-- Lab vs Auto: `lab_debian` vs `bmw` · [Maßnahmen 01B](docs/feld/2026-10-14-massnahmen-01b.md)
-- GATE-01 **offen** (Standard-Control noch lückenhaft; Wire UNKNOWN; lange unbroken Timeline fehlt)
-- Auto: `./tools/ota_car_esp.sh` → Bin `firmware/dist/hu-probe.0.2.11.esp32s3.bin`
+- FW **0.2.12**: Deferred BOT trägt Capture-`tUs` (kein `bot_data`→`read` Timeline-Rücksprung); WiFi-Restart nach ~25 s
+- Feld 0.2.11: [Auswertung](docs/feld/2026-10-14-bmw-s0-0.2.11-auswertung.md) — Gap-p50 **~3,6–3,7 ms**; [Abend-Triage](docs/feld/2026-10-14-review-abend-triage.md)
+- Control/STALL Desk-Karte: [Audit-Intake](docs/feld/2026-10-14-audit-control-stall-recovery.md) · [Maßnahmen 01C](docs/feld/2026-10-14-massnahmen-01c.md)
+- GATE-01 **offen** (Control-Hooks noch zu implementieren; Wire UNKNOWN)
+- Auto/Lab: `./tools/ota_car_esp.sh` / `lab_s0_run.sh` → `firmware/dist/hu-probe.0.2.12.esp32s3.bin`
 
 ### Status-LED (ESP32-S3 RGB)
 

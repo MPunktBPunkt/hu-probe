@@ -242,22 +242,12 @@ int32_t MscGadget::onRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t 
     char kind[8];
     tagForLba(lba, tag, sizeof(tag), kind, sizeof(kind));
 
-    // GATE-01B: real host CBW on first DATA chunk of this BOT command.
+    // GATE-01B: CBW + DATA share Capture-tUs so drain stays non-decreasing (0.2.12).
     if (offset == 0) {
-        MscBotTap::emitCbwIfNew();
+        MscBotTap::emitCbwIfNew(t0);
     }
-    MscBotTap::emitDataChunk(lba, bufsize, dur, gap, tag, kind, "in");
-
-    Sample s;
-    s.tUs = t0;
-    s.lba = lba;
-    s.n = bufsize;
-    s.durUs = dur;
-    s.gapUs = gap;
-    s.botTag = MscBotTap::currentHostTag();
-    snprintf(s.tag, sizeof(s.tag), "%s", tag);
-    snprintf(s.kind, sizeof(s.kind), "%s", kind);
-    pushSample(s);
+    // Comfort read is emitted with bot_data in MscBotTap::drain.
+    MscBotTap::emitDataChunk(t0, lba, bufsize, dur, gap, tag, kind, "in");
     return (int32_t)bufsize;
 }
 
@@ -297,9 +287,7 @@ void MscGadget::drainSamples() {
         if (s.scsi == 1) {
             instrument_->onScsi("write10");
         } else if (MscBotTap::realBotEnabled()) {
-            // BOT CBW/DATA/CSW already emitted from TinyUSB tap — comfort read only.
-            instrument_->emitReadAggregate(s.tUs, s.botTag, s.lba, s.n, s.durUs, s.gapUs, s.tag,
-                                           s.kind);
+            // 0.2.12+: comfort read emitted with bot_data in MscBotTap::drain (same Capture-tUs).
         } else {
             instrument_->emitBotRead10Synth(s.tUs, s.lba, s.n, s.durUs, s.gapUs, s.tag, s.kind);
         }

@@ -329,7 +329,7 @@ void ReadInstrument::onBotCsw(uint32_t botTag, uint32_t residue, uint8_t status)
     EventBus::instance().publish(doc);
 }
 
-void ReadInstrument::emitBotCbwTinyusb(const uint8_t cbwRaw[31]) {
+void ReadInstrument::emitBotCbwTinyusb(const uint8_t cbwRaw[31], int64_t tUs) {
     if (!session_ || !session_->active() || !cbwRaw) return;
     msc_cbw_t cbw;
     memcpy(&cbw, cbwRaw, 31);
@@ -353,7 +353,7 @@ void ReadInstrument::emitBotCbwTinyusb(const uint8_t cbwRaw[31]) {
     }
 
     JsonDocument doc;
-    stamp(doc);
+    stampAt(doc, tUs);
     doc["ev"] = "bot_cbw";
     doc["bot_tag"] = cbw.tag;
     doc["bot_source"] = "tinyusb";
@@ -374,14 +374,14 @@ void ReadInstrument::emitBotCbwTinyusb(const uint8_t cbwRaw[31]) {
     EventBus::instance().publish(doc);
 }
 
-void ReadInstrument::emitBotDataTinyusb(uint32_t botTag, uint32_t lba, uint32_t nBytes,
+void ReadInstrument::emitBotDataTinyusb(int64_t tUs, uint32_t botTag, uint32_t lba, uint32_t nBytes,
                                         uint32_t durUs, uint32_t gapUs, const char* tag,
                                         const char* kind, const char* dir) {
     windowBytes_ += nBytes;
     if (!session_ || !session_->active()) return;
 
     JsonDocument doc;
-    stamp(doc);
+    stampAt(doc, tUs);
     doc["ev"] = "bot_data";
     doc["bot_tag"] = botTag;
     doc["bot_source"] = "tinyusb";
@@ -395,9 +395,12 @@ void ReadInstrument::emitBotDataTinyusb(uint32_t botTag, uint32_t lba, uint32_t 
     if (tag) doc["tag"] = tag;
     if (kind) doc["kind"] = kind;
     EventBus::instance().publish(doc);
+
+    // Comfort read immediately after bot_data with the same Capture-tUs (0.2.12).
+    emitReadAggregate(tUs, botTag, lba, nBytes, durUs, gapUs, tag, kind);
 }
 
-void ReadInstrument::emitBotCswTinyusb(const uint8_t cswRaw[13]) {
+void ReadInstrument::emitBotCswTinyusb(const uint8_t cswRaw[13], int64_t tUs) {
     if (!session_ || !session_->active() || !cswRaw) return;
     msc_csw_t csw;
     memcpy(&csw, cswRaw, 13);
@@ -407,7 +410,7 @@ void ReadInstrument::emitBotCswTinyusb(const uint8_t cswRaw[13]) {
     bytesToHex(cswRaw, 13, cswHex, sizeof(cswHex));
 
     JsonDocument doc;
-    stamp(doc);
+    stampAt(doc, tUs);
     doc["ev"] = "bot_csw";
     doc["bot_tag"] = csw.tag;
     doc["bot_source"] = "tinyusb";
@@ -419,11 +422,11 @@ void ReadInstrument::emitBotCswTinyusb(const uint8_t cswRaw[13]) {
 }
 
 void ReadInstrument::emitUsbControlTinyusb(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue,
-                                           uint16_t wIndex, uint16_t wLength) {
+                                           uint16_t wIndex, uint16_t wLength, int64_t tUs) {
     if (!session_ || !session_->active()) return;
 
     JsonDocument doc;
-    stamp(doc);
+    stampAt(doc, tUs);
     doc["ev"] = "usb";
     doc["usb_ev"] = "control";
     doc["bot_source"] = "tinyusb";
@@ -453,10 +456,10 @@ void ReadInstrument::emitUsbControlTinyusb(uint8_t bmRequestType, uint8_t bReque
     EventBus::instance().publish(doc);
 }
 
-void ReadInstrument::emitBotNeedResetTinyusb() {
+void ReadInstrument::emitBotNeedResetTinyusb(int64_t tUs) {
     if (!session_ || !session_->active()) return;
     JsonDocument doc;
-    stamp(doc);
+    stampAt(doc, tUs);
     doc["ev"] = "usb";
     doc["usb_ev"] = "bot_need_reset";
     doc["bot_source"] = "tinyusb";

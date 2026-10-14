@@ -19,7 +19,7 @@
 #define WIFI_RECONNECT_EVERY_MS 10000
 #endif
 #ifndef WIFI_RESTART_AFTER_MS
-#define WIFI_RESTART_AFTER_MS 90000
+#define WIFI_RESTART_AFTER_MS 25000
 #endif
 
 App& App::instance() {
@@ -214,11 +214,12 @@ void App::superviseWifi() {
 
 void App::loop() {
     superviseWifi();
+    // Drain Capture-tUs BOT/read before loop-now status/health (keeps t_us non-decreasing).
+    msc_.loop();
+    instrument_.tick();
     hub_.loop();
     tcp_.loop();
     web_.loop();
-    msc_.loop();
-    instrument_.tick();
     led_.tick(session_, msc_, instrument_, tcp_, EventBus::instance());
 
     unsigned long now = millis();

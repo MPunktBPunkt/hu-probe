@@ -10,8 +10,8 @@ Kein weiteres Fremd-Audit für Control/STALL nötig. Nächste Arbeit = **Code in
 
 | Prio | Maßnahme | Status | Hinweis |
 |------|----------|--------|---------|
-| **P0** | `t_us`-Fix: Pending.Data Capture-Zeit + `stampAt`; Validator Regression | **offen** | Blocker vor jeder neuen Baseline |
-| **P0b** | Restart-Timeout ~90 s → ~25 s | empfohlen | Quick Win, parallel zu P0 ok |
+| **P0** | `t_us`-Fix: Pending Capture-Zeit + `stampAt`; Validator Regression | **done in 0.2.12** | Lab-Smoke noch ausstehend |
+| **P0b** | Restart-Timeout ~90 s → ~25 s | **done in 0.2.12** | Quick Win |
 | **P1** | Control/Enum-Hooks nach Audit-Karte: `SET_ADDRESS`, `SET_CONFIGURATION`, `tud_mount_cb`/`tud_umount_cb` | **offen** | Desk fertig; usbd-/mount-Hooks |
 | **P1** | STALL / CLEAR_HALT / BOT-Reset als getrennte Epochs; Clear-Halt ≠ NEED_RESET-Heilung | **teilweise** | `bot_need_reset` da; Stall/BOT-Reset-Epoch schärfen |
 | **P1** | State-Clear bei Mount (Replug ohne VBUS oft ohne Umount) | **offen** | Audit `007`/`008` |

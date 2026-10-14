@@ -1,4 +1,5 @@
 #include "MscBotTap.h"
+#include "core/ProbeClock.h"
 #include "tusb.h"
 #include "class/msc/msc.h"
 #include <cstring>
@@ -62,6 +63,7 @@ void MscBotTap::queueControl(uint8_t bmRequestType, uint8_t bRequest, uint16_t w
                              uint16_t wIndex, uint16_t wLength) {
     Pending p;
     p.kind = Kind::Control;
+    p.tUs = ProbeClock::nowUs();
     p.bmRequestType = bmRequestType;
     p.bRequest = bRequest;
     p.wValue = wValue;
@@ -70,7 +72,7 @@ void MscBotTap::queueControl(uint8_t bmRequestType, uint8_t bRequest, uint16_t w
     queue(p);
 }
 
-void MscBotTap::emitCbwIfNew() {
+void MscBotTap::emitCbwIfNew(int64_t tUs) {
     const uint8_t* cbw = itfCbw();
     if (readLe32(cbw) != MSC_CBW_SIGNATURE) return;
     uint32_t tag = readLe32(cbw + 4);
@@ -80,15 +82,17 @@ void MscBotTap::emitCbwIfNew() {
     needResetArmed_ = false;
     Pending p;
     p.kind = Kind::Cbw;
+    p.tUs = tUs;
     p.botTag = tag;
     memcpy(p.raw, cbw, 31);
     queue(p);
 }
 
-void MscBotTap::emitDataChunk(uint32_t lba, uint32_t nBytes, uint32_t durUs, uint32_t gapUs,
-                              const char* tag, const char* kind, const char* dir) {
+void MscBotTap::emitDataChunk(int64_t tUs, uint32_t lba, uint32_t nBytes, uint32_t durUs,
+                              uint32_t gapUs, const char* tag, const char* kind, const char* dir) {
     Pending p;
     p.kind = Kind::Data;
+    p.tUs = tUs;
     p.botTag = currentHostTag();
     p.lba = lba;
     p.nBytes = nBytes;
@@ -106,6 +110,7 @@ void MscBotTap::emitCsw() {
     if (readLe32(csw) != MSC_CSW_SIGNATURE) return;
     Pending p;
     p.kind = Kind::Csw;
+    p.tUs = ProbeClock::nowUs();
     p.botTag = readLe32(csw + 4);
     memcpy(p.raw, csw, 13);
     queue(p);
@@ -118,12 +123,13 @@ void MscBotTap::emitNeedResetIfNew() {
     cswPending_ = false;
     Pending p;
     p.kind = Kind::NeedReset;
+    p.tUs = ProbeClock::nowUs();
     queue(p);
 }
 
 void MscBotTap::onBotReset() { needResetArmed_ = false; }
 
-void MscBotTap::onNonDataScsiEnter() { emitCbwIfNew(); }
+void MscBotTap::onNonDataScsiEnter() { emitCbwIfNew(ProbeClock::nowUs()); }
 
 void MscBotTap::afterMscdXfer() {
     uint8_t st = itfStage();
@@ -131,10 +137,11 @@ void MscBotTap::afterMscdXfer() {
         emitNeedResetIfNew();
         return;
     }
+    int64_t now = ProbeClock::nowUs();
     if (st == kStageData) {
-        emitCbwIfNew();
+        emitCbwIfNew(now);
     } else if (st == kStageStatus) {
-        emitCbwIfNew();
+        emitCbwIfNew(now);
         emitCsw();
     } else if (st == kStageStatusSent) {
         emitCsw();
@@ -152,21 +159,21 @@ void MscBotTap::drain(int maxEvents) {
         pendingCount_--;
         switch (p.kind) {
             case Kind::Cbw:
-                instrument_->emitBotCbwTinyusb(p.raw);
+                instrument_->emitBotCbwTinyusb(p.raw, p.tUs);
                 break;
             case Kind::Data:
-                instrument_->emitBotDataTinyusb(p.botTag, p.lba, p.nBytes, p.durUs, p.gapUs, p.tag,
-                                                p.kindStr, p.dir);
+                instrument_->emitBotDataTinyusb(p.tUs, p.botTag, p.lba, p.nBytes, p.durUs, p.gapUs,
+                                                p.tag, p.kindStr, p.dir);
                 break;
             case Kind::Csw:
-                instrument_->emitBotCswTinyusb(p.raw);
+                instrument_->emitBotCswTinyusb(p.raw, p.tUs);
                 break;
             case Kind::NeedReset:
-                instrument_->emitBotNeedResetTinyusb();
+                instrument_->emitBotNeedResetTinyusb(p.tUs);
                 break;
             case Kind::Control:
                 instrument_->emitUsbControlTinyusb(p.bmRequestType, p.bRequest, p.wValue, p.wIndex,
-                                                   p.wLength);
+                                                   p.wLength, p.tUs);
                 break;
         }
     }
@@ -276,9 +283,9 @@ void tud_msc_scsi_complete_cb(uint8_t lun, uint8_t const scsi_cmd[16]) {
 
 void MscBotTap::begin(ReadInstrument*) {}
 ReadInstrument* MscBotTap::instrument() { return nullptr; }
-void MscBotTap::emitCbwIfNew() {}
-void MscBotTap::emitDataChunk(uint32_t, uint32_t, uint32_t, uint32_t, const char*, const char*,
-                              const char*) {}
+void MscBotTap::emitCbwIfNew(int64_t) {}
+void MscBotTap::emitDataChunk(int64_t, uint32_t, uint32_t, uint32_t, uint32_t, const char*,
+                              const char*, const char*) {}
 void MscBotTap::emitCsw() {}
 void MscBotTap::emitNeedResetIfNew() {}
 void MscBotTap::onBotReset() {}

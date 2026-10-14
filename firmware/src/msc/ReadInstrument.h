@@ -28,14 +28,16 @@ public:
     void onBotCsw(uint32_t botTag, uint32_t residue, uint8_t status);
 
     /** GATE-01B: host CBW/CSW bytes from TinyUSB `_mscd_itf` (`synthesized=false`). */
-    void emitBotCbwTinyusb(const uint8_t cbw[31]);
-    void emitBotDataTinyusb(uint32_t botTag, uint32_t lba, uint32_t nBytes, uint32_t durUs,
-                            uint32_t gapUs, const char* tag, const char* kind, const char* dir);
-    void emitBotCswTinyusb(const uint8_t csw[13]);
+    void emitBotCbwTinyusb(const uint8_t cbw[31], int64_t tUs);
+    /** bot_data + comfort read at same Capture-tUs (keeps seq/t_us non-decreasing). */
+    void emitBotDataTinyusb(int64_t tUs, uint32_t botTag, uint32_t lba, uint32_t nBytes,
+                            uint32_t durUs, uint32_t gapUs, const char* tag, const char* kind,
+                            const char* dir);
+    void emitBotCswTinyusb(const uint8_t csw[13], int64_t tUs);
     void emitUsbControlTinyusb(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue,
-                               uint16_t wIndex, uint16_t wLength);
+                               uint16_t wIndex, uint16_t wLength, int64_t tUs);
     /** TinyUSB MSC_STAGE_NEED_RESET (invalid CBW → stall both EPs). */
-    void emitBotNeedResetTinyusb();
+    void emitBotNeedResetTinyusb(int64_t tUs);
     /** Comfort `read` only (BOT chain already emitted as tinyusb). */
     void emitReadAggregate(int64_t tUs, uint32_t botTag, uint32_t lba, uint32_t nBytes,
                            uint32_t durUs, uint32_t gapUs, const char* tag, const char* kind);

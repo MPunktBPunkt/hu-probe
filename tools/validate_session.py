@@ -72,8 +72,10 @@ def main() -> int:
     if tus:
         back = sum(1 for i in range(1, len(tus)) if tus[i] < tus[i - 1])
         if back:
-            # Allowed after 0.2.3 fix for drain vs capture; still flag for audit.
-            warns.append(f"t_us regressions={back} (check capture-vs-drain stamping)")
+            # 0.2.12+: Capture-tUs on deferred BOT; regressions are a hard FAIL.
+            fails.append(
+                f"t_us regressions={back} (need FW ≥0.2.12 capture stamp on bot_data/read)"
+            )
         else:
             oks.append("t_us non-decreasing")
 

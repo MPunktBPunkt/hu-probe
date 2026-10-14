@@ -9,7 +9,7 @@
 - [x] Monotonic µs-Timestamp (`t_us`) auf Events (Capture-Zeit ab 0.2.3)
 - [x] Global per-Session `seq` (thread-safe); Lücken über Collector `recv_seq_gaps` + TCP peek→pop (0.2.4)
 - [x] `gap_us` aus µs-Uhr (uint32)
-- [ ] Event-Stream `t_us` monoton über BOT+read (0.2.11-Regression: `bot_data` Drain-Stamp vs `read` Capture — Fix vor Baseline)
+- [x] Event-Stream `t_us` monoton über BOT+read (0.2.12: Capture-`tUs` im Pending-Ring + comfort read mit `bot_data`)
 
 ### USB Enumeration / Control
 
