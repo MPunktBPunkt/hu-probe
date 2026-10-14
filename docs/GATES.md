@@ -2,22 +2,23 @@
 
 ## HU-PROBE-GATE-01 — Measurement Integrity
 
-**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8**, Class-Driver-Hooks hardened **0.2.9**; Standard-Control-Sniff noch lückenhaft)
+**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8**, Class-Driver-Hooks hardened **0.2.9**; Standard-Control/STALL: **Desk-Hook-Karte da**, Implementierung ausstehend)
 
 ### Zeit & Sequenz
 
 - [x] Monotonic µs-Timestamp (`t_us`) auf Events (Capture-Zeit ab 0.2.3)
 - [x] Global per-Session `seq` (thread-safe); Lücken über Collector `recv_seq_gaps` + TCP peek→pop (0.2.4)
 - [x] `gap_us` aus µs-Uhr (uint32)
+- [ ] Event-Stream `t_us` monoton über BOT+read (0.2.11-Regression: `bot_data` Drain-Stamp vs `read` Capture — Fix vor Baseline)
 
 ### USB Enumeration / Control
 
 - [x] USB attach/detach/suspend/resume sichtbar (Host + Soft)
 - [~] Control-Transfer-Visibility: **MSC-Class** (GET_MAX_LUN / BOT_RESET) ab 0.2.8; Standard-Device-Requests noch nicht vollständig
 - [~] Descriptor-Capture: **gadget_identity**-Events bei Attach (synthetisch) + ggf. Class-Control
-- [ ] SET_ADDRESS / SET_CONFIGURATION in der Timeline (usbd-Hook ausstehend)
+- [ ] SET_ADDRESS / SET_CONFIGURATION in der Timeline — Desk-Karte: [control-stall intake](feld/2026-10-14-audit-control-stall-recovery.md); usbd-Hook + `tud_mount_cb` ausstehend
 - [~] Endpoint / Direction auf USB-Events (teilweise)
-- [ ] STALL / CLEAR_HALT / Reset-Recovery
+- [~] STALL / CLEAR_HALT / Reset-Recovery — `bot_need_reset` da (0.2.9); Clear-Halt ≠ NEED_RESET-Heilung (Audit); BOT-Reset-Epoch + Stall-Events ausstehend
 
 ### BOT / SCSI Evidenz
 
@@ -42,7 +43,7 @@
 
 ### Freigabe
 
-**Closed** erst wenn Stufe B vollständig (BOT ok ab 0.2.8/0.2.9 + Standard-Control-Sniff) + Lab-Dry-Run `dropped=0` / keine `recv_seq_gaps`.  
-Stufe A (0.2.6) = Synth. Stufe B BOT (0.2.8) = TinyUSB-Host-CBW/CSW; **0.2.9** = Class-Driver-Hooks (`mscd_xfer_cb` / NEED_RESET). Wire-Paketebene bleibt UNKNOWN.
+**Closed** erst wenn Stufe B vollständig (BOT ok ab 0.2.8/0.2.9 + Standard-Control/STALL **implementiert und Lab-Dry-Run**) + Event-`t_us` monoton + `dropped=0` / keine `recv_seq_gaps`.  
+Stufe A (0.2.6) = Synth. Stufe B BOT (0.2.8) = TinyUSB-Host-CBW/CSW; **0.2.9** = Class-Driver-Hooks (`mscd_xfer_cb` / NEED_RESET). Control/STALL-Desk: Audit `usb-control-stall-recovery-2026` (`5fab7f5`) — ersetzt keine Implementation. Wire-Paketebene bleibt UNKNOWN.
 
-Verwandt: Technology-Audit `usb-bot-observation-2026-instrument-sources` · [Audit-Intake](feld/2026-10-14-audit-instrument-sources.md). GATE-01 ist die **Instrumenten**-Voraussetzung.
+Verwandt: [BOT instrument-sources](feld/2026-10-14-audit-instrument-sources.md) · [Control/STALL recovery](feld/2026-10-14-audit-control-stall-recovery.md). GATE-01 ist die **Instrumenten**-Voraussetzung.
