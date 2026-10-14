@@ -14,8 +14,8 @@ void ConfigStore::applyDefaults() {
     collectorHost = COLLECTOR_HOST_DEFAULT;
     collectorPort = COLLECTOR_PORT_DEFAULT;
     enableCollector = true;
-    vehicleId = "bmw";
-    profileId = "bmw_nbt_evo";
+    vehicleId = "lab_debian";
+    profileId = "lab_debian";
     scenarioId = "s0_plug_enum";
     enableNtp = true;
     ntpServer = NTP_SERVER_DEFAULT;

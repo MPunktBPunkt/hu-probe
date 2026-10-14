@@ -27,6 +27,8 @@ sessions/YYYYMMDD-HHMMSS_<vehicle>_<scenario>/
   "ended_at": null,
   "vehicle": "bmw",
   "profile_id": "bmw_nbt_evo",
+  "usb_host_kind": "bmw_nbt_evo",
+  "usb_host_role": "vehicle_hu",
   "scenario": "s0_plug_enum",
   "fw_version": "0.1.1",
   "fw_type": "hu-probe",

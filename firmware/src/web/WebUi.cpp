@@ -15,7 +15,11 @@ static const char* PAGE =
     "</style></head><body>"
     "<h1>hu-probe</h1><p class=muted>Head-Unit MSC Messsonde · " FW_VERSION "</p>"
     "<div class=row>"
-    "<label>Vehicle <select id=v><option value=bmw>bmw</option><option value=mazda_cx30>mazda_cx30</option></select></label>"
+    "<label>Vehicle <select id=v>"
+    "<option value=lab_debian>lab_debian (USB-Host Linux)</option>"
+    "<option value=bmw>bmw (NBT Evo)</option>"
+    "<option value=mazda_cx30>mazda_cx30</option>"
+    "</select></label>"
     "<label>Scenario <select id=s>"
     "<option value=s0_plug_enum>s0_plug_enum</option>"
     "<option value=s1_eager_eof>s1_eager_eof</option>"
@@ -27,6 +31,7 @@ static const char* PAGE =
     "<option value=s7_lifecycle>s7_lifecycle</option>"
     "</select></label>"
     "</div>"
+    "<p class=muted>Lab vs Auto: vehicle+profile+MAC trennen Sessions. lab_debian ≠ BMW-Facts.</p>"
     "<div class=row>"
     "<button onclick=start()>Start Session</button>"
     "<button class=sec onclick=stop()>Stop</button>"
@@ -36,9 +41,10 @@ static const char* PAGE =
     "</div>"
     "<pre id=st>loading…</pre>"
     "<script>"
+    "const PROFILE={lab_debian:'lab_debian',bmw:'bmw_nbt_evo',mazda_cx30:'mazda_cx30'};"
     "async function refresh(){const r=await fetch('/api/status');st.textContent=JSON.stringify(await r.json(),null,2)}"
     "async function start(){await fetch('/api/session/start',{method:'POST',headers:{'Content-Type':'application/json'},"
-    "body:JSON.stringify({vehicle:v.value,scenario:s.value})});refresh()}"
+    "body:JSON.stringify({vehicle:v.value,scenario:s.value,profile_id:PROFILE[v.value]||v.value})});refresh()}"
     "async function stop(){await fetch('/api/session/stop',{method:'POST'});refresh()}"
     "async function mark(){await fetch('/api/marker',{method:'POST',headers:{'Content-Type':'application/json'},"
     "body:JSON.stringify({name:'operator'})});refresh()}"
@@ -144,17 +150,31 @@ void WebUi::handleConfigPost() {
     server_.send(200, "application/json", "{\"ok\":true}");
 }
 
+static String profileForVehicle(const String& vehicle, const String& fallback) {
+    if (vehicle == "lab_debian") return "lab_debian";
+    if (vehicle == "bmw") return "bmw_nbt_evo";
+    if (vehicle == "mazda_cx30") return "mazda_cx30";
+    return fallback;
+}
+
 void WebUi::handleSessionStart() {
-    String vehicle = cfg_ ? cfg_->vehicleId : "bmw";
+    String vehicle = cfg_ ? cfg_->vehicleId : "lab_debian";
     String scenario = cfg_ ? cfg_->scenarioId : "s0_plug_enum";
-    String profile = cfg_ ? cfg_->profileId : "bmw_nbt_evo";
+    String profile = cfg_ ? cfg_->profileId : "lab_debian";
+    bool profileExplicit = false;
     if (server_.hasArg("plain")) {
         JsonDocument doc;
         if (!deserializeJson(doc, server_.arg("plain"))) {
             if (doc["vehicle"].is<const char*>()) vehicle = doc["vehicle"].as<String>();
             if (doc["scenario"].is<const char*>()) scenario = doc["scenario"].as<String>();
-            if (doc["profile_id"].is<const char*>()) profile = doc["profile_id"].as<String>();
+            if (doc["profile_id"].is<const char*>()) {
+                profile = doc["profile_id"].as<String>();
+                profileExplicit = true;
+            }
         }
+    }
+    if (!profileExplicit) {
+        profile = profileForVehicle(vehicle, profile);
     }
     if (cfg_) {
         cfg_->vehicleId = vehicle;

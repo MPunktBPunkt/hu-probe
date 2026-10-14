@@ -19,8 +19,9 @@ public:
     int collectorPort = COLLECTOR_PORT_DEFAULT;
     bool enableCollector = true;
 
-    String vehicleId = "bmw";
-    String profileId = "bmw_nbt_evo";
+    // Lab default: never silently tag dry-runs as BMW.
+    String vehicleId = "lab_debian";
+    String profileId = "lab_debian";
     String scenarioId = "s0_plug_enum";
 
     bool enableNtp = true;

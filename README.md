@@ -48,12 +48,13 @@ SoftAP-Setup: `ESP-HuProbe-Setup`.
 - [Medienvariation](docs/MEDIA_VARIATION.md)
 - [Feldauswertung BMW S0](docs/feld/2026-10-14-bmw-s0-auswertung.md) · [Review-Triage](docs/feld/2026-10-14-review-triage.md)
 
-## Status (v0.2.4) — Capture-Härtung + 512 KiB-Medium
+## Status (v0.2.5) — Lab vs Auto klar getrennt
 
 - BMW-S0-Baseline (FW 0.2.2): 4 KiB Mode, Gap-p50 3724 µs, 6/8 Fenster = 22-Read
-- FW **0.2.3**: Capture-`t_us` · **0.2.4**: TCP peek→TX→pop, thread-safe Seq, `msc_sample_overflow` in capture_health, **512 KiB** Silence-MP3-FAT
-- Tools: `validate_session`, `fingerprint_session`, `correlate_windows`, `build_demo_fat`
-- OTA `.88`/`.89` ausstehend (Geräte offline) · GATE-01 offen · Mazda-Profil null
+- FW **0.2.5**: Default `vehicle/profile=lab_debian`, Session-Felder `usb_host_kind` / `usb_host_role`
+- Unterscheidung: Ordner `*_lab_debian_*` vs `*_bmw_*`, MAC `.88` vs `.89`, Profil `lab_debian` vs `bmw_nbt_evo`
+- Lab-Lauf: `./tools/lab_s0_run.sh` · Auto-OTA: `./tools/ota_car_esp.sh`
+- GATE-01 offen · Mazda-Profil null
 
 ```bash
 cd firmware && pio run -e huprobe-s3 -t upload

@@ -52,6 +52,20 @@ bool Session::start(const String& vehicle, const String& scenario, const String&
     doc["profile_id"] = profileId_;
     doc["fw_version"] = FW_VERSION;
     doc["fw_type"] = FW_TYPE;
+    // Explicit host class so lab Debian can never be mistaken for a car HU.
+    if (vehicle_ == "lab_debian") {
+        doc["usb_host_kind"] = "linux_debian";
+        doc["usb_host_role"] = "lab_reference";
+    } else if (vehicle_ == "bmw") {
+        doc["usb_host_kind"] = "bmw_nbt_evo";
+        doc["usb_host_role"] = "vehicle_hu";
+    } else if (vehicle_ == "mazda_cx30") {
+        doc["usb_host_kind"] = "mazda_cx30";
+        doc["usb_host_role"] = "vehicle_hu";
+    } else {
+        doc["usb_host_kind"] = "unknown";
+        doc["usb_host_role"] = "unknown";
+    }
     {
         uint8_t mac[6];
         WiFi.macAddress(mac);

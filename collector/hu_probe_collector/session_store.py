@@ -99,7 +99,15 @@ class SessionStore:
 
         if event.get("ev") == "session" and event.get("action") == "start":
             data = load()
-            for key in ("vehicle", "scenario", "profile_id", "fw_version", "mac"):
+            for key in (
+                "vehicle",
+                "scenario",
+                "profile_id",
+                "fw_version",
+                "mac",
+                "usb_host_kind",
+                "usb_host_role",
+            ):
                 if event.get(key) is not None:
                     data[key] = event.get(key)
             if event.get("fw_type"):
