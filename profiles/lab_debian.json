@@ -1,36 +1,45 @@
 {
   "profile_id": "lab_debian",
   "vehicle": "lab_debian",
-  "label": "Lab USB-Host (Debian/Linux) — instrument reference, not a HU",
+  "label": "Lab / Proxmox USB-Host (Debian LXC) — instrument reference, not a HU",
   "schema": 2,
   "source": {
     "epistemic": "Lab host for dry-run / GATE-01 / firmware validation only",
-    "notes": "Never treat lab_debian fingerprints as BMW or Mazda facts. Compare only instrument health and crude xfer sizes."
+    "notes": "ESP .88 on Proxmox Genesys hub, passed through as /dev/sda HU_PROBE. Never treat fingerprints as BMW or Mazda facts.",
+    "params_as_of": "2026-10-14",
+    "params_fw": "0.2.6–0.2.7",
+    "params_status": "preliminary_until_fresh_0.2.7_triplicate_after_power_cycle"
   },
   "usb_host": {
     "kind": "linux_debian",
-    "role": "lab_reference"
+    "role": "lab_reference",
+    "topology": "proxmox_host_genesys_hub_passthrough_lxc",
+    "block_device": "/dev/sda",
+    "model": "HU_PROBE"
   },
   "expectations": {
-    "enum_s_approx": null,
+    "enum_s_approx": 0.3,
     "tur_hz_approx": null,
     "queue_depth": null,
-    "writes_expected": null,
-    "read_size_bytes_mode": null,
-    "gap_ms_p50_idle": null,
+    "writes_expected": false,
+    "read_size_bytes_mode": 4096,
+    "gap_ms_p50_idle": 4.2,
+    "gap_us_p50_pace_range": [3900, 4400],
     "eager_eof": null,
     "prefetch_lead_s_approx": null,
     "busy_tone_s_approx": null,
     "stall_off_tone_s_approx": null,
     "cache_hit_no_reads_on_replay": null,
-    "remount_full_reread": null
+    "remount_full_reread": null,
+    "soft_detach_attach_s_approx": 0.30,
+    "bot_synth_order": ["bot_cbw", "bot_data", "read", "bot_csw"]
   },
   "fingerprint_template": {
-    "xfer_hist": {},
-    "kinds": [],
+    "xfer_hist": { "4096": "dominant", "512": "minor" },
+    "kinds": ["boot", "dir", "fat", "file"],
     "resume": null,
-    "identity_sensitivity": null
+    "identity_sensitivity": "serial_bump_HP000x"
   },
   "sessions": [],
-  "open_gates": ["instrument_only"]
+  "open_gates": ["instrument_only", "await_fresh_triplicate_0.2.7"]
 }

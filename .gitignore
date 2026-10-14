@@ -27,10 +27,6 @@ sessions/*
 !sessions/.gitkeep
 !sessions/20261014-081637_bmw_s0_plug_enum/
 !sessions/20261014-081637_bmw_s0_plug_enum/**
-!sessions/20261014-125119_lab_debian_s0_plug_enum/
-!sessions/20261014-125119_lab_debian_s0_plug_enum/**
-!sessions/20261014-125659_lab_debian_s0_plug_enum/
-!sessions/20261014-125659_lab_debian_s0_plug_enum/**
 sessions/**/collector.*
 
 # Firmware artifacts (release bins under firmware/dist/ are tracked)
