@@ -1,15 +1,22 @@
 # Feldtest v0.2.0 — erster HU-Lauf
 
-## Flash (USB-UART, nicht OTG)
+## Flash Auto-ESP `.89` (aus pidrive heraus)
+
+Gerät: **PiDrive-USB** `192.168.178.89` / MAC `68B6B32BC568` (aktuell pidrive, OTA-fähig).
+
+Wenn du im Auto bist und der ESP online ist:
 
 ```bash
-cd firmware
-pio run -e huprobe-s3 -t upload
+cd /home/martin/projects/hu-probe
+./tools/ota_car_esp.sh
 ```
 
-Artifact: `firmware/dist/hu-probe.0.2.0.esp32s3.bin`
+Das Skript startet den Collector, wartet auf `.89`, flash’t per `POST /ota-upload`, wartet auf hu-probe.
 
-OTG-Port der S3 geht zur **HU**; Flash über UART-Bridge.
+Nur Status: `./tools/ota_car_esp.sh --status`
+
+Artifact: `firmware/dist/hu-probe.0.2.0.esp32s3.bin`  
+OTG-Port → **HU**; OTA läuft über WLAN.
 
 ## Im Auto
 
