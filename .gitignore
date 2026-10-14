@@ -45,6 +45,14 @@ sessions/*
 !sessions/20261014-182045_lab_debian_s0_plug_enum/**
 !sessions/20261014-182234_lab_debian_s0_plug_enum/
 !sessions/20261014-182234_lab_debian_s0_plug_enum/**
+!sessions/20261014-202437_lab_debian_s0_plug_enum/
+!sessions/20261014-202437_lab_debian_s0_plug_enum/**
+!sessions/20261014-202518_lab_debian_s0_plug_enum/
+!sessions/20261014-202518_lab_debian_s0_plug_enum/**
+!sessions/20261014-202600_lab_debian_s0_plug_enum/
+!sessions/20261014-202600_lab_debian_s0_plug_enum/**
+!sessions/20261014-203943_lab_debian_s0_plug_enum/
+!sessions/20261014-203943_lab_debian_s0_plug_enum/**
 sessions/**/collector.*
 
 # Firmware artifacts (release bins under firmware/dist/ are tracked)

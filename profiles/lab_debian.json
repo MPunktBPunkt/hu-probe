@@ -7,8 +7,8 @@
     "epistemic": "Lab host for dry-run / GATE-01 / firmware validation only",
     "notes": "ESP .88 on Proxmox Genesys hub, passed through as /dev/sda HU_PROBE. Never treat fingerprints as BMW or Mazda facts.",
     "params_as_of": "2026-10-14",
-    "params_fw": "0.2.6–0.2.7",
-    "params_status": "preliminary_until_fresh_0.2.7_triplicate_after_power_cycle"
+    "params_fw": "0.2.13",
+    "params_status": "lab_triple_0.2.13_soft_remount_dd; t_us clamp smoke 203943"
   },
   "usb_host": {
     "kind": "linux_debian",
@@ -23,7 +23,7 @@
     "queue_depth": null,
     "writes_expected": false,
     "read_size_bytes_mode": 4096,
-    "gap_ms_p50_idle": 4.2,
+    "gap_ms_p50_idle": 4.1,
     "gap_us_p50_pace_range": [3900, 4400],
     "eager_eof": null,
     "prefetch_lead_s_approx": null,
@@ -32,7 +32,8 @@
     "cache_hit_no_reads_on_replay": null,
     "remount_full_reread": null,
     "soft_detach_attach_s_approx": 0.30,
-    "bot_synth_order": ["bot_cbw", "bot_data", "read", "bot_csw"]
+    "bot_synth_order": ["bot_cbw", "bot_data", "read", "bot_csw"],
+    "control_hooks": ["set_address", "mount", "umount", "ep_stall", "clear_halt"]
   },
   "fingerprint_template": {
     "xfer_hist": { "4096": "dominant", "512": "minor" },
@@ -40,6 +41,11 @@
     "resume": null,
     "identity_sensitivity": "serial_bump_HP000x"
   },
-  "sessions": [],
-  "open_gates": ["instrument_only", "await_fresh_triplicate_0.2.7"]
+  "sessions": [
+    "20261014-202437_lab_debian_s0_plug_enum",
+    "20261014-202518_lab_debian_s0_plug_enum",
+    "20261014-202600_lab_debian_s0_plug_enum",
+    "20261014-203943_lab_debian_s0_plug_enum"
+  ],
+  "open_gates": ["instrument_only", "GATE-01_await_formal_close"]
 }

@@ -21,6 +21,13 @@ inline int64_t nowUs() {
 inline void observeEventTUs(int64_t tUs) {
     if (tUs > lastEventTUsRef()) lastEventTUsRef() = tUs;
 }
+/** Clamp Capture-tUs up to last published, then raise watermark. Use for every emit. */
+inline int64_t publishUs(int64_t tUs) {
+    int64_t last = lastEventTUsRef();
+    if (tUs < last) tUs = last;
+    observeEventTUs(tUs);
+    return tUs;
+}
 inline int64_t eventNowUs() {
     int64_t n = nowUs();
     int64_t last = lastEventTUsRef();

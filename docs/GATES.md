@@ -2,7 +2,7 @@
 
 ## HU-PROBE-GATE-01 — Measurement Integrity
 
-**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8**; Control/STALL-Hooks ab **0.2.13** — Lab-Dry-Run gegen Kill-Kriterien noch offen)
+**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8**; Control/STALL-Hooks ab **0.2.13**; Lab-Dry-Run Kill 1–3 **PASS** — formal Close + lange BMW-Timeline noch offen)
 
 ### Zeit & Sequenz
 
@@ -43,7 +43,7 @@
 
 ### Freigabe
 
-**Closed** erst wenn Stufe B vollständig (BOT ok ab 0.2.8/0.2.9 + Standard-Control/STALL **implementiert und Lab-Dry-Run**) + Event-`t_us` monoton + `dropped=0` / keine `recv_seq_gaps`.  
-Stufe A (0.2.6) = Synth. Stufe B BOT (0.2.8) = TinyUSB-Host-CBW/CSW; **0.2.9** = Class-Driver-Hooks (`mscd_xfer_cb` / NEED_RESET). Control/STALL-Desk: Audit `usb-control-stall-recovery-2026` (`5fab7f5`) — ersetzt keine Implementation. Wire-Paketebene bleibt UNKNOWN.
+**Closed** erst wenn Stufe B vollständig (BOT ok ab 0.2.8/0.2.9 + Standard-Control/STALL **implementiert und Lab-Dry-Run**) + Event-`t_us` monoton + `dropped=0` / keine `recv_seq_gaps` + formale Freigabe.  
+Lab 0.2.13: Kill 1–3 PASS, Gap-p50 ~4,0–4,4 ms, `publishUs`-Clamp Smoke `t_us` OK — siehe [lab-debian-s0-0.2.13](feld/2026-10-14-lab-debian-s0-0.2.13.md). Wire-Paketebene bleibt UNKNOWN.
 
 Verwandt: [BOT instrument-sources](feld/2026-10-14-audit-instrument-sources.md) · [Control/STALL recovery](feld/2026-10-14-audit-control-stall-recovery.md). GATE-01 ist die **Instrumenten**-Voraussetzung.

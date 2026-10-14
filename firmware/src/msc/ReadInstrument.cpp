@@ -33,7 +33,9 @@ void ReadInstrument::stamp(JsonDocument& doc) {
 }
 
 void ReadInstrument::stampAt(JsonDocument& doc, int64_t tUs) {
-    ProbeClock::observeEventTUs(tUs);
+    // Late Capture-tUs (deferred BOT / phase with older mount stamp) must not walk
+    // the timeline backwards. Pace remains in gap_us/dur_us.
+    tUs = ProbeClock::publishUs(tUs);
     doc["v"] = 2;
     if (session_) {
         doc["sid"] = session_->id();

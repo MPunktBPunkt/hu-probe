@@ -157,6 +157,8 @@ void MscGadget::remountMedia(bool bumpIdentity) {
     MSC.mediaPresent(false);
     mediaPresented_ = false;
     remountHoldUntilMs_ = millis() + 600;
+    // Flush deferred Capture-tUs BOT before remount phase stamp.
+    MscBotTap::drain(128);
     if (session_ && session_->active()) {
         session_->setPhase("remount", bumpIdentity ? serial_ : "keepId");
     }

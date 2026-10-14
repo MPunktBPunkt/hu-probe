@@ -108,8 +108,7 @@ void Session::setPhase(const String& phase, const String& note, int64_t tUs) {
     phase_ = phase;
     if (!active_) return;
     JsonDocument doc;
-    int64_t t = (tUs > 0) ? tUs : ProbeClock::eventNowUs();
-    ProbeClock::observeEventTUs(t);
+    int64_t t = ProbeClock::publishUs((tUs > 0) ? tUs : ProbeClock::eventNowUs());
     doc["v"] = 2;
     doc["sid"] = id_;
     doc["seq"] = nextSeq();
