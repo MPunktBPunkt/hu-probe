@@ -30,4 +30,5 @@ sessions/*
 firmware/.pio/
 *.bin
 !firmware/dist/*.bin
+!firmware/src/msc/demo_fat.bin
 !profiles/**
