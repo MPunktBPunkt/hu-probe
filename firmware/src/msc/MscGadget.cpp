@@ -1,4 +1,5 @@
 #include "MscGadget.h"
+#include "MscBotTap.h"
 #include "DemoFatImage.h"
 #include "BuildFlags.h"
 #include "core/ProbeClock.h"
@@ -47,6 +48,7 @@ void MscGadget::begin(Session* session, ReadInstrument* instrument) {
     g_msc = this;
     remountGen_ = 1;
     snprintf(serial_, sizeof(serial_), "HP%04u", (unsigned)remountGen_);
+    MscBotTap::begin(instrument);
 
     USB.onEvent(usb_event_cb);
     MSC.vendorID("HUPROBE");
@@ -81,6 +83,7 @@ void MscGadget::loop() {
         remountHoldUntilMs_ = 0;
         presentMedia("remount");
     }
+    MscBotTap::poll();
     drainSamples();
 }
 
@@ -235,13 +238,25 @@ int32_t MscGadget::onRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t 
     lastReadEndUs_ = t1;
     readCount_++;
 
+    char tag[8];
+    char kind[8];
+    tagForLba(lba, tag, sizeof(tag), kind, sizeof(kind));
+
+    // GATE-01B: real host CBW on first DATA chunk of this BOT command.
+    if (offset == 0) {
+        MscBotTap::emitCbwIfNew();
+    }
+    MscBotTap::emitDataChunk(lba, bufsize, dur, gap, tag, kind, "in");
+
     Sample s;
     s.tUs = t0;
     s.lba = lba;
     s.n = bufsize;
     s.durUs = dur;
     s.gapUs = gap;
-    tagForLba(lba, s.tag, sizeof(s.tag), s.kind, sizeof(s.kind));
+    s.botTag = MscBotTap::currentHostTag();
+    snprintf(s.tag, sizeof(s.tag), "%s", tag);
+    snprintf(s.kind, sizeof(s.kind), "%s", kind);
     pushSample(s);
     return (int32_t)bufsize;
 }
@@ -281,8 +296,11 @@ void MscGadget::drainSamples() {
         if (!instrument_) continue;
         if (s.scsi == 1) {
             instrument_->onScsi("write10");
+        } else if (MscBotTap::realBotEnabled()) {
+            // BOT CBW/DATA/CSW already emitted from TinyUSB tap — comfort read only.
+            instrument_->emitReadAggregate(s.tUs, s.botTag, s.lba, s.n, s.durUs, s.gapUs, s.tag,
+                                           s.kind);
         } else {
-            // Nur timed read — volle BOT-Roh-Evidenz kommt mit TinyUSB-Wrap (GATE-01).
             instrument_->emitBotRead10Synth(s.tUs, s.lba, s.n, s.durUs, s.gapUs, s.tag, s.kind);
         }
     }

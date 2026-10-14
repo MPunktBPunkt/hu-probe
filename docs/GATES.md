@@ -2,7 +2,7 @@
 
 ## HU-PROBE-GATE-01 — Measurement Integrity
 
-**Status:** open (Stufe A teilweise erfüllt in FW ≥0.2.6; Roh-Host-Control & echter TinyUSB-CBW noch offen)
+**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8** über TinyUSB `_mscd_itf`; Standard-Control-Sniff noch lückenhaft)
 
 ### Zeit & Sequenz
 
@@ -13,20 +13,20 @@
 ### USB Enumeration / Control
 
 - [x] USB attach/detach/suspend/resume sichtbar (Host + Soft)
-- [ ] Control-Transfer-Visibility (bmRequestType, …) — Host-Sniff fehlt
-- [~] Descriptor-Capture: **gadget_identity**-Events bei Attach (synthetisch aus lokaler Identity, kein Host-Control)
-- [ ] SET_ADDRESS / SET_CONFIGURATION in der Timeline
+- [~] Control-Transfer-Visibility: **MSC-Class** (GET_MAX_LUN / BOT_RESET) ab 0.2.8; Standard-Device-Requests noch nicht vollständig
+- [~] Descriptor-Capture: **gadget_identity**-Events bei Attach (synthetisch) + ggf. Class-Control
+- [ ] SET_ADDRESS / SET_CONFIGURATION in der Timeline (usbd-Hook ausstehend)
 - [~] Endpoint / Direction auf USB-Events (teilweise)
 - [ ] STALL / CLEAR_HALT / Reset-Recovery
 
 ### BOT / SCSI Evidenz
 
-- [~] BOT CBW: `raw_hex` + Decode — **`bot_source=msc_synth`** aus MSC-Read (kein TinyUSB-Roh-CBW)
-- [~] SCSI CDB: READ(10) synthetisiert aus LBA/Länge
+- [x] BOT CBW: `raw_hex` + Decode — **`bot_source=tinyusb`**, Host-Tag (0.2.8)
+- [x] SCSI CDB: aus Host-CBW (READ10/WRITE10/TUR/…)
 - [x] DATA: expected/actual/dur/gap
-- [~] CSW: synthetisiert (status=passed) parallel zum Read
+- [x] CSW: Host-CSW bytes (`synthesized=false`)
 - [x] Inter-command gap (`gap_us`) aus Capture-Zeit
-- [ ] Echte CBW/CSW-Bytes vom Bus (TinyUSB-Hook) — Stufe B
+- [x] Echte CBW/CSW-Bytes aus TinyUSB Device-State (nicht Wire-Capture)
 
 ### Capture Health / Forensik
 
@@ -40,7 +40,7 @@
 
 ### Freigabe
 
-**Closed** erst wenn Stufe B (echter Bus-CBW + Control-Sniff) + Lab-Dry-Run `dropped=0` / keine `recv_seq_gaps`.  
-Stufe A (0.2.6) erlaubt instrumentierte Lab-/Feldläufe mit klar markierter Synthese (`synthesized: true`).
+**Closed** erst wenn Stufe B vollständig (BOT ok ab 0.2.8 + Standard-Control-Sniff) + Lab-Dry-Run `dropped=0` / keine `recv_seq_gaps`.  
+Stufe A (0.2.6) = Synth. Stufe B BOT (0.2.8) = TinyUSB-Host-CBW/CSW; Wire-Paketebene bleibt UNKNOWN.
 
 Verwandt: Technology-Audit HU-A\*. GATE-01 ist die **Instrumenten**-Voraussetzung.

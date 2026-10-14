@@ -48,13 +48,13 @@ SoftAP-Setup: `ESP-HuProbe-Setup`.
 - [Medienvariation](docs/MEDIA_VARIATION.md)
 - [Feldauswertung BMW S0](docs/feld/2026-10-14-bmw-s0-auswertung.md) · [Review-Triage](docs/feld/2026-10-14-review-triage.md)
 
-## Status (v0.2.7) — GATE-01 Stufe A (BOT-Synth)
+## Status (v0.2.8) — GATE-01B BOT (TinyUSB-Host-CBW)
 
-- BMW-S0-Baseline (FW 0.2.2): 4 KiB Mode, Gap-p50 3724 µs, 6/8 Fenster = 22-Read
-- FW **0.2.7**: BOT-Synth-Kette CBW→DATA→read→CSW (t_us monoton), `fw_sha`/`probe_identity`
-- Lab vs Auto: `lab_debian` vs `bmw` · [Lab 0.2.7](docs/feld/2026-10-14-lab-debian-s0-0.2.7.md) · Tools: `lab_s0_run.sh`
-- GATE-01 **offen** (Stufe B = echter Bus-CBW + Control-Sniff) · Mazda-Profil null
-- Lab-ESP `.88`: FW 0.2.7 geflasht, WiFi zeitweise tot · [Stand vor Auto](docs/feld/2026-10-14-stand-vor-auto.md) · Bin unter `firmware/dist/`
+- BMW-S0-Baseline (FW 0.2.2): 4 KiB Mode, Gap-p50 3724 µs, 6/8 Fenster = 22-Read — **durch 0.2.8-Feld ersetzen**
+- FW **0.2.8**: echte CBW/CDB/CSW aus TinyUSB (`bot_source=tinyusb`, `synthesized=false`) + MSC-Class-Control
+- Lab vs Auto: `lab_debian` vs `bmw` · [Maßnahmen 01B](docs/feld/2026-10-14-massnahmen-01b.md)
+- GATE-01 **offen** (Standard-Control SET_ADDRESS/… noch lückenhaft; Wire-Paketebene UNKNOWN)
+- Auto: `./tools/ota_car_esp.sh` → Bin `firmware/dist/hu-probe.0.2.8.esp32s3.bin`
 
 ```bash
 cd firmware && pio run -e huprobe-s3 -t upload

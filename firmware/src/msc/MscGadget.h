@@ -48,6 +48,7 @@ private:
         uint32_t n = 0;
         uint32_t durUs = 0;  // full µs — no uint16 cap (lab: gap hit 65535)
         uint32_t gapUs = 0;
+        uint32_t botTag = 0;  // host CBW tag (TinyUSB)
         char tag[8] = {0};
         char kind[8] = {0};
         uint8_t scsi = 0;  // 0=read, 1=write note

@@ -10,8 +10,7 @@ public:
     /** Komfort-Pfad (Sim / Aggregat). Für echte Evidenz: onBot* / emitBotRead10Synth. */
     void onRead(uint32_t lba, uint32_t nBytes, uint32_t durUs, const char* tag, const char* kind);
     /**
-     * MSC Sample-Ring → synthetische BOT-Kette (CBW/DATA/CSW) + read-Aggregat.
-     * TinyUSB/Arduino USBMSC liefert keinen Roh-CBW; GATE-01 Stufe A = msc_synth.
+     * Stufe A fallback: synthetische BOT-Kette. Ab 0.2.8 Drain nutzt TinyUSB-Tap (Stufe B).
      */
     void emitBotRead10Synth(int64_t tUs, uint32_t lba, uint32_t nBytes, uint32_t durUs,
                             uint32_t gapUs, const char* tag, const char* kind);
@@ -27,6 +26,17 @@ public:
     void onBotData(uint32_t botTag, const char* dir, uint32_t expected, uint32_t actual,
                    uint32_t durUs, uint32_t lba, const char* tag, const char* kind);
     void onBotCsw(uint32_t botTag, uint32_t residue, uint8_t status);
+
+    /** GATE-01B: host CBW/CSW bytes from TinyUSB `_mscd_itf` (`synthesized=false`). */
+    void emitBotCbwTinyusb(const uint8_t cbw[31]);
+    void emitBotDataTinyusb(uint32_t botTag, uint32_t lba, uint32_t nBytes, uint32_t durUs,
+                            uint32_t gapUs, const char* tag, const char* kind, const char* dir);
+    void emitBotCswTinyusb(const uint8_t csw[13]);
+    void emitUsbControlTinyusb(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue,
+                               uint16_t wIndex, uint16_t wLength);
+    /** Comfort `read` only (BOT chain already emitted as tinyusb). */
+    void emitReadAggregate(int64_t tUs, uint32_t botTag, uint32_t lba, uint32_t nBytes,
+                           uint32_t durUs, uint32_t gapUs, const char* tag, const char* kind);
 
     float readRateKbS() const { return readRateKbS_; }
     float turHz() const { return turHz_; }

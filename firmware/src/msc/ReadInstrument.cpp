@@ -1,7 +1,25 @@
 #include "ReadInstrument.h"
 #include "core/ProbeClock.h"
 #include "net/EventBus.h"
+#include "tusb.h"
+#include "class/msc/msc.h"
 #include <cstring>
+
+static const char* scsiOpcodeName(uint8_t op) {
+    switch (op) {
+        case 0x00: return "tur";
+        case 0x03: return "request_sense";
+        case 0x12: return "inquiry";
+        case 0x1A: return "mode_sense6";
+        case 0x1B: return "start_stop";
+        case 0x1E: return "prevent_allow";
+        case 0x23: return "read_format_capacities";
+        case 0x25: return "read_capacity10";
+        case 0x28: return "read10";
+        case 0x2A: return "write10";
+        default: return "other";
+    }
+}
 
 void ReadInstrument::begin(Session* session) {
     session_ = session;
@@ -308,6 +326,149 @@ void ReadInstrument::onBotCsw(uint32_t botTag, uint32_t residue, uint8_t status)
     doc["bot_tag"] = botTag;
     doc["residue"] = residue;
     doc["status"] = status;
+    EventBus::instance().publish(doc);
+}
+
+void ReadInstrument::emitBotCbwTinyusb(const uint8_t cbwRaw[31]) {
+    if (!session_ || !session_->active() || !cbwRaw) return;
+    msc_cbw_t cbw;
+    memcpy(&cbw, cbwRaw, 31);
+    if (cbw.signature != MSC_CBW_SIGNATURE) return;
+
+    uint8_t op = cbw.command[0];
+    if (op == 0x00) turCountWindow_++;
+    if (op == 0x2A) writeCount_++;
+
+    char cdbHex[33];
+    char cbwHex[63];
+    bytesToHex(cbw.command, 16, cdbHex, sizeof(cdbHex));
+    bytesToHex(cbwRaw, 31, cbwHex, sizeof(cbwHex));
+
+    uint32_t lba = 0;
+    uint16_t blocks = 0;
+    if (op == 0x28 || op == 0x2A) {
+        lba = ((uint32_t)cbw.command[2] << 24) | ((uint32_t)cbw.command[3] << 16) |
+              ((uint32_t)cbw.command[4] << 8) | (uint32_t)cbw.command[5];
+        blocks = (uint16_t)(((uint16_t)cbw.command[7] << 8) | cbw.command[8]);
+    }
+
+    JsonDocument doc;
+    stamp(doc);
+    doc["ev"] = "bot_cbw";
+    doc["bot_tag"] = cbw.tag;
+    doc["bot_source"] = "tinyusb";
+    doc["synthesized"] = false;
+    doc["raw_hex"] = cbwHex;
+    doc["signature"] = "USBC";
+    doc["xfer_len"] = cbw.total_bytes;
+    doc["flags"] = cbw.dir;
+    doc["lun"] = cbw.lun;
+    doc["cdb_len"] = cbw.cmd_len;
+    doc["cdb_hex"] = cdbHex;
+    JsonObject scsi = doc["scsi"].to<JsonObject>();
+    scsi["opcode"] = scsiOpcodeName(op);
+    scsi["opcode_byte"] = op;
+    scsi["lba"] = lba;
+    scsi["blocks"] = blocks;
+    scsi["control"] = cbw.command[cbw.cmd_len > 0 ? (cbw.cmd_len - 1) : 0];
+    EventBus::instance().publish(doc);
+}
+
+void ReadInstrument::emitBotDataTinyusb(uint32_t botTag, uint32_t lba, uint32_t nBytes,
+                                        uint32_t durUs, uint32_t gapUs, const char* tag,
+                                        const char* kind, const char* dir) {
+    windowBytes_ += nBytes;
+    if (!session_ || !session_->active()) return;
+
+    JsonDocument doc;
+    stamp(doc);
+    doc["ev"] = "bot_data";
+    doc["bot_tag"] = botTag;
+    doc["bot_source"] = "tinyusb";
+    doc["synthesized"] = false;
+    if (dir) doc["dir"] = dir;
+    doc["expected"] = nBytes;
+    doc["actual"] = nBytes;
+    doc["dur_us"] = durUs;
+    doc["gap_us"] = gapUs;
+    doc["lba"] = lba;
+    if (tag) doc["tag"] = tag;
+    if (kind) doc["kind"] = kind;
+    EventBus::instance().publish(doc);
+}
+
+void ReadInstrument::emitBotCswTinyusb(const uint8_t cswRaw[13]) {
+    if (!session_ || !session_->active() || !cswRaw) return;
+    msc_csw_t csw;
+    memcpy(&csw, cswRaw, 13);
+    if (csw.signature != MSC_CSW_SIGNATURE) return;
+
+    char cswHex[27];
+    bytesToHex(cswRaw, 13, cswHex, sizeof(cswHex));
+
+    JsonDocument doc;
+    stamp(doc);
+    doc["ev"] = "bot_csw";
+    doc["bot_tag"] = csw.tag;
+    doc["bot_source"] = "tinyusb";
+    doc["synthesized"] = false;
+    doc["raw_hex"] = cswHex;
+    doc["residue"] = csw.data_residue;
+    doc["status"] = csw.status;
+    EventBus::instance().publish(doc);
+}
+
+void ReadInstrument::emitUsbControlTinyusb(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue,
+                                           uint16_t wIndex, uint16_t wLength) {
+    if (!session_ || !session_->active()) return;
+
+    JsonDocument doc;
+    stamp(doc);
+    doc["ev"] = "usb";
+    doc["usb_ev"] = "control";
+    doc["bot_source"] = "tinyusb";
+    doc["synthesized"] = false;
+    doc["ep"] = 0;
+    doc["dir"] = (bmRequestType & 0x80) ? "in" : "out";
+    doc["bmRequestType"] = bmRequestType;
+    doc["bRequest"] = bRequest;
+    doc["wValue"] = wValue;
+    doc["wIndex"] = wIndex;
+    doc["wLength"] = wLength;
+    doc["dur_us"] = 0;
+
+    if ((bmRequestType & 0x60) == 0x20) {
+        if (bRequest == 0xFE) doc["note"] = "msc_get_max_lun";
+        else if (bRequest == 0xFF) doc["note"] = "msc_bot_reset";
+        else doc["note"] = "msc_class";
+    } else if ((bmRequestType & 0x60) == 0) {
+        switch (bRequest) {
+            case 0x05: doc["usb_ev"] = "set_address"; break;
+            case 0x06: doc["usb_ev"] = "get_descriptor"; break;
+            case 0x09: doc["usb_ev"] = "set_configuration"; break;
+            case 0x01: doc["usb_ev"] = "clear_halt"; doc["note"] = "clear_feature"; break;
+            default: break;
+        }
+    }
+    EventBus::instance().publish(doc);
+}
+
+void ReadInstrument::emitReadAggregate(int64_t tUs, uint32_t botTag, uint32_t lba, uint32_t nBytes,
+                                       uint32_t durUs, uint32_t gapUs, const char* tag,
+                                       const char* kind) {
+    readCount_++;
+    if (!session_ || !session_->active()) return;
+    JsonDocument doc;
+    stampAt(doc, tUs);
+    doc["ev"] = "read";
+    doc["bot_tag"] = botTag;
+    doc["bot_source"] = "tinyusb";
+    doc["lba"] = lba;
+    doc["n"] = nBytes;
+    doc["dur_us"] = durUs;
+    doc["gap_us"] = gapUs;
+    if (tag) doc["tag"] = tag;
+    if (kind) doc["kind"] = kind;
     EventBus::instance().publish(doc);
 }
 

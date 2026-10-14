@@ -120,11 +120,16 @@ Ein SCSI-Befehl = typischerweise drei Events (CBW → DATA → CSW), verknüpft 
 
 ### ev = bot_cbw
 
+`bot_source`: `tinyusb` (FW ≥0.2.8, Host-CBW aus Device-Stack) | `msc_synth` (Stufe A, rekonstruiert).  
+`synthesized`: `false` bei `tinyusb`, `true` bei `msc_synth`.
+
 ```json
 {
   "v": 2, "sid": "...", "seq": 40, "t_us": 13000000,
   "ev": "bot_cbw",
   "bot_tag": 7,
+  "bot_source": "tinyusb",
+  "synthesized": false,
   "raw_hex": "55534243...",
   "signature": "USBC",
   "xfer_len": 4096,
