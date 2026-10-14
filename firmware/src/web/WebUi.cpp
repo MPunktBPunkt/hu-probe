@@ -1,5 +1,6 @@
 #include "WebUi.h"
 #include "BuildFlags.h"
+#include <Update.h>
 #include <WiFi.h>
 
 static const char* PAGE =
@@ -67,6 +68,10 @@ void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
     server_.on("/api/debug/sim-read", HTTP_POST, [this]() { handleSimulateRead(); });
     server_.on("/api/usb/cycle", HTTP_POST, [this]() { handleUsbCycle(); });
     server_.on("/api/usb/remount", HTTP_POST, [this]() { handleUsbRemount(); });
+    server_.on(
+        "/ota-upload", HTTP_POST,
+        [this]() { handleOtaDone(); },
+        [this]() { handleOtaUpload(); });
     server_.begin();
     Serial.println("[WEB] :80");
 }
@@ -229,4 +234,35 @@ void WebUi::handleUsbRemount() {
     String body;
     serializeJson(out, body);
     server_.send(200, "application/json", body);
+}
+
+void WebUi::handleOtaUpload() {
+    HTTPUpload& upload = server_.upload();
+    if (upload.status == UPLOAD_FILE_START) {
+        Serial.printf("[OTA] upload start %s\n", upload.filename.c_str());
+        if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+            Update.printError(Serial);
+        }
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+        if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+            Update.printError(Serial);
+        }
+    } else if (upload.status == UPLOAD_FILE_END) {
+        if (!Update.end(true)) {
+            Update.printError(Serial);
+        } else {
+            Serial.printf("[OTA] %u bytes\n", upload.totalSize);
+        }
+    }
+}
+
+void WebUi::handleOtaDone() {
+    server_.sendHeader(F("Connection"), F("close"));
+    if (Update.hasError()) {
+        server_.send(500, F("text/plain"), F("OTA fail"));
+        return;
+    }
+    server_.send(200, F("text/plain"), F("OK"));
+    delay(400);
+    ESP.restart();
 }

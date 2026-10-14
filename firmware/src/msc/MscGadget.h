@@ -43,11 +43,11 @@ public:
 
 private:
     struct Sample {
-        uint32_t tUs = 0;
+        uint32_t tUs = 0;   // low 32 of probe clock (gaps use full int64 delta before store)
         uint32_t lba = 0;
-        uint16_t n = 0;
-        uint16_t durUs = 0;
-        uint16_t gapUs = 0;
+        uint32_t n = 0;
+        uint32_t durUs = 0;  // full µs — no uint16 cap (lab: gap hit 65535)
+        uint32_t gapUs = 0;
         char tag[8] = {0};
         char kind[8] = {0};
         uint8_t scsi = 0;  // 0=read, 1=write note
@@ -74,7 +74,7 @@ private:
     uint32_t plugCount_ = 0;
     uint32_t unplugCount_ = 0;
     uint32_t readCount_ = 0;
-    uint32_t lastReadEndUs_ = 0;
+    int64_t lastReadEndUs_ = 0;
 
     static constexpr size_t kSampleRing = 512;
     Sample ring_[kSampleRing];

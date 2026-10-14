@@ -69,6 +69,7 @@ sessions/YYYYMMDD-HHMMSS_<vehicle>_<scenario>/
 
 - **Primär:** `t_us` — einzige Quelle für Gap-/Duration-Analysen im µs-Bereich.
 - `gap_us` und `dur_us` werden aus derselben Uhr abgeleitet, nie aus `millis()`.
+- Ab FW **0.2.1:** `gap_us` / `dur_us` sind volle **uint32** (µs), kein 16-bit-Cap bei 65535.
 - Wall-clock nur in `session.json` (`started_at` / Marker-Notizen), nicht für Host-Timing.
 
 ---

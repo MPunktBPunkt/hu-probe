@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef FW_VERSION
-#define FW_VERSION "0.2.0"
+#define FW_VERSION "0.2.2"
 #endif
 
 #ifndef FW_TYPE
@@ -48,8 +48,9 @@
 #define EVENT_RING_SIZE 2048
 #endif
 
+/** Status cadence — 1s flooded lab JSONL; 2.5s keeps telemetry without drowning reads. */
 #ifndef STATUS_INTERVAL_MS
-#define STATUS_INTERVAL_MS 1000
+#define STATUS_INTERVAL_MS 2500
 #endif
 
 #ifndef NTP_SERVER_DEFAULT

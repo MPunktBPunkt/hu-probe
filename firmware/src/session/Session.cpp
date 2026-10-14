@@ -1,6 +1,8 @@
 #include "Session.h"
+#include "BuildFlags.h"
 #include "core/ProbeClock.h"
 #include "net/EventBus.h"
+#include <WiFi.h>
 #include <time.h>
 
 void Session::begin() {
@@ -48,6 +50,16 @@ bool Session::start(const String& vehicle, const String& scenario, const String&
     doc["vehicle"] = vehicle_;
     doc["scenario"] = scenario_;
     doc["profile_id"] = profileId_;
+    doc["fw_version"] = FW_VERSION;
+    doc["fw_type"] = FW_TYPE;
+    {
+        uint8_t mac[6];
+        WiFi.macAddress(mac);
+        char macStr[18];
+        snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        doc["mac"] = macStr;
+    }
     EventBus::instance().publish(doc);
     return true;
 }

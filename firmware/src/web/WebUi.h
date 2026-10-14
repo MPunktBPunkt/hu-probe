@@ -25,6 +25,8 @@ private:
     void handleSimulateRead();
     void handleUsbCycle();
     void handleUsbRemount();
+    void handleOtaUpload();
+    void handleOtaDone();
 
     WebServer server_{80};
     ConfigStore* cfg_ = nullptr;

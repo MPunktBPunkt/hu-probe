@@ -208,7 +208,7 @@ int32_t MscGadget::onRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t 
     if (bufsize > 4096) bufsize = 4096;
     uint8_t* out = (uint8_t*)buffer;
 
-    uint32_t t0 = (uint32_t)ProbeClock::nowUs();
+    int64_t t0 = ProbeClock::nowUs();
     uint32_t pos = lba * DEMO_FAT_SECTOR_SIZE + offset;
     if (pos >= DEMO_FAT_SIZE) {
         memset(out, 0, bufsize);
@@ -219,19 +219,26 @@ int32_t MscGadget::onRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t 
         memcpy(out, DEMO_FAT_IMAGE + pos, n);
         if (n < bufsize) memset(out + n, 0, bufsize - n);
     }
-    uint32_t t1 = (uint32_t)ProbeClock::nowUs();
-    uint32_t dur = (t1 >= t0) ? (t1 - t0) : 0;
+    int64_t t1 = ProbeClock::nowUs();
+    uint32_t dur = 0;
+    if (t1 >= t0) {
+        int64_t d = t1 - t0;
+        dur = (d > 0xFFFFFFFFLL) ? 0xFFFFFFFFu : (uint32_t)d;
+    }
     uint32_t gap = 0;
-    if (lastReadEndUs_ && t0 >= lastReadEndUs_) gap = t0 - lastReadEndUs_;
+    if (lastReadEndUs_ > 0 && t0 >= lastReadEndUs_) {
+        int64_t g = t0 - lastReadEndUs_;
+        gap = (g > 0xFFFFFFFFLL) ? 0xFFFFFFFFu : (uint32_t)g;
+    }
     lastReadEndUs_ = t1;
     readCount_++;
 
     Sample s;
-    s.tUs = t0;
+    s.tUs = (uint32_t)t0;
     s.lba = lba;
-    s.n = (uint16_t)bufsize;
-    s.durUs = (uint16_t)((dur > 65535) ? 65535 : dur);
-    s.gapUs = (uint16_t)((gap > 65535) ? 65535 : gap);
+    s.n = bufsize;
+    s.durUs = dur;
+    s.gapUs = gap;
     tagForLba(lba, s.tag, sizeof(s.tag), s.kind, sizeof(s.kind));
     pushSample(s);
     return (int32_t)bufsize;
@@ -244,7 +251,7 @@ int32_t MscGadget::onWrite(uint32_t lba, uint32_t offset, uint8_t* buffer, uint3
     Sample s;
     s.tUs = (uint32_t)ProbeClock::nowUs();
     s.lba = lba;
-    s.n = (uint16_t)bufsize;
+    s.n = bufsize;
     s.scsi = 1;
     snprintf(s.tag, sizeof(s.tag), "WR");
     snprintf(s.kind, sizeof(s.kind), "write");
@@ -264,8 +271,8 @@ void MscGadget::pushSample(const Sample& s) {
 }
 
 void MscGadget::drainSamples() {
-    // Bound work per loop tick.
-    for (int i = 0; i < 64 && count_ > 0; i++) {
+    // Bound work per loop tick (lab: 4k bursts need faster drain than status spam).
+    for (int i = 0; i < 128 && count_ > 0; i++) {
         Sample s = ring_[head_];
         head_ = (head_ + 1) % kSampleRing;
         count_--;

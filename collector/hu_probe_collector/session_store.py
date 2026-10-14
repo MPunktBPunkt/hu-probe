@@ -32,6 +32,7 @@ class SessionStore:
                 "fw_version": (meta or {}).get("fw_version"),
                 "fw_type": "hu-probe",
                 "fw_sha": None,
+                "mac": (meta or {}).get("mac"),
                 "clock": {
                     "domain": "probe_monotonic_us",
                     "source": "esp_timer",
@@ -59,8 +60,19 @@ class SessionStore:
                 "vehicle": event.get("vehicle"),
                 "scenario": event.get("scenario"),
                 "profile_id": event.get("profile_id"),
+                "fw_version": event.get("fw_version"),
+                "mac": event.get("mac"),
             }
         folder = self.ensure_session(str(sid), meta)
+        if event.get("ev") == "session" and event.get("action") == "start":
+            sj = folder / "session.json"
+            data = json.loads(sj.read_text(encoding="utf-8"))
+            for key in ("vehicle", "scenario", "profile_id", "fw_version", "mac"):
+                if event.get(key) is not None:
+                    data[key if key != "profile_id" else "profile_id"] = event.get(key)
+            if event.get("fw_type"):
+                data["fw_type"] = event.get("fw_type")
+            sj.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
         line = json.dumps(event, separators=(",", ":")) + "\n"
         with (folder / "events.jsonl").open("a", encoding="utf-8") as f:
             f.write(line)
