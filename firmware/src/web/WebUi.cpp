@@ -182,7 +182,11 @@ void WebUi::handleSessionStart() {
         cfg_->profileId = profile;
         cfg_->save();
     }
-    if (session_) session_->start(vehicle, scenario, profile);
+    if (session_) {
+        const char* ser = msc_ ? msc_->identitySerial() : nullptr;
+        const char* lab = msc_ ? msc_->volumeLabel() : nullptr;
+        session_->start(vehicle, scenario, profile, ser, lab);
+    }
     server_.send(200, "application/json", "{\"ok\":true}");
 }
 

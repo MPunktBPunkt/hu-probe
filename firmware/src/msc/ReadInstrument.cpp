@@ -7,6 +7,7 @@ void ReadInstrument::begin(Session* session) {
     session_ = session;
     windowStartMs_ = millis();
     lastDataEndUs_ = 0;
+    botTag_ = 0;
 }
 
 void ReadInstrument::stamp(JsonDocument& doc) {
@@ -19,9 +20,22 @@ void ReadInstrument::stampAt(JsonDocument& doc, int64_t tUs) {
         doc["sid"] = session_->id();
         doc["seq"] = session_->nextSeq();
     }
-    // ArduinoJson stores as JSON number; safe within double mantissa for session lengths.
     doc["t_us"] = (long long)tUs;
     doc["t_ms"] = ProbeClock::nowMsCompat(tUs);
+}
+
+void ReadInstrument::bytesToHex(const uint8_t* in, size_t n, char* out, size_t outLen) {
+    static const char* kHex = "0123456789abcdef";
+    size_t need = n * 2 + 1;
+    if (outLen < need) {
+        if (outLen) out[0] = 0;
+        return;
+    }
+    for (size_t i = 0; i < n; i++) {
+        out[i * 2] = kHex[(in[i] >> 4) & 0xF];
+        out[i * 2 + 1] = kHex[in[i] & 0xF];
+    }
+    out[n * 2] = 0;
 }
 
 void ReadInstrument::onRead(uint32_t lba, uint32_t nBytes, uint32_t durUs,
@@ -31,27 +45,141 @@ void ReadInstrument::onRead(uint32_t lba, uint32_t nBytes, uint32_t durUs,
     if (lastDataEndUs_ > 0 && now >= lastDataEndUs_) {
         gapUs = (uint32_t)(now - lastDataEndUs_);
     }
-    onReadTimed(now, lba, nBytes, durUs, gapUs, tag, kind);
+    emitBotRead10Synth(now, lba, nBytes, durUs, gapUs, tag, kind);
     lastDataEndUs_ = now + (int64_t)durUs;
 }
 
-void ReadInstrument::onReadTimed(int64_t tUs, uint32_t lba, uint32_t nBytes, uint32_t durUs,
-                                 uint32_t gapUs, const char* tag, const char* kind) {
+void ReadInstrument::emitBotRead10Synth(int64_t tUs, uint32_t lba, uint32_t nBytes,
+                                        uint32_t durUs, uint32_t gapUs, const char* tag,
+                                        const char* kind) {
     readCount_++;
     windowBytes_ += nBytes;
     if (!session_ || !session_->active()) return;
 
-    JsonDocument doc;
-    // Preserve MSC-callback time from the sample ring (not drain/loop time).
-    stampAt(doc, tUs);
-    doc["ev"] = "read";
-    doc["lba"] = lba;
-    doc["n"] = nBytes;
-    doc["dur_us"] = durUs;
-    doc["gap_us"] = gapUs;
-    if (tag) doc["tag"] = tag;
-    if (kind) doc["kind"] = kind;
-    EventBus::instance().publish(doc);
+    uint16_t blocks = (uint16_t)((nBytes + 511u) / 512u);
+    if (blocks == 0) blocks = 1;
+    uint32_t botTag = ++botTag_;
+
+    // SCSI READ(10) CDB
+    uint8_t cdb[16] = {0};
+    cdb[0] = 0x28;
+    cdb[2] = (uint8_t)(lba >> 24);
+    cdb[3] = (uint8_t)(lba >> 16);
+    cdb[4] = (uint8_t)(lba >> 8);
+    cdb[5] = (uint8_t)(lba);
+    cdb[7] = (uint8_t)(blocks >> 8);
+    cdb[8] = (uint8_t)(blocks);
+
+    // BOT CBW (31 bytes), signature USBC
+    uint8_t cbw[31] = {0};
+    cbw[0] = 'U';
+    cbw[1] = 'S';
+    cbw[2] = 'B';
+    cbw[3] = 'C';
+    cbw[4] = (uint8_t)(botTag);
+    cbw[5] = (uint8_t)(botTag >> 8);
+    cbw[6] = (uint8_t)(botTag >> 16);
+    cbw[7] = (uint8_t)(botTag >> 24);
+    cbw[8] = (uint8_t)(nBytes);
+    cbw[9] = (uint8_t)(nBytes >> 8);
+    cbw[10] = (uint8_t)(nBytes >> 16);
+    cbw[11] = (uint8_t)(nBytes >> 24);
+    cbw[12] = 0x80;  // IN
+    cbw[13] = 0;     // LUN
+    cbw[14] = 10;    // CBWCBLength
+    memcpy(cbw + 15, cdb, 16);
+
+    char cdbHex[33];
+    char cbwHex[63];
+    bytesToHex(cdb, 16, cdbHex, sizeof(cdbHex));
+    bytesToHex(cbw, 31, cbwHex, sizeof(cbwHex));
+
+    {
+        JsonDocument doc;
+        stampAt(doc, tUs);
+        doc["ev"] = "bot_cbw";
+        doc["bot_tag"] = botTag;
+        doc["bot_source"] = "msc_synth";
+        doc["synthesized"] = true;
+        doc["raw_hex"] = cbwHex;
+        doc["signature"] = "USBC";
+        doc["xfer_len"] = nBytes;
+        doc["flags"] = 0x80;
+        doc["lun"] = 0;
+        doc["cdb_len"] = 10;
+        doc["cdb_hex"] = cdbHex;
+        JsonObject scsi = doc["scsi"].to<JsonObject>();
+        scsi["opcode"] = "read10";
+        scsi["opcode_byte"] = 0x28;
+        scsi["lba"] = lba;
+        scsi["blocks"] = blocks;
+        scsi["control"] = 0;
+        EventBus::instance().publish(doc);
+    }
+
+    {
+        JsonDocument doc;
+        stampAt(doc, tUs);
+        doc["ev"] = "bot_data";
+        doc["bot_tag"] = botTag;
+        doc["bot_source"] = "msc_synth";
+        doc["synthesized"] = true;
+        doc["dir"] = "in";
+        doc["expected"] = nBytes;
+        doc["actual"] = nBytes;
+        doc["dur_us"] = durUs;
+        doc["gap_us"] = gapUs;
+        doc["lba"] = lba;
+        if (tag) doc["tag"] = tag;
+        if (kind) doc["kind"] = kind;
+        EventBus::instance().publish(doc);
+    }
+
+    // CSW (13 bytes), signature USBS
+    uint8_t csw[13] = {0};
+    csw[0] = 'U';
+    csw[1] = 'S';
+    csw[2] = 'B';
+    csw[3] = 'S';
+    csw[4] = (uint8_t)(botTag);
+    csw[5] = (uint8_t)(botTag >> 8);
+    csw[6] = (uint8_t)(botTag >> 16);
+    csw[7] = (uint8_t)(botTag >> 24);
+    // residue 0
+    csw[12] = 0;  // passed
+    char cswHex[27];
+    bytesToHex(csw, 13, cswHex, sizeof(cswHex));
+
+    int64_t tCsw = tUs + (int64_t)durUs;
+    {
+        JsonDocument doc;
+        stampAt(doc, tCsw);
+        doc["ev"] = "bot_csw";
+        doc["bot_tag"] = botTag;
+        doc["bot_source"] = "msc_synth";
+        doc["synthesized"] = true;
+        doc["raw_hex"] = cswHex;
+        doc["residue"] = 0;
+        doc["status"] = 0;
+        EventBus::instance().publish(doc);
+    }
+
+    {
+        JsonDocument doc;
+        stampAt(doc, tUs);
+        doc["ev"] = "read";
+        doc["bot_tag"] = botTag;
+        doc["bot_source"] = "msc_synth";
+        doc["lba"] = lba;
+        doc["n"] = nBytes;
+        doc["dur_us"] = durUs;
+        doc["gap_us"] = gapUs;
+        if (tag) doc["tag"] = tag;
+        if (kind) doc["kind"] = kind;
+        EventBus::instance().publish(doc);
+    }
+
+    lastDataEndUs_ = tUs + (int64_t)durUs;
 }
 
 void ReadInstrument::onScsi(const char* op) {
@@ -79,6 +207,32 @@ void ReadInstrument::onUsb(const char* usbEv, uint8_t ep, const char* dir, uint3
     doc["dur_us"] = durUs;
     if (note) doc["note"] = note;
     EventBus::instance().publish(doc);
+}
+
+void ReadInstrument::emitIdentityDescriptors(const char* serial, const char* vendor,
+                                             const char* product, const char* revision) {
+    if (!session_ || !session_->active()) return;
+    int64_t t = ProbeClock::nowUs();
+    auto emit = [&](const char* descType, const char* note) {
+        JsonDocument doc;
+        stampAt(doc, t);
+        doc["ev"] = "usb";
+        doc["usb_ev"] = "get_descriptor";
+        doc["desc_type"] = descType;
+        doc["ep"] = 0;
+        doc["dir"] = "in";
+        doc["dur_us"] = 0;
+        doc["bot_source"] = "gadget_identity";
+        doc["synthesized"] = true;
+        if (note) doc["note"] = note;
+        if (serial) doc["serial"] = serial;
+        if (vendor) doc["vendor"] = vendor;
+        if (product) doc["product"] = product;
+        if (revision) doc["revision"] = revision;
+        EventBus::instance().publish(doc);
+    };
+    emit("device", "local gadget identity (not host control sniff)");
+    emit("string", serial ? serial : "");
 }
 
 void ReadInstrument::onBotCbw(uint32_t botTag, const char* cdbHex, const char* opcode,
@@ -132,7 +286,6 @@ void ReadInstrument::onBotData(uint32_t botTag, const char* dir, uint32_t expect
     if (kind) doc["kind"] = kind;
     EventBus::instance().publish(doc);
 
-    // Komfort-Aggregat parallel
     JsonDocument rd;
     stamp(rd);
     rd["ev"] = "read";

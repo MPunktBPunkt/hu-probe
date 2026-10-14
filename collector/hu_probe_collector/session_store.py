@@ -104,6 +104,8 @@ class SessionStore:
                 "scenario",
                 "profile_id",
                 "fw_version",
+                "fw_sha",
+                "fw_build_id",
                 "mac",
                 "usb_host_kind",
                 "usb_host_role",
@@ -112,6 +114,8 @@ class SessionStore:
                     data[key] = event.get(key)
             if event.get("fw_type"):
                 data["fw_type"] = event.get("fw_type")
+            if isinstance(event.get("probe_identity"), dict):
+                data["probe_identity"] = event.get("probe_identity")
             dirty_meta = True
             self._last_seq.pop(sid_s, None)
 

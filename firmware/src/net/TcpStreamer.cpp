@@ -45,7 +45,8 @@ void TcpStreamer::flushPending() {
     String line;
     int n = 0;
     EventBus& bus = EventBus::instance();
-    while (n < 64) {
+    // BOT synth emits ~4 events/read — drain faster than status cadence.
+    while (n < 192) {
         if (!client_.connected()) {
             wasConnected_ = false;
             bus.noteTcpDisconnect();

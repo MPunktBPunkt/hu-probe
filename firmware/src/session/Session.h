@@ -6,7 +6,8 @@
 class Session {
 public:
     void begin();
-    bool start(const String& vehicle, const String& scenario, const String& profileId);
+    bool start(const String& vehicle, const String& scenario, const String& profileId,
+               const char* probeSerial = nullptr, const char* volumeLabel = nullptr);
     void stop();
     bool active() const { return active_; }
     const String& id() const { return id_; }

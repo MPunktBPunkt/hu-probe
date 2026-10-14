@@ -1,10 +1,12 @@
 #include "App.h"
 #include "BuildFlags.h"
+#include "BuildId.h"
 #include "core/ProbeClock.h"
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <ESPmDNS.h>
 #include <esp_system.h>
+#include <Preferences.h>
 
 #ifndef CAPTURE_HEALTH_INTERVAL_MS
 #define CAPTURE_HEALTH_INTERVAL_MS 5000
@@ -28,6 +30,8 @@ void App::buildHeartbeat(JsonDocument& doc) {
     doc["name"] = a.config_.deviceName;
     doc["fwType"] = FW_TYPE;
     doc["fwVersion"] = FW_VERSION;
+    doc["fwSha"] = FW_GIT_SHA;
+    doc["fwBuildId"] = FW_BUILD_ID;
     doc["chipModel"] = HUPROBE_BOARD_LABEL;
     doc["hwType"] = HUPROBE_HW_TYPE;
 
@@ -93,8 +97,10 @@ void App::begin() {
     hub_.sendNow();
 
     // Auto-session for field use: plug → measure without opening the UI first.
-    session_.start(config_.vehicleId, config_.scenarioId, config_.profileId);
-    Serial.printf("[SESSION] auto-start %s\n", session_.id().c_str());
+    session_.start(config_.vehicleId, config_.scenarioId, config_.profileId,
+                   msc_.identitySerial(), msc_.volumeLabel());
+    Serial.printf("[SESSION] auto-start %s fw=%s sha=%s\n", session_.id().c_str(), FW_VERSION,
+                  FW_GIT_SHA);
 }
 
 void App::emitStatus() {
@@ -140,7 +146,17 @@ void App::emitCaptureHealth() {
     doc["ring_size"] = EVENT_RING_SIZE;
     doc["msc_sample_overflow"] = msc_.sampleOverflow();
     doc["msc_reads"] = msc_.readCount();
+    doc["fw_sha"] = FW_GIT_SHA;
+    doc["fw_build_id"] = FW_BUILD_ID;
     bus.publish(doc);
+
+    // Persist last seq for post-VBUS forensics (survives soft reset, not hard power-cut).
+    Preferences prefs;
+    if (prefs.begin("huprobe", false)) {
+        prefs.putUInt("last_seq", session_.seq());
+        prefs.putString("last_sid", session_.id());
+        prefs.end();
+    }
 }
 
 void App::loop() {

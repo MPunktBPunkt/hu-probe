@@ -1,5 +1,6 @@
 #include "MscGadget.h"
 #include "DemoFatImage.h"
+#include "BuildFlags.h"
 #include "core/ProbeClock.h"
 #include "USB.h"
 #include "USBMSC.h"
@@ -165,6 +166,7 @@ void MscGadget::onUsbPlugged(bool on) {
         plugCount_++;
         if (instrument_ && session_ && session_->active()) {
             instrument_->onUsb("attach", 0, "in", 0, "host");
+            instrument_->emitIdentityDescriptors(serial_, "HUPROBE", "HU_PROBE", FW_VERSION);
         }
         if (session_ && session_->active()) session_->setPhase("enum", "plug");
         Serial.println("[MSC] USB plugged (host started)");
@@ -281,7 +283,7 @@ void MscGadget::drainSamples() {
             instrument_->onScsi("write10");
         } else {
             // Nur timed read — volle BOT-Roh-Evidenz kommt mit TinyUSB-Wrap (GATE-01).
-            instrument_->onReadTimed(s.tUs, s.lba, s.n, s.durUs, s.gapUs, s.tag, s.kind);
+            instrument_->emitBotRead10Synth(s.tUs, s.lba, s.n, s.durUs, s.gapUs, s.tag, s.kind);
         }
     }
 }

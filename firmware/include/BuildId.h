@@ -1,0 +1,4 @@
+#pragma once
+#define FW_GIT_SHA "82033f4d10df"
+#define FW_BUILD_ID "82033f4d10df-20261014T100100Z"
+#define FW_BUILD_UTC "20261014T100100Z"

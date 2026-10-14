@@ -29,6 +29,15 @@ sessions/YYYYMMDD-HHMMSS_<vehicle>_<scenario>/
   "profile_id": "bmw_nbt_evo",
   "usb_host_kind": "bmw_nbt_evo",
   "usb_host_role": "vehicle_hu",
+  "fw_sha": "a1b2c3d4e5f6",
+  "fw_build_id": "a1b2c3d4e5f6-20261014T120000Z",
+  "probe_identity": {
+    "mac": "68:b6:b3:2b:c5:68",
+    "usb_serial": "HP0001",
+    "volume_label": "HUPROBE",
+    "board": "ESP32-S3",
+    "hw_type": "esp32s3"
+  },
   "scenario": "s0_plug_enum",
   "fw_version": "0.1.1",
   "fw_type": "hu-probe",

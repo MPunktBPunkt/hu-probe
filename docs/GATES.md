@@ -2,46 +2,45 @@
 
 ## HU-PROBE-GATE-01 — Measurement Integrity
 
-**Status:** open (Schema v2 eingefroren; Read-Aggregate im Feld OK; Roh-BOT/Deskriptoren/`fw_sha` ausstehend)
-
-Teilfortschritt (2026-10-14): monotonic `t_us`/`gap_us` (uint32), Session-`capture_health`, physische USB attach/detach — aber Seq-Lücke in erster Feldsession, Drain-`t_us` bis 0.2.2, kein Roh-CBW/CDB/CSW.
-
-Vor echtem Feldbetrieb und vor der Bewertung von HU-Fakten müssen folgende Punkte erfüllt sein. Ohne dieses Gate ist die Probe ein vorbereitetes Gerüst, kein wissenschaftlich brauchbares Messgerät.
+**Status:** open (Stufe A teilweise erfüllt in FW ≥0.2.6; Roh-Host-Control & echter TinyUSB-CBW noch offen)
 
 ### Zeit & Sequenz
 
-- [ ] Monotonic µs-Timestamp (`t_us` / `t_probe_us`) auf allen Events
-- [ ] Global per-Session `seq` monoton steigend, lückenlos nachweisbar (oder Drop dokumentiert)
-- [ ] `gap_us` aus µs-Uhr, nicht aus `millis()`-Quantisierung
+- [x] Monotonic µs-Timestamp (`t_us`) auf Events (Capture-Zeit ab 0.2.3)
+- [x] Global per-Session `seq` (thread-safe); Lücken über Collector `recv_seq_gaps` + TCP peek→pop (0.2.4)
+- [x] `gap_us` aus µs-Uhr (uint32)
 
 ### USB Enumeration / Control
 
-- [ ] USB Reset / Connect / Disconnect sichtbar
-- [ ] Control-Transfer-Visibility (bmRequestType, bRequest, wValue, wIndex, wLength)
-- [ ] Descriptor-Capture (Device, Configuration, String)
+- [x] USB attach/detach/suspend/resume sichtbar (Host + Soft)
+- [ ] Control-Transfer-Visibility (bmRequestType, …) — Host-Sniff fehlt
+- [~] Descriptor-Capture: **gadget_identity**-Events bei Attach (synthetisch aus lokaler Identity, kein Host-Control)
 - [ ] SET_ADDRESS / SET_CONFIGURATION in der Timeline
-- [ ] Endpoint / Direction je Transfer
+- [~] Endpoint / Direction auf USB-Events (teilweise)
 - [ ] STALL / CLEAR_HALT / Reset-Recovery
 
 ### BOT / SCSI Evidenz
 
-- [ ] BOT CBW: raw hex + decoded (signature, tag, xfer_len, flags, lun, cdb_len, cdb[16])
-- [ ] SCSI CDB: raw + decoded (opcode, LBA, blocks, control)
-- [ ] DATA: expected / actual length + duration
-- [ ] CSW: raw + decoded (tag, residue, status)
-- [ ] Inter-command gap aus monotonic clock
+- [~] BOT CBW: `raw_hex` + Decode — **`bot_source=msc_synth`** aus MSC-Read (kein TinyUSB-Roh-CBW)
+- [~] SCSI CDB: READ(10) synthetisiert aus LBA/Länge
+- [x] DATA: expected/actual/dur/gap
+- [~] CSW: synthetisiert (status=passed) parallel zum Read
+- [x] Inter-command gap (`gap_us`) aus Capture-Zeit
+- [ ] Echte CBW/CSW-Bytes vom Bus (TinyUSB-Hook) — Stufe B
 
 ### Capture Health / Forensik
 
-- [ ] Event-Drop-Accounting (`dropped`, `queue_highwater`)
-- [ ] Explizites `capture_health`-Event / Session-Attribut
-- [ ] TCP-Disconnect-Accounting
-- [ ] Firmware-Version + SHA (oder Build-ID) in `session.json`
-- [ ] Probe-Identity (MAC, Serial, Volume-Label) in Session
-- [ ] Rohdaten in `events.jsonl` unverändert erhalten (Derived nur unter `derived/`)
+- [x] Event-Drop-Accounting (`dropped`, `queue_highwater`)
+- [x] `capture_health` (+ `published`, `tcp_tx_*`, `msc_sample_overflow`)
+- [x] TCP-Disconnect-Accounting; silent TX-loss behoben (0.2.4)
+- [x] Firmware-Version + **Git-SHA / Build-ID** in Session (`fw_sha`, `fw_build_id`)
+- [x] Probe-Identity (MAC, USB-Serial, Volume-Label) in Session
+- [x] Rohdaten `events.jsonl` unverändert; Derived unter `derived/`
+- [~] VBUS-Tail: last `seq`/`sid` in NVS bei capture_health (kein voller Event-Ring über Power-Loss)
 
 ### Freigabe
 
-Erst wenn alle Checkboxen erfüllt und ein Labor-Dry-Run (Sim + idealerweise Host-PC als USB-Host) die Capture-Health mit `dropped=0` zeigt, gilt GATE-01 als **closed**. Danach: BMW-Validierung, dann Mazda Discovery.
+**Closed** erst wenn Stufe B (echter Bus-CBW + Control-Sniff) + Lab-Dry-Run `dropped=0` / keine `recv_seq_gaps`.  
+Stufe A (0.2.6) erlaubt instrumentierte Lab-/Feldläufe mit klar markierter Synthese (`synthesized: true`).
 
-Verwandt: Technology-Audit HU-A\* (Verhaltens-Gates). GATE-01 ist die **Instrumenten**-Voraussetzung dafür.
+Verwandt: Technology-Audit HU-A\*. GATE-01 ist die **Instrumenten**-Voraussetzung.

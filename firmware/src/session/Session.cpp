@@ -1,5 +1,6 @@
 #include "Session.h"
 #include "BuildFlags.h"
+#include "BuildId.h"
 #include "core/ProbeClock.h"
 #include "net/EventBus.h"
 #include <WiFi.h>
@@ -13,7 +14,8 @@ void Session::begin() {
     seqFirst_ = 0;
 }
 
-bool Session::start(const String& vehicle, const String& scenario, const String& profileId) {
+bool Session::start(const String& vehicle, const String& scenario, const String& profileId,
+                    const char* probeSerial, const char* volumeLabel) {
     if (active_) stop();
     vehicle_ = vehicle;
     scenario_ = scenario;
@@ -52,6 +54,8 @@ bool Session::start(const String& vehicle, const String& scenario, const String&
     doc["profile_id"] = profileId_;
     doc["fw_version"] = FW_VERSION;
     doc["fw_type"] = FW_TYPE;
+    doc["fw_sha"] = FW_GIT_SHA;
+    doc["fw_build_id"] = FW_BUILD_ID;
     // Explicit host class so lab Debian can never be mistaken for a car HU.
     if (vehicle_ == "lab_debian") {
         doc["usb_host_kind"] = "linux_debian";
@@ -66,14 +70,20 @@ bool Session::start(const String& vehicle, const String& scenario, const String&
         doc["usb_host_kind"] = "unknown";
         doc["usb_host_role"] = "unknown";
     }
+    char macStr[18] = {0};
     {
         uint8_t mac[6];
         WiFi.macAddress(mac);
-        char macStr[18];
         snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
                  mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
         doc["mac"] = macStr;
     }
+    JsonObject id = doc["probe_identity"].to<JsonObject>();
+    id["mac"] = macStr;
+    id["usb_serial"] = probeSerial ? probeSerial : "";
+    id["volume_label"] = volumeLabel ? volumeLabel : "";
+    id["board"] = HUPROBE_BOARD_LABEL;
+    id["hw_type"] = HUPROBE_HW_TYPE;
     EventBus::instance().publish(doc);
     return true;
 }
