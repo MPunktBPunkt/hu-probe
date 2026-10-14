@@ -2,6 +2,7 @@
 #include "BuildFlags.h"
 #include "BuildId.h"
 #include "core/ProbeClock.h"
+#include "msc/MscBotTap.h"
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <ESPmDNS.h>
@@ -10,6 +11,15 @@
 
 #ifndef CAPTURE_HEALTH_INTERVAL_MS
 #define CAPTURE_HEALTH_INTERVAL_MS 5000
+#endif
+#ifndef NVS_TAIL_INTERVAL_MS
+#define NVS_TAIL_INTERVAL_MS 60000
+#endif
+#ifndef WIFI_RECONNECT_EVERY_MS
+#define WIFI_RECONNECT_EVERY_MS 10000
+#endif
+#ifndef WIFI_RESTART_AFTER_MS
+#define WIFI_RESTART_AFTER_MS 90000
 #endif
 
 App& App::instance() {
@@ -56,6 +66,10 @@ void App::setupWifi() {
         ESP.restart();
     }
     led_.setWifiPortal(false);
+    // USB-MSC + WiFi coexist better without modem sleep (field: WiFi death under BOT load).
+    WiFi.setSleep(false);
+    wifiDownSinceMs_ = 0;
+    wifiReconnectAttempts_ = 0;
     Serial.printf("[WIFI] %s\n", WiFi.localIP().toString().c_str());
 }
 
@@ -148,21 +162,58 @@ void App::emitCaptureHealth() {
     doc["tcp_disconnects"] = bus.tcpDisconnects();
     doc["ring_size"] = EVENT_RING_SIZE;
     doc["msc_sample_overflow"] = msc_.sampleOverflow();
+    doc["bot_pending_overflow"] = MscBotTap::pendingOverflow();
     doc["msc_reads"] = msc_.readCount();
     doc["fw_sha"] = FW_GIT_SHA;
     doc["fw_build_id"] = FW_BUILD_ID;
     bus.publish(doc);
 
-    // Persist last seq for post-VBUS forensics (survives soft reset, not hard power-cut).
-    Preferences prefs;
-    if (prefs.begin("huprobe", false)) {
-        prefs.putUInt("last_seq", session_.seq());
-        prefs.putString("last_sid", session_.id());
-        prefs.end();
+    // NVS every ~60s only — flash erase during MSC+WiFi was a field WiFi-killer.
+    unsigned long now = millis();
+    if (now - lastNvsTailMs_ >= NVS_TAIL_INTERVAL_MS) {
+        lastNvsTailMs_ = now;
+        Preferences prefs;
+        if (prefs.begin("huprobe", false)) {
+            prefs.putUInt("last_seq", session_.seq());
+            prefs.putString("last_sid", session_.id());
+            prefs.end();
+        }
+    }
+}
+
+void App::superviseWifi() {
+    if (WiFi.status() == WL_CONNECTED) {
+        if (wifiDownSinceMs_ != 0) {
+            Serial.printf("[WIFI] recovered after %lu ms (attempts=%u)\n",
+                          (unsigned long)(millis() - wifiDownSinceMs_), wifiReconnectAttempts_);
+        }
+        wifiDownSinceMs_ = 0;
+        wifiReconnectAttempts_ = 0;
+        return;
+    }
+    unsigned long now = millis();
+    if (wifiDownSinceMs_ == 0) {
+        wifiDownSinceMs_ = now;
+        Serial.println("[WIFI] lost — supervising reconnect");
+    }
+    unsigned long downFor = now - wifiDownSinceMs_;
+    if (now - lastWifiReconnectMs_ >= WIFI_RECONNECT_EVERY_MS) {
+        lastWifiReconnectMs_ = now;
+        wifiReconnectAttempts_++;
+        Serial.printf("[WIFI] reconnect #%u (down %lu ms)\n", wifiReconnectAttempts_, downFor);
+        WiFi.disconnect(false, false);
+        delay(50);
+        WiFi.reconnect();
+    }
+    if (downFor >= WIFI_RESTART_AFTER_MS && wifiReconnectAttempts_ >= 3) {
+        Serial.println("[WIFI] unrecoverable — ESP.restart()");
+        delay(200);
+        ESP.restart();
     }
 }
 
 void App::loop() {
+    superviseWifi();
     hub_.loop();
     tcp_.loop();
     web_.loop();

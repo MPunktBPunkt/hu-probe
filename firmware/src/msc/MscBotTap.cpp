@@ -6,14 +6,12 @@
 #if !ARDUINO_USB_MODE
 
 // TinyUSB 0.15 `_mscd_itf` (DWARF): cbw@0 (31), csw@32 (13), stage@48, …
-// Opaque so C++ packing cannot diverge from the C object in libarduino_tinyusb.
 extern "C" uint8_t _mscd_itf[];
 
 enum {
     kOffCbw = 0,
     kOffCsw = 32,
     kOffStage = 48,
-    kStageCmd = 0,
     kStageData = 1,
     kStageStatus = 2,
     kStageStatusSent = 3,
@@ -32,18 +30,47 @@ ReadInstrument* MscBotTap::instrument_ = nullptr;
 uint32_t MscBotTap::lastCbwTag_ = 0xFFFFFFFFu;
 bool MscBotTap::cswPending_ = false;
 bool MscBotTap::needResetArmed_ = false;
+MscBotTap::Pending MscBotTap::pending_[kPendingRing];
+volatile size_t MscBotTap::pendingHead_ = 0;
+volatile size_t MscBotTap::pendingTail_ = 0;
+volatile size_t MscBotTap::pendingCount_ = 0;
+uint32_t MscBotTap::pendingOverflow_ = 0;
 
 void MscBotTap::begin(ReadInstrument* instrument) {
     instrument_ = instrument;
     lastCbwTag_ = 0xFFFFFFFFu;
     cswPending_ = false;
     needResetArmed_ = false;
+    pendingHead_ = pendingTail_ = pendingCount_ = 0;
+    pendingOverflow_ = 0;
 }
 
 ReadInstrument* MscBotTap::instrument() { return instrument_; }
 
+void MscBotTap::queue(const Pending& p) {
+    if (pendingCount_ >= kPendingRing) {
+        pendingHead_ = (pendingHead_ + 1) % kPendingRing;
+        pendingCount_--;
+        pendingOverflow_++;
+    }
+    pending_[pendingTail_] = p;
+    pendingTail_ = (pendingTail_ + 1) % kPendingRing;
+    pendingCount_++;
+}
+
+void MscBotTap::queueControl(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue,
+                             uint16_t wIndex, uint16_t wLength) {
+    Pending p;
+    p.kind = Kind::Control;
+    p.bmRequestType = bmRequestType;
+    p.bRequest = bRequest;
+    p.wValue = wValue;
+    p.wIndex = wIndex;
+    p.wLength = wLength;
+    queue(p);
+}
+
 void MscBotTap::emitCbwIfNew() {
-    if (!instrument_) return;
     const uint8_t* cbw = itfCbw();
     if (readLe32(cbw) != MSC_CBW_SIGNATURE) return;
     uint32_t tag = readLe32(cbw + 4);
@@ -51,28 +78,47 @@ void MscBotTap::emitCbwIfNew() {
     lastCbwTag_ = tag;
     cswPending_ = true;
     needResetArmed_ = false;
-    instrument_->emitBotCbwTinyusb(cbw);
+    Pending p;
+    p.kind = Kind::Cbw;
+    p.botTag = tag;
+    memcpy(p.raw, cbw, 31);
+    queue(p);
 }
 
 void MscBotTap::emitDataChunk(uint32_t lba, uint32_t nBytes, uint32_t durUs, uint32_t gapUs,
                               const char* tag, const char* kind, const char* dir) {
-    if (!instrument_) return;
-    instrument_->emitBotDataTinyusb(currentHostTag(), lba, nBytes, durUs, gapUs, tag, kind, dir);
+    Pending p;
+    p.kind = Kind::Data;
+    p.botTag = currentHostTag();
+    p.lba = lba;
+    p.nBytes = nBytes;
+    p.durUs = durUs;
+    p.gapUs = gapUs;
+    if (tag) snprintf(p.tag, sizeof(p.tag), "%s", tag);
+    if (kind) snprintf(p.kindStr, sizeof(p.kindStr), "%s", kind);
+    if (dir) snprintf(p.dir, sizeof(p.dir), "%s", dir);
+    queue(p);
 }
 
 void MscBotTap::emitCsw() {
-    if (!instrument_ || !cswPending_) return;
+    if (!cswPending_) return;
     const uint8_t* csw = itfCsw();
     if (readLe32(csw) != MSC_CSW_SIGNATURE) return;
-    instrument_->emitBotCswTinyusb(csw);
+    Pending p;
+    p.kind = Kind::Csw;
+    p.botTag = readLe32(csw + 4);
+    memcpy(p.raw, csw, 13);
+    queue(p);
     cswPending_ = false;
 }
 
 void MscBotTap::emitNeedResetIfNew() {
-    if (!instrument_ || needResetArmed_) return;
+    if (needResetArmed_) return;
     needResetArmed_ = true;
     cswPending_ = false;
-    instrument_->emitBotNeedResetTinyusb();
+    Pending p;
+    p.kind = Kind::NeedReset;
+    queue(p);
 }
 
 void MscBotTap::onBotReset() { needResetArmed_ = false; }
@@ -85,8 +131,6 @@ void MscBotTap::afterMscdXfer() {
         emitNeedResetIfNew();
         return;
     }
-    // CBW is in _mscd_itf once TinyUSB leaves CMD for DATA (bulk) or STATUS (no-data).
-    // Do not emit on CMD/STATUS_SENT — residual CBW bytes would duplicate after CSW.
     if (st == kStageData) {
         emitCbwIfNew();
     } else if (st == kStageStatus) {
@@ -97,17 +141,47 @@ void MscBotTap::afterMscdXfer() {
     }
 }
 
-void MscBotTap::poll() {
-    // TUR/INQUIRY/CAPACITY build CSW after the Arduino callback returns — catch STATUS stage.
-    if (itfStage() == kStageNeedReset) {
-        emitNeedResetIfNew();
+void MscBotTap::drain(int maxEvents) {
+    if (!instrument_) {
+        pendingHead_ = pendingTail_ = pendingCount_ = 0;
         return;
     }
-    if (!cswPending_) return;
-    uint8_t st = itfStage();
-    if (st == kStageStatus || st == kStageStatusSent) {
-        emitCsw();
+    for (int i = 0; i < maxEvents && pendingCount_ > 0; i++) {
+        Pending p = pending_[pendingHead_];
+        pendingHead_ = (pendingHead_ + 1) % kPendingRing;
+        pendingCount_--;
+        switch (p.kind) {
+            case Kind::Cbw:
+                instrument_->emitBotCbwTinyusb(p.raw);
+                break;
+            case Kind::Data:
+                instrument_->emitBotDataTinyusb(p.botTag, p.lba, p.nBytes, p.durUs, p.gapUs, p.tag,
+                                                p.kindStr, p.dir);
+                break;
+            case Kind::Csw:
+                instrument_->emitBotCswTinyusb(p.raw);
+                break;
+            case Kind::NeedReset:
+                instrument_->emitBotNeedResetTinyusb();
+                break;
+            case Kind::Control:
+                instrument_->emitUsbControlTinyusb(p.bmRequestType, p.bRequest, p.wValue, p.wIndex,
+                                                   p.wLength);
+                break;
+        }
     }
+}
+
+void MscBotTap::poll() {
+    if (itfStage() == kStageNeedReset) {
+        emitNeedResetIfNew();
+    } else if (cswPending_) {
+        uint8_t st = itfStage();
+        if (st == kStageStatus || st == kStageStatusSent) {
+            emitCsw();
+        }
+    }
+    drain(96);
 }
 
 uint32_t MscBotTap::currentHostTag() {
@@ -168,13 +242,11 @@ bool __wrap_tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool sta
 
 bool __wrap_mscd_control_xfer_cb(uint8_t rhport, uint8_t stage,
                                  tusb_control_request_t const* request) {
-    if (request && stage == CONTROL_STAGE_SETUP && MscBotTap::instrument()) {
-        MscBotTap::instrument()->emitUsbControlTinyusb(
-            request->bmRequestType, request->bRequest, request->wValue, request->wIndex,
-            request->wLength);
+    if (request && stage == CONTROL_STAGE_SETUP) {
+        MscBotTap::queueControl(request->bmRequestType, request->bRequest, request->wValue,
+                                request->wIndex, request->wLength);
     }
     bool ok = __real_mscd_control_xfer_cb(rhport, stage, request);
-    // BOT_RESET clears NEED_RESET; allow a later need_reset event.
     if (request && stage == CONTROL_STAGE_SETUP && (request->bmRequestType & 0x60) == 0x20 &&
         request->bRequest == 0xFF) {
         MscBotTap::onBotReset();
@@ -213,11 +285,19 @@ void MscBotTap::onBotReset() {}
 void MscBotTap::onNonDataScsiEnter() {}
 void MscBotTap::afterMscdXfer() {}
 void MscBotTap::poll() {}
+void MscBotTap::drain(int) {}
+void MscBotTap::queue(const Pending&) {}
+void MscBotTap::queueControl(uint8_t, uint8_t, uint16_t, uint16_t, uint16_t) {}
 uint32_t MscBotTap::currentHostTag() { return 0; }
 
 ReadInstrument* MscBotTap::instrument_ = nullptr;
 uint32_t MscBotTap::lastCbwTag_ = 0;
 bool MscBotTap::cswPending_ = false;
 bool MscBotTap::needResetArmed_ = false;
+MscBotTap::Pending MscBotTap::pending_[kPendingRing];
+volatile size_t MscBotTap::pendingHead_ = 0;
+volatile size_t MscBotTap::pendingTail_ = 0;
+volatile size_t MscBotTap::pendingCount_ = 0;
+uint32_t MscBotTap::pendingOverflow_ = 0;
 
 #endif

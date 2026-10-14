@@ -61,7 +61,7 @@ void HubClient::sendHeartbeat() {
     HTTPClient http;
     http.begin(url);
     http.addHeader(F("Content-Type"), F("application/json"));
-    http.setTimeout(8000);
+    http.setTimeout(2000);  // keep loop responsive under MSC load (was 8s WiFi stall risk)
     int code = http.POST(payload);
     lastOk_ = (code == 200);
     if (code == 200) {

@@ -17,7 +17,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HUB="${HUB:-http://192.168.178.113:8093}"
 MAC="${MAC:-68B6B32BC568}"
 IP="${IP:-192.168.178.89}"
-FW_NAME="${FW_NAME:-hu-probe.0.2.10.esp32s3.bin}"
+FW_NAME="${FW_NAME:-hu-probe.0.2.11.esp32s3.bin}"
 FW_SRC="$ROOT/firmware/dist/$FW_NAME"
 COLLECTOR_PORT="${COLLECTOR_PORT:-9100}"
 WEB_PORT="${WEB_PORT:-8088}"
@@ -39,7 +39,21 @@ need python3
 [ -f "$FW_SRC" ] || die "Bin fehlt: $FW_SRC"
 
 probe_http() {
-  curl -s -m 2 -o /dev/null -w '%{http_code}' "http://$IP/api/status" 2>/dev/null || echo 000
+  # curl prints 000 on connect fail and may still exit non-zero — never append a second 000.
+  local code
+  code="$(curl -s -m 2 -o /dev/null -w '%{http_code}' "http://$IP/api/status" 2>/dev/null || true)"
+  echo "${code:-000}"
+}
+
+probe_fw() {
+  curl -s -m 2 "http://$IP/api/status" 2>/dev/null | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print(d.get("fw") or d.get("fwVersion") or "")
+except Exception:
+    print("")
+' 2>/dev/null || true
 }
 
 hub_device() {
@@ -55,17 +69,23 @@ for d in json.load(sys.stdin):
 print_status() {
   code="$(probe_http)"
   echo "    HTTP $IP/api/status → $code"
+  fw="$(probe_fw)"
+  [ -n "$fw" ] && echo "    probe fw=$fw"
   j="$(hub_device)"
   if [ -n "$j" ]; then
-    python3 -c "
-import json
-d=json.loads('''$j''')
-print(f\"    hub: name={d.get('name')} online={d.get('online')} ver={d.get('version')} ip={d.get('ip')} rssi={d.get('rssi')}\")
-print(f\"    hub otaUrl={d.get('otaUrl') or '-'}\")
-"
+    # Pipe JSON via stdin — hub ios blobs contain quotes that break shell embedding.
+    echo "$j" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("    hub: name=%s online=%s ver=%s ip=%s rssi=%s" % (d.get("name"), d.get("online"), d.get("version"), d.get("ip"), d.get("rssi"))); print("    hub otaUrl=%s" % (d.get("otaUrl") or "-"))'
   else
     echo "    hub: Gerät nicht gefunden"
   fi
+}
+
+already_target_fw() {
+  local want fw
+  want="${FW_NAME#hu-probe.}"
+  want="${want%.esp32s3.bin}"
+  fw="$(probe_fw)"
+  [ -n "$fw" ] && [ "$fw" = "$want" ]
 }
 
 wait_reachable() {
@@ -80,7 +100,8 @@ wait_reachable() {
       ver="$(echo "$j" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version",""))')"
     fi
     printf '    [%s] http=%s hub_online=%s ver=%s\n' "$(date +%H:%M:%S)" "$code" "$online" "$ver"
-    if [ "$code" = "200" ] || [ "$online" = "True" ] || [ "$online" = "true" ]; then
+    # Flash needs HTTP; hub-online alone is not enough (/ota-upload).
+    if [ "$code" = "200" ]; then
       return 0
     fi
     sleep 3
@@ -177,15 +198,23 @@ case "$mode" in
   collector) start_collector ;;
   flash)
     print_status
-    flash_direct
-    wait_huprobe
+    if already_target_fw; then
+      echo "    schon auf Ziel-FW — Flash übersprungen"
+    else
+      flash_direct
+      wait_huprobe
+    fi
     ;;
   wait)
     start_collector
     wait_reachable
     print_status
-    flash_direct
-    wait_huprobe
+    if already_target_fw; then
+      echo "    schon auf Ziel-FW — Flash übersprungen"
+    else
+      flash_direct
+      wait_huprobe
+    fi
     step "Fertig"
     echo "    Probe-UI:  http://$IP/"
     echo "    Soft-Cycle / Remount in der UI testen"

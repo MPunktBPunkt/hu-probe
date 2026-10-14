@@ -48,15 +48,15 @@ SoftAP-Setup: `ESP-HuProbe-Setup`.
 - [Medienvariation](docs/MEDIA_VARIATION.md)
 - [Feldauswertung BMW S0](docs/feld/2026-10-14-bmw-s0-auswertung.md) · [Review-Triage](docs/feld/2026-10-14-review-triage.md)
 
-## Status (v0.2.10) — GATE-01B + Status-LED
+## Status (v0.2.11) — WiFi-Stabilität unter MSC-Last
 
-- BMW-S0-Baseline (FW 0.2.2): 4 KiB Mode, Gap-p50 3724 µs, 6/8 Fenster = 22-Read — **durch 0.2.10-Feld ersetzen**
-- FW **0.2.8**: echte CBW/CDB/CSW aus TinyUSB (`bot_source=tinyusb`) + MSC-Class-Control
-- FW **0.2.9**: `--wrap=mscd_xfer_cb` + `usb_ev=bot_need_reset` ([Audit-Intake](docs/feld/2026-10-14-audit-instrument-sources.md))
-- FW **0.2.10**: On-board RGB Status-LED (Feld-Glance)
+- BMW-S0-Baseline (FW 0.2.2): 4 KiB Mode, Gap-p50 3724 µs, 6/8 Fenster = 22-Read — **durch 0.2.11-Feld ersetzen**
+- FW **0.2.8–0.2.9**: TinyUSB CBW/CSW + Class-Driver-Hooks
+- FW **0.2.10**: On-board RGB Status-LED
+- FW **0.2.11**: BOT-Events deferred vom USB-Callback; WiFi-Reconnect/Restart; NVS gedrosselt
 - Lab vs Auto: `lab_debian` vs `bmw` · [Maßnahmen 01B](docs/feld/2026-10-14-massnahmen-01b.md)
 - GATE-01 **offen** (Standard-Control SET_ADDRESS/… noch lückenhaft; Wire-Paketebene UNKNOWN)
-- Auto: `./tools/ota_car_esp.sh` → Bin `firmware/dist/hu-probe.0.2.10.esp32s3.bin`
+- Auto: `./tools/ota_car_esp.sh` → Bin `firmware/dist/hu-probe.0.2.11.esp32s3.bin`
 
 ### Status-LED (ESP32-S3 RGB)
 

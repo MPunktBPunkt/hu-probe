@@ -27,6 +27,7 @@ private:
     static void buildHeartbeat(JsonDocument& doc);
     void emitStatus();
     void emitCaptureHealth();
+    void superviseWifi();
 
     ConfigStore config_;
     HubClient hub_;
@@ -38,4 +39,8 @@ private:
     StatusLed led_;
     unsigned long lastStatusMs_ = 0;
     unsigned long lastCaptureHealthMs_ = 0;
+    unsigned long lastNvsTailMs_ = 0;
+    unsigned long wifiDownSinceMs_ = 0;
+    unsigned long lastWifiReconnectMs_ = 0;
+    uint8_t wifiReconnectAttempts_ = 0;
 };
