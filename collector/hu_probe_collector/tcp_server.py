@@ -87,6 +87,7 @@ class TcpCollector:
                         event = json.loads(line.decode("utf-8"))
                     except (UnicodeDecodeError, json.JSONDecodeError) as e:
                         log.warning("bad line from %s: %s", addr, e)
+                        self.store.note_parse_error()
                         continue
                     self.store.append_event(event)
                     self.events += 1

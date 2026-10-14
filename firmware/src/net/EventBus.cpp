@@ -6,16 +6,22 @@ EventBus& EventBus::instance() {
 }
 
 void EventBus::begin() {
+    portENTER_CRITICAL(&mux_);
     head_ = tail_ = count_ = 0;
     dropped_ = 0;
     highwater_ = 0;
     tcpDisconnects_ = 0;
     published_ = 0;
+    streamLost_ = 0;
+    tcpTxOk_ = 0;
+    tcpTxFail_ = 0;
+    portEXIT_CRITICAL(&mux_);
 }
 
 void EventBus::publish(JsonDocument& doc) {
     String line;
     serializeJson(doc, line);
+    portENTER_CRITICAL(&mux_);
     if (count_ >= EVENT_RING_SIZE) {
         head_ = (head_ + 1) % EVENT_RING_SIZE;
         count_--;
@@ -26,13 +32,30 @@ void EventBus::publish(JsonDocument& doc) {
     count_++;
     published_++;
     if (count_ > highwater_) highwater_ = (uint32_t)count_;
+    portEXIT_CRITICAL(&mux_);
+}
+
+bool EventBus::peek(String& out) {
+    portENTER_CRITICAL(&mux_);
+    if (count_ == 0) {
+        portEXIT_CRITICAL(&mux_);
+        return false;
+    }
+    out = ring_[head_];
+    portEXIT_CRITICAL(&mux_);
+    return true;
 }
 
 bool EventBus::pop(String& out) {
-    if (count_ == 0) return false;
+    portENTER_CRITICAL(&mux_);
+    if (count_ == 0) {
+        portEXIT_CRITICAL(&mux_);
+        return false;
+    }
     out = ring_[head_];
     head_ = (head_ + 1) % EVENT_RING_SIZE;
     count_--;
+    portEXIT_CRITICAL(&mux_);
     return true;
 }
 
@@ -45,6 +68,10 @@ void EventBus::fillCaptureHealth(JsonObject obj, uint32_t seqFirst, uint32_t seq
     obj["event_seq_first"] = seqFirst;
     obj["event_seq_last"] = seqLast;
     obj["dropped"] = dropped_;
+    obj["published"] = published_;
+    obj["stream_lost"] = streamLost_;
+    obj["tcp_tx_ok"] = tcpTxOk_;
+    obj["tcp_tx_fail"] = tcpTxFail_;
     obj["queue_pending"] = (uint32_t)count_;
     obj["queue_highwater"] = highwater_;
     obj["tcp_connected"] = tcpConnected;

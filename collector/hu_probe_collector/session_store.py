@@ -11,11 +11,20 @@ class SessionStore:
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         self._active: dict[str, Path] = {}
+        self._last_seq: dict[str, int] = {}
+        self._recv_events: dict[str, int] = {}
+        self._parse_errors = 0
+
+    @property
+    def parse_errors(self) -> int:
+        return self._parse_errors
+
+    def note_parse_error(self) -> None:
+        self._parse_errors += 1
 
     def ensure_session(self, sid: str, meta: dict[str, Any] | None = None) -> Path:
         if sid in self._active:
             return self._active[sid]
-        # Prefer sid as folder name if it already looks like our convention.
         folder = self.root / sid
         folder.mkdir(parents=True, exist_ok=True)
         (folder / "derived").mkdir(exist_ok=True)
@@ -41,6 +50,13 @@ class SessionStore:
                     "dropped": 0,
                     "queue_highwater": 0,
                     "tcp_disconnects": 0,
+                    "published": 0,
+                    "stream_lost": 0,
+                    "tcp_tx_fail": 0,
+                    "msc_sample_overflow": 0,
+                    "recv_seq_gaps": [],
+                    "recv_events": 0,
+                    "parse_errors": 0,
                     "complete": None,
                 },
                 "gates": ["HU-PROBE-GATE-01"],
@@ -49,6 +65,11 @@ class SessionStore:
             session_json.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         self._active[sid] = folder
         return folder
+
+    def _write_session(self, folder: Path, data: dict[str, Any]) -> None:
+        (folder / "session.json").write_text(
+            json.dumps(data, indent=2) + "\n", encoding="utf-8"
+        )
 
     def append_event(self, event: dict[str, Any]) -> Path | None:
         sid = event.get("sid")
@@ -64,18 +85,53 @@ class SessionStore:
                 "mac": event.get("mac"),
             }
         folder = self.ensure_session(str(sid), meta)
+        sid_s = str(sid)
+        self._recv_events[sid_s] = self._recv_events.get(sid_s, 0) + 1
+
+        dirty_meta = False
+        data: dict[str, Any] | None = None
+
+        def load() -> dict[str, Any]:
+            nonlocal data
+            if data is None:
+                data = json.loads((folder / "session.json").read_text(encoding="utf-8"))
+            return data
+
         if event.get("ev") == "session" and event.get("action") == "start":
-            sj = folder / "session.json"
-            data = json.loads(sj.read_text(encoding="utf-8"))
+            data = load()
             for key in ("vehicle", "scenario", "profile_id", "fw_version", "mac"):
                 if event.get(key) is not None:
-                    data[key if key != "profile_id" else "profile_id"] = event.get(key)
+                    data[key] = event.get(key)
             if event.get("fw_type"):
                 data["fw_type"] = event.get("fw_type")
-            sj.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+            dirty_meta = True
+            self._last_seq.pop(sid_s, None)
+
+        seq = event.get("seq")
+        if isinstance(seq, int):
+            prev = self._last_seq.get(sid_s)
+            if prev is not None and seq != prev + 1:
+                data = load()
+                cap = data.setdefault("capture", {})
+                gaps = list(cap.get("recv_seq_gaps") or [])
+                gaps.append(
+                    {
+                        "after": prev,
+                        "got": seq,
+                        "missing": list(range(prev + 1, seq)),
+                    }
+                )
+                if len(gaps) > 64:
+                    gaps = gaps[-64:]
+                cap["recv_seq_gaps"] = gaps
+                cap["complete"] = False
+                dirty_meta = True
+            self._last_seq[sid_s] = seq
+
         line = json.dumps(event, separators=(",", ":")) + "\n"
         with (folder / "events.jsonl").open("a", encoding="utf-8") as f:
             f.write(line)
+
         ev = event.get("ev")
         if ev == "marker":
             with (folder / "markers.jsonl").open("a", encoding="utf-8") as f:
@@ -84,26 +140,42 @@ class SessionStore:
             with (folder / "status.jsonl").open("a", encoding="utf-8") as f:
                 f.write(line)
             if ev == "capture_health":
-                sj = folder / "session.json"
-                data = json.loads(sj.read_text(encoding="utf-8"))
+                data = load()
                 cap = data.setdefault("capture", {})
-                cap["dropped"] = event.get("dropped", cap.get("dropped", 0))
+                for key in (
+                    "dropped",
+                    "tcp_disconnects",
+                    "published",
+                    "stream_lost",
+                    "tcp_tx_fail",
+                    "msc_sample_overflow",
+                ):
+                    if key in event:
+                        cap[key] = event.get(key)
                 cap["queue_highwater"] = max(
                     int(cap.get("queue_highwater") or 0),
                     int(event.get("queue_highwater") or 0),
                 )
-                cap["tcp_disconnects"] = event.get(
-                    "tcp_disconnects", cap.get("tcp_disconnects", 0)
-                )
+                cap["recv_events"] = self._recv_events.get(sid_s, 0)
+                cap["parse_errors"] = self._parse_errors
                 dropped = int(cap.get("dropped") or 0)
                 disc = int(cap.get("tcp_disconnects") or 0)
-                cap["complete"] = dropped == 0 and disc == 0
-                sj.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+                stream_lost = int(cap.get("stream_lost") or 0)
+                gaps = cap.get("recv_seq_gaps") or []
+                cap["complete"] = (
+                    dropped == 0 and disc == 0 and stream_lost == 0 and not gaps
+                )
+                dirty_meta = True
         elif ev == "session" and event.get("action") == "stop":
-            sj = folder / "session.json"
-            data = json.loads(sj.read_text(encoding="utf-8"))
+            data = load()
             data["ended_at"] = datetime.now(timezone.utc).astimezone().isoformat()
-            sj.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+            cap = data.setdefault("capture", {})
+            cap["recv_events"] = self._recv_events.get(sid_s, 0)
+            cap["parse_errors"] = self._parse_errors
+            dirty_meta = True
+
+        if dirty_meta and data is not None:
+            self._write_session(folder, data)
         return folder
 
     def list_sessions(self) -> list[dict[str, Any]]:

@@ -4,20 +4,29 @@
 #include <ArduinoJson.h>
 #include "BuildFlags.h"
 
-/** Ringpuffer für JSONL-Events (Collector + lokaler Trace). */
+/** Ringpuffer für JSONL-Events (Collector + lokaler Trace). Thread-safe. */
 class EventBus {
 public:
     static EventBus& instance();
     void begin();
     void publish(JsonDocument& doc);
+    /** Copy head without removing (for TCP flush-before-pop). */
+    bool peek(String& out);
+    /** Remove head after successful TX (or intentional discard). */
     bool pop(String& out);
     size_t pending() const;
     uint32_t dropped() const { return dropped_; }
     uint32_t highwater() const { return highwater_; }
     uint32_t tcpDisconnects() const { return tcpDisconnects_; }
     void noteTcpDisconnect() { tcpDisconnects_++; }
-    void noteTcpConnect() { /* counter stays cumulative */ }
+    void noteTcpConnect() { /* cumulative disconnects only */ }
     uint32_t published() const { return published_; }
+    uint32_t streamLost() const { return streamLost_; }
+    void noteStreamLost(uint32_t n = 1) { streamLost_ += n; }
+    uint32_t tcpTxOk() const { return tcpTxOk_; }
+    uint32_t tcpTxFail() const { return tcpTxFail_; }
+    void noteTcpTxOk() { tcpTxOk_++; }
+    void noteTcpTxFail() { tcpTxFail_++; }
     void fillCaptureHealth(JsonObject obj, uint32_t seqFirst, uint32_t seqLast,
                            bool tcpConnected) const;
 
@@ -31,4 +40,8 @@ private:
     uint32_t highwater_ = 0;
     uint32_t tcpDisconnects_ = 0;
     uint32_t published_ = 0;
+    uint32_t streamLost_ = 0;
+    uint32_t tcpTxOk_ = 0;
+    uint32_t tcpTxFail_ = 0;
+    portMUX_TYPE mux_ = portMUX_INITIALIZER_UNLOCKED;
 };

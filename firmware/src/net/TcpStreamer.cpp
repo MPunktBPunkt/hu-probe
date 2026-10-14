@@ -41,11 +41,30 @@ void TcpStreamer::tryConnect() {
 }
 
 void TcpStreamer::flushPending() {
+    // Peek → write → pop. Never drop a seq on failed TX (root cause of silent gaps).
     String line;
     int n = 0;
-    while (n < 64 && EventBus::instance().pop(line)) {
-        client_.print(line);
-        client_.print('\n');
+    EventBus& bus = EventBus::instance();
+    while (n < 64) {
+        if (!client_.connected()) {
+            wasConnected_ = false;
+            bus.noteTcpDisconnect();
+            return;
+        }
+        if (!bus.peek(line)) return;
+        size_t need = line.length() + 1;  // + '\n'
+        size_t w = client_.print(line);
+        w += client_.print('\n');
+        if (w < need) {
+            bus.noteTcpTxFail();
+            // Leave line at head; retry next loop / after reconnect.
+            return;
+        }
+        String discarded;
+        if (!bus.pop(discarded)) {
+            return;
+        }
+        bus.noteTcpTxOk();
         n++;
     }
 }

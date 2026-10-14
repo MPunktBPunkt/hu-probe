@@ -1,7 +1,7 @@
 # Unabhängige Review-Triage — BMW S0 (2026-10-14)
 
 Quellen: Mistral-Handoff, GPT-Prüfbericht, Grok-Prüfbericht, Re-Audit von `events.jsonl` / Firmware.  
-Repo-HEAD zum Feldpush: `fd5dff2`. Maßnahmenstand: dieser Commit (FW 0.2.3-Code + Tools).
+Repo-HEAD Feldauswertung: `fd5dff2`. Maßnahmenstand: FW **0.2.4** (Capture-`t_us`, TCP peek→pop, 512 KiB-Medium, Collector-Seq-Audit).
 
 ## Gesamturteil
 
@@ -52,31 +52,32 @@ Erste belastbare Host-Signatur vorhanden; GATE-01 bleibt offen.
 
 ## Maßnahmen (priorisiert)
 
-### P0 — Sofort (dieser Commit)
+### P0 — Sofort
 
 | ID | Maßnahme | Status |
 |----|----------|--------|
-| P0.1 | `tools/validate_session.py` — seq/sid/`t_us`/drain-Heuristik/capture | umgesetzt |
-| P0.2 | `tools/fingerprint_session.py` — reproduzierbar, optional leere Fenster | umgesetzt |
-| P0.3 | FW **0.2.3**: Sample.`tUs` als `int64_t`, Drain übernimmt Capture-Zeit | Code; **OTA ausstehend** |
-| P0.4 | Feldauswertung korrigieren (6/8, Fenster 3/7, Epistemik, Zeiten) | umgesetzt |
+| P0.1 | `tools/validate_session.py` | ✅ |
+| P0.2 | `tools/fingerprint_session.py` | ✅ |
+| P0.3 | FW **0.2.3**: Capture-`t_us` | ✅ Code/Bin; OTA offen |
+| P0.4 | Feldauswertung korrigieren | ✅ |
 
-### P1 — Nächste Labor-/Feldschleife
+### P1 — Labor-/Feldschleife
 
-| ID | Maßnahme |
-|----|----------|
-| P1.1 | 0.2.3 auf Lab `.88` + Auto `.89` flashen; Validator muss drain-Heuristik freigeben |
-| P1.2 | Seq-Lücke 249/250: EventBus vs. Collector-Parser vs. stille TCP-Verluste instrumentieren |
-| P1.3 | Fingerprint-Fenster an Capture-`t_us` neu rechnen; Fenster 3/7 mit Markern korrelieren |
-| P1.4 | `sample_overflow` / Ring-Highwater in `session.json` / capture_health persistieren |
+| ID | Maßnahme | Status |
+|----|----------|--------|
+| P1.1 | 0.2.4 auf `.88`/`.89` flashen | ⏳ Geräte offline (Hub: noch PiDrive-FW) |
+| P1.2 | Seq-Lücke: TCP `pop` vor TX-Erfolg | ✅ Fix 0.2.4 + Collector `recv_seq_gaps` |
+| P1.3 | Fenster 3/7 × Marker | ✅ `tools/correlate_windows.py` + Auswertung |
+| P1.4 | `msc_sample_overflow` / `published` / `tcp_tx_*` in capture_health | ✅ |
+| P1.5 | EventBus/Session seq thread-safe (`portMUX`) | ✅ |
 
 ### P2 — Medium & Szenarien (BMW)
 
-| ID | Maßnahme |
-|----|----------|
-| P2.1 | ≥512 KiB / 1 MiB Silence-MP3-Slots (`Mp3Silence` ausbauen) |
-| P2.2 | S1 Eager-EOF, S2 Prefetch, S3 Cache-Hit (Replug ohne Full-Reread?) |
-| P2.3 | S5 Busy-Budget, S6 Identity-Matrix (`MEDIA_VARIATION`) |
+| ID | Maßnahme | Status |
+|----|----------|--------|
+| P2.1 | ≥512 KiB Silence-MP3 Demo-FAT | ✅ `tools/build_demo_fat.py` (3×158 KiB) |
+| P2.2 | S1 Eager-EOF, S2 Prefetch, S3 Cache-Hit | offen (nach OTA) |
+| P2.3 | S5 Busy-Budget, S6 Identity-Matrix | offen |
 
 ### P3 — GATE-01 schließen
 
@@ -96,13 +97,13 @@ Mazda Discovery — Profil bleibt null, bis eigene Sessions existieren. Keine NB
 ```
 Projekt: github.com/MPunktBPunkt/hu-probe
 Zweck: USB-MSC-Sonde ESP32-S3; BMW NBT=Golden; Mazda=Stub/null. FACT nur eigene Session.
-Status: FW 0.2.3 Code (Capture-t_us Fix); Feld noch 0.2.2. GATE-01 OFFEN.
-Session: sessions/20261014-081637_bmw_s0_plug_enum — dropped=0, seq fehlt 249/250,
-  4KiB mode, gap_p50=3724us, 6/8 Fenster=22-Read, Fenster3 ohne DATA, Fenster7=94 Reads
-  mit Drain-t_us-Artefakt (gap_us glaubwürdig).
-Tools: tools/validate_session.py, tools/fingerprint_session.py
-Roadmap: P0 Validator/t_us → P1 Flash+Seq → P2 Medium/S1–S6 → P3 GATE-01 → P4 Mazda
-Never: NBT-Claims auf Mazda; events.jsonl überschreiben; gap_us durch Drain-t_us ersetzen.
+Status: FW 0.2.4 Bin ready (t_us + TCP peek/pop + 512KiB FAT); Feld noch 0.2.2. GATE-01 OFFEN.
+Session: sessions/20261014-081637_bmw_s0_plug_enum — dropped=0, seq fehlt 249/250
+  (Ursache: pop-before-TX bis 0.2.3), 4KiB, gap_p50=3724us, 6/8=22-Read,
+  Fenster3=kurze Replug-Dwell ohne DATA, Fenster7=94 Reads Drain-Artefakt.
+Tools: validate_session, fingerprint_session, correlate_windows, build_demo_fat
+Next: OTA 0.2.4 → Lab S0 → BMW S1/S2 → GATE-01 BOT → Mazda
+Never: NBT→Mazda; events.jsonl überschreiben; Drain-t_us als HU-Pace lesen.
 ```
 
 ## Validator-Lauf (diese Session)

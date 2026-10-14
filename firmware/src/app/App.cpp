@@ -129,11 +129,17 @@ void App::emitCaptureHealth() {
     doc["event_seq_first"] = session_.seqFirst();
     doc["event_seq_last"] = session_.seq();
     doc["dropped"] = bus.dropped();
+    doc["published"] = bus.published();
+    doc["stream_lost"] = bus.streamLost();
+    doc["tcp_tx_ok"] = bus.tcpTxOk();
+    doc["tcp_tx_fail"] = bus.tcpTxFail();
     doc["queue_pending"] = (uint32_t)bus.pending();
     doc["queue_highwater"] = bus.highwater();
     doc["tcp_connected"] = tcp_.connected();
     doc["tcp_disconnects"] = bus.tcpDisconnects();
     doc["ring_size"] = EVENT_RING_SIZE;
+    doc["msc_sample_overflow"] = msc_.sampleOverflow();
+    doc["msc_reads"] = msc_.readCount();
     bus.publish(doc);
 }
 

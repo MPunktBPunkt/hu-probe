@@ -234,18 +234,33 @@ Periodisch und bei Session-Ende. Ohne dieses Event ist die Session forensisch nu
   "event_seq_first": 1,
   "event_seq_last": 10042,
   "dropped": 0,
+  "published": 10042,
+  "stream_lost": 0,
+  "tcp_tx_ok": 10000,
+  "tcp_tx_fail": 0,
   "queue_pending": 12,
   "queue_highwater": 312,
   "tcp_connected": true,
   "tcp_disconnects": 0,
-  "ring_size": 2048
+  "ring_size": 2048,
+  "msc_sample_overflow": 0,
+  "msc_reads": 240
 }
 ```
 
+Collector spiegelt zusätzlich in `session.json` → `capture`:
+
+- `recv_seq_gaps` — Empfänger-Sicht (nach `seq`)
+- `recv_events` / `parse_errors`
+
 Analyse-Regel:
 
-- `dropped == 0` und `tcp_disconnects == 0` → Session **vollständig** (für Timing-Claims)
+- Probe: `dropped == 0`, `stream_lost == 0`, `tcp_disconnects == 0`
+- Collector: `recv_seq_gaps` leer
 - sonst → Claims nur mit Einschränkung / Re-Run
+
+Hinweis: Bis FW 0.2.3 konnte TCP bei Write-Fehler Events bereits aus dem Ring nehmen
+(`pop` vor erfolgreichem TX) — stille Seq-Lücken bei `dropped=0`. Ab 0.2.4: peek→TX→pop.
 
 ---
 

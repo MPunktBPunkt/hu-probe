@@ -39,16 +39,20 @@
 
 **6 von 8** nicht-leeren Fenstern zeigen das 22-Read-Grundmuster (nicht 7/8).
 
-### Fenster 3 (FACT)
+### Fenster 3 (FACT + Korrelation)
 
-14 Reads in ~3,8 ms Span, kein DATA. Attach→Detach nur ~3,76 s. Ursache: **UNKNOWN** (unterbrochener Enum/Playback-Pfad).
+14 Reads in ~3,8 ms Span, kein DATA. Attach→Detach nur **~3,76 s** — mitten in der physischen Replug-Serie nach Marker `before_physical_replug`.  
+**INFERENCE:** zu kurze Verweildauer für DATA/Playback-Pfad. Ursache im Detail: **UNKNOWN**.
+
+### Fenster 4–6 (FACT)
+
+Jeweils Plug ~4,7–7,5 s **ohne** Read-Events. Ebenfalls schnelle Replug-Serie — HU hat in diesen Fenstern kein MSC-Read (oder Samples gingen verloren; `msc_sample_overflow` war in 0.2.2 nicht in `session.json`).
 
 ### Fenster 7 (FACT + Instrumenten-Artefakt)
 
-94 Reads / 282 KiB. `gap_us` zeigt wiederholte Enum-Pässe (~4× BOOT/FAT/ROOT/DATA).  
-Unter FW 0.2.2 ist `t_us` der Reads **Drain-Zeit** (Sample-Ring → Loop), nicht MSC-Callback-Zeit — daher der scheinbare ~27 ms-Burst *nach* Host-Detach.  
-**HYPOTHESIS:** Mehrfach-Scan während Plug-Fenster 7; Emission nach VBUS/Loop-Recovery.  
-**Fix:** FW ≥0.2.3 stempelt Capture-`t_us` aus dem Sample.
+94 Reads / 282 KiB, alle als Orphan **nach** Detach gestempelt (Drain-`t_us`). `gap_us` zeigt ~4× BOOT/FAT/ROOT/DATA. Plug-Dauer ~7,3 s.  
+**HYPOTHESIS:** Mehrfach-Scan während Plug; Emission nach VBUS/Loop-Recovery.  
+**Fix:** FW ≥0.2.3 Capture-`t_us`; FW ≥0.2.4 TCP peek→TX→pop (stille Seq-Verluste).
 
 ### Capture-Hygiene
 
@@ -69,12 +73,13 @@ Kein universelles „NBT liest immer 4 KiB / 4 ms“ ableiten.
 
 ## Limitationen / nächste Bau
 
-1. Session-Validator + reproduzierbarer Fingerprint (`tools/`)
-2. FW 0.2.3: Capture-`t_us` im Sample-Ring (Drain-Bug)
-3. Seq-Lücke 249/250 ursächlich klären
-4. Größere Slot-Geometrie (Silence-MP3 / ≥512 KiB) für S1/S2
+1. ~~Validator + Fingerprint~~ → `tools/validate_session.py`, `fingerprint_session.py`, `correlate_windows.py`
+2. ~~Capture-`t_us`~~ → FW 0.2.3+
+3. ~~TCP silent loss / Seq~~ → FW 0.2.4 peek→TX→pop + Collector `recv_seq_gaps` (Feld-OTA ausstehend)
+4. ~~512 KiB Silence-MP3-Medium~~ → Demo-FAT ab 0.2.4 (Flash ~80 %)
 5. GATE-01: Roh-BOT CBW/CDB/CSW, `fw_sha`, Deskriptoren
 6. VBUS-Verlust → lokaler Tail-Ring
+7. OTA 0.2.4 auf Lab `.88` / Auto `.89` sobald online
 
 ## Artefakte
 

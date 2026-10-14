@@ -118,8 +118,22 @@ void Session::toStatusJson(JsonObject obj) const {
     obj["scenario"] = scenario_;
     obj["profile_id"] = profileId_;
     obj["phase"] = phase_;
-    obj["seq"] = seq_;
+    obj["seq"] = seq();
     obj["seq_first"] = seqFirst_;
+}
+
+uint32_t Session::nextSeq() {
+    portENTER_CRITICAL(&seqMux_);
+    uint32_t s = ++seq_;
+    portEXIT_CRITICAL(&seqMux_);
+    return s;
+}
+
+uint32_t Session::seq() const {
+    portENTER_CRITICAL(&seqMux_);
+    uint32_t s = seq_;
+    portEXIT_CRITICAL(&seqMux_);
+    return s;
 }
 
 uint32_t Session::seqFirst() const {

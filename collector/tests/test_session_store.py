@@ -52,8 +52,27 @@ def test_append_session_events(tmp_path: Path) -> None:
             "dropped": 0,
             "queue_highwater": 4,
             "tcp_disconnects": 0,
+            "published": 3,
+            "stream_lost": 0,
+            "msc_sample_overflow": 0,
         }
     )
     meta = json.loads((folder / "session.json").read_text(encoding="utf-8"))
     assert meta["capture"]["complete"] is True
     assert meta["capture"]["queue_highwater"] == 4
+    assert meta["capture"]["recv_events"] == 3
+
+    # Seq gap must mark incomplete
+    store.append_event(
+        {
+            "v": 2,
+            "sid": "20261014-120000_bmw_s0_plug_enum",
+            "seq": 6,
+            "t_us": 2000,
+            "ev": "read",
+            "n": 512,
+        }
+    )
+    meta = json.loads((folder / "session.json").read_text(encoding="utf-8"))
+    assert meta["capture"]["complete"] is False
+    assert meta["capture"]["recv_seq_gaps"][0]["missing"] == [4, 5]
