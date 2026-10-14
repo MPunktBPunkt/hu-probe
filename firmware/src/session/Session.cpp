@@ -104,11 +104,12 @@ void Session::stop() {
     phase_ = "idle";
 }
 
-void Session::setPhase(const String& phase, const String& note) {
+void Session::setPhase(const String& phase, const String& note, int64_t tUs) {
     phase_ = phase;
     if (!active_) return;
     JsonDocument doc;
-    int64_t t = ProbeClock::nowUs();
+    int64_t t = (tUs > 0) ? tUs : ProbeClock::eventNowUs();
+    ProbeClock::observeEventTUs(t);
     doc["v"] = 2;
     doc["sid"] = id_;
     doc["seq"] = nextSeq();
@@ -123,7 +124,8 @@ void Session::setPhase(const String& phase, const String& note) {
 void Session::marker(const String& name, const String& note) {
     if (!active_) return;
     JsonDocument doc;
-    int64_t t = ProbeClock::nowUs();
+    int64_t t = ProbeClock::eventNowUs();
+    ProbeClock::observeEventTUs(t);
     doc["v"] = 2;
     doc["sid"] = id_;
     doc["seq"] = nextSeq();

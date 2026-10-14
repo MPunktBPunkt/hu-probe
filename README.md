@@ -48,13 +48,14 @@ SoftAP-Setup: `ESP-HuProbe-Setup`.
 - [Medienvariation](docs/MEDIA_VARIATION.md)
 - [Feldauswertung BMW S0](docs/feld/2026-10-14-bmw-s0-auswertung.md) · [Review-Triage](docs/feld/2026-10-14-review-triage.md)
 
-## Status (v0.2.12) — Capture-tUs Fix + WiFi-Restart schneller
+## Status (v0.2.13) — Control/STALL-Epochs
 
-- FW **0.2.12**: Deferred BOT trägt Capture-`tUs` (kein `bot_data`→`read` Timeline-Rücksprung); WiFi-Restart nach ~25 s
-- Feld 0.2.11: [Auswertung](docs/feld/2026-10-14-bmw-s0-0.2.11-auswertung.md) — Gap-p50 **~3,6–3,7 ms**; [Abend-Triage](docs/feld/2026-10-14-review-abend-triage.md)
-- Control/STALL Desk-Karte: [Audit-Intake](docs/feld/2026-10-14-audit-control-stall-recovery.md) · [Maßnahmen 01C](docs/feld/2026-10-14-massnahmen-01c.md)
-- GATE-01 **offen** (Control-Hooks noch zu implementieren; Wire UNKNOWN)
-- Auto/Lab: `./tools/ota_car_esp.sh` / `lab_s0_run.sh` → `firmware/dist/hu-probe.0.2.12.esp32s3.bin`
+- FW **0.2.13**: `set_address` / `mount`·`umount`·`set_configuration` / `ep_stall`·`ep_clear_halt` / `msc_bot_reset`; Clear-Halt heilt NEED_RESET nicht; Mount clear BOT-Epoch
+- FW **0.2.12**: Capture-`tUs` auf deferred BOT; WiFi-Restart ~25 s
+- Feld 0.2.11: [Auswertung](docs/feld/2026-10-14-bmw-s0-0.2.11-auswertung.md) · [Abend-Triage](docs/feld/2026-10-14-review-abend-triage.md)
+- Audit: [Control/STALL](docs/feld/2026-10-14-audit-control-stall-recovery.md) · [Maßnahmen 01C](docs/feld/2026-10-14-massnahmen-01c.md)
+- GATE-01 **offen** (Lab-Dry-Run Kill-Kriterien; Wire UNKNOWN)
+- Auto/Lab: Bin `firmware/dist/hu-probe.0.2.13.esp32s3.bin`
 
 ### Status-LED (ESP32-S3 RGB)
 

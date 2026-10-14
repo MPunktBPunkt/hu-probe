@@ -34,6 +34,12 @@ def _prepare(env):
             "-Wl,--wrap=tud_msc_scsi_cb",
             "-Wl,--wrap=tud_msc_start_stop_cb",
             "-Wl,--wrap=mscd_control_xfer_cb",
+            # 0.2.13 Control/STALL epochs (Audit usb-control-stall-recovery-2026)
+            "-Wl,--wrap=tud_mount_cb",
+            "-Wl,--wrap=tud_umount_cb",
+            "-Wl,--wrap=dcd_set_address",
+            "-Wl,--wrap=usbd_edpt_stall",
+            "-Wl,--wrap=usbd_edpt_clear_stall",
         ]
     )
 

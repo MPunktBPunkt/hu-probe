@@ -49,6 +49,7 @@ void MscGadget::begin(Session* session, ReadInstrument* instrument) {
     remountGen_ = 1;
     snprintf(serial_, sizeof(serial_), "HP%04u", (unsigned)remountGen_);
     MscBotTap::begin(instrument);
+    MscBotTap::setProbeSerial(serial_);
 
     USB.onEvent(usb_event_cb);
     MSC.vendorID("HUPROBE");
@@ -99,6 +100,7 @@ void MscGadget::bumpSerial() {
     if (remountGen_ == 0) remountGen_ = 1;
     snprintf(serial_, sizeof(serial_), "HP%04u", (unsigned)(remountGen_ % 10000));
     USB.serialNumber(serial_);
+    MscBotTap::setProbeSerial(serial_);
 }
 
 void MscGadget::setIdentity(const char* serial, const char* label) {
@@ -167,19 +169,12 @@ void MscGadget::onUsbPlugged(bool on) {
     suspended_ = false;
     if (on) {
         plugCount_++;
-        if (instrument_ && session_ && session_->active()) {
-            instrument_->onUsb("attach", 0, "in", 0, "host");
-            instrument_->emitIdentityDescriptors(serial_, "HUPROBE", "HU_PROBE", FW_VERSION);
-        }
-        if (session_ && session_->active()) session_->setPhase("enum", "plug");
-        Serial.println("[MSC] USB plugged (host started)");
+        // mount/identity/phase come from MscBotTap::drain(Kind::Mount) — same Capture-tUs.
+        Serial.println("[MSC] USB plugged (host started / mount)");
     } else {
         unplugCount_++;
         bumpSerial();  // next attach looks like a new stick
-        if (instrument_ && session_ && session_->active()) {
-            instrument_->onUsb("detach", 0, "in", 0, "host");
-        }
-        if (session_ && session_->active()) session_->setPhase("idle", "unplug");
+        // umount/phase from MscBotTap::drain(Kind::Umount).
         Serial.printf("[MSC] USB unplugged — next serial %s\n", serial_);
     }
 }

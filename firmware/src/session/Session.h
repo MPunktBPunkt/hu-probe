@@ -15,7 +15,8 @@ public:
     const String& scenario() const { return scenario_; }
     const String& profileId() const { return profileId_; }
     const String& phase() const { return phase_; }
-    void setPhase(const String& phase, const String& note = "");
+    /** Optional tUs aligns phase with Capture epochs (e.g. mount). 0 = now. */
+    void setPhase(const String& phase, const String& note = "", int64_t tUs = 0);
     uint32_t nextSeq();
     uint32_t seq() const;
     uint32_t seqFirst() const;

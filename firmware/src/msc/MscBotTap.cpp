@@ -1,4 +1,5 @@
 #include "MscBotTap.h"
+#include "BuildFlags.h"
 #include "core/ProbeClock.h"
 #include "tusb.h"
 #include "class/msc/msc.h"
@@ -31,6 +32,9 @@ ReadInstrument* MscBotTap::instrument_ = nullptr;
 uint32_t MscBotTap::lastCbwTag_ = 0xFFFFFFFFu;
 bool MscBotTap::cswPending_ = false;
 bool MscBotTap::needResetArmed_ = false;
+int64_t MscBotTap::lastMountTUs_ = 0;
+int64_t MscBotTap::lastUmountTUs_ = 0;
+char MscBotTap::probeSerial_[16] = "HP0001";
 MscBotTap::Pending MscBotTap::pending_[kPendingRing];
 volatile size_t MscBotTap::pendingHead_ = 0;
 volatile size_t MscBotTap::pendingTail_ = 0;
@@ -39,16 +43,28 @@ uint32_t MscBotTap::pendingOverflow_ = 0;
 
 void MscBotTap::begin(ReadInstrument* instrument) {
     instrument_ = instrument;
-    lastCbwTag_ = 0xFFFFFFFFu;
-    cswPending_ = false;
-    needResetArmed_ = false;
+    clearBotEpoch();
     pendingHead_ = pendingTail_ = pendingCount_ = 0;
     pendingOverflow_ = 0;
 }
 
 ReadInstrument* MscBotTap::instrument() { return instrument_; }
 
+void MscBotTap::setProbeSerial(const char* serial) {
+    if (!serial) return;
+    snprintf(probeSerial_, sizeof(probeSerial_), "%s", serial);
+}
+
+void MscBotTap::clearBotEpoch() {
+    lastCbwTag_ = 0xFFFFFFFFu;
+    cswPending_ = false;
+    needResetArmed_ = false;
+}
+
 void MscBotTap::queue(const Pending& p) {
+    // Raise watermark at queue (USB callback) so status/health cannot stamp below
+    // pending Capture-tUs before drain publishes them.
+    ProbeClock::observeEventTUs(p.tUs);
     if (pendingCount_ >= kPendingRing) {
         pendingHead_ = (pendingHead_ + 1) % kPendingRing;
         pendingCount_--;
@@ -69,6 +85,10 @@ void MscBotTap::queueControl(uint8_t bmRequestType, uint8_t bRequest, uint16_t w
     p.wValue = wValue;
     p.wIndex = wIndex;
     p.wLength = wLength;
+    // Standard CLEAR_FEATURE(HALT) while NEED_RESET: log, do not heal.
+    if ((bmRequestType & 0x60) == 0 && bRequest == 0x01 && needResetArmed_) {
+        p.flag = 1;
+    }
     queue(p);
 }
 
@@ -127,7 +147,60 @@ void MscBotTap::emitNeedResetIfNew() {
     queue(p);
 }
 
-void MscBotTap::onBotReset() { needResetArmed_ = false; }
+void MscBotTap::onBotReset() {
+    Pending p;
+    p.kind = Kind::BotReset;
+    p.tUs = ProbeClock::nowUs();
+    queue(p);
+    clearBotEpoch();
+}
+
+void MscBotTap::queueSetAddress(uint8_t addr) {
+    Pending p;
+    p.kind = Kind::SetAddress;
+    p.tUs = ProbeClock::nowUs();
+    p.wValue = addr;
+    queue(p);
+}
+
+void MscBotTap::queueMount() {
+    // Replug without VBUS often skips umount — Mount is the safe epoch (Audit 007/008).
+    clearBotEpoch();
+    Pending p;
+    p.kind = Kind::Mount;
+    p.tUs = ProbeClock::nowUs();
+    lastMountTUs_ = p.tUs;
+    p.wValue = 1;  // SET_CONFIGURATION n≠0 implied; exact n not exposed by tud_mount_cb
+    queue(p);
+}
+
+void MscBotTap::queueUmount() {
+    Pending p;
+    p.kind = Kind::Umount;
+    p.tUs = ProbeClock::nowUs();
+    lastUmountTUs_ = p.tUs;
+    p.wValue = 0;  // cfg 0 or bus-level unmount
+    queue(p);
+    clearBotEpoch();
+}
+
+void MscBotTap::queueEpStall(uint8_t epAddr) {
+    Pending p;
+    p.kind = Kind::EpStall;
+    p.tUs = ProbeClock::nowUs();
+    p.epAddr = epAddr;
+    queue(p);
+}
+
+void MscBotTap::queueEpClearHalt(uint8_t epAddr) {
+    Pending p;
+    p.kind = Kind::EpClearHalt;
+    p.tUs = ProbeClock::nowUs();
+    p.epAddr = epAddr;
+    // Capture latch at queue time — Clear-Halt must NOT clear NEED_RESET.
+    p.flag = needResetArmed_ ? 1 : 0;
+    queue(p);
+}
 
 void MscBotTap::onNonDataScsiEnter() { emitCbwIfNew(ProbeClock::nowUs()); }
 
@@ -173,7 +246,34 @@ void MscBotTap::drain(int maxEvents) {
                 break;
             case Kind::Control:
                 instrument_->emitUsbControlTinyusb(p.bmRequestType, p.bRequest, p.wValue, p.wIndex,
-                                                   p.wLength, p.tUs);
+                                                   p.wLength, p.tUs, p.flag != 0);
+                break;
+            case Kind::SetAddress:
+                instrument_->emitUsbEpochTinyusb(p.tUs, "set_address", 0, p.wValue, nullptr);
+                break;
+            case Kind::Mount:
+                // Mount ≡ SET_CONFIGURATION n; identity+phase share Capture-tUs (no race).
+                instrument_->emitUsbEpochTinyusb(p.tUs, "mount", 0, p.wValue,
+                                                 "set_configuration_n_via_tud_mount_cb");
+                instrument_->emitIdentityDescriptorsAt(p.tUs, probeSerial_, "HUPROBE", "HU_PROBE",
+                                                       FW_VERSION);
+                instrument_->emitPhaseAt(p.tUs, "enum", "plug");
+                break;
+            case Kind::Umount:
+                instrument_->emitUsbEpochTinyusb(p.tUs, "umount", 0, 0,
+                                                 "set_configuration_0_or_bus_via_tud_umount_cb");
+                instrument_->emitPhaseAt(p.tUs, "idle", "unplug");
+                break;
+            case Kind::EpStall:
+                instrument_->emitUsbEpochTinyusb(p.tUs, "ep_stall", p.epAddr, 0, nullptr);
+                break;
+            case Kind::EpClearHalt:
+                instrument_->emitUsbEpochTinyusb(
+                    p.tUs, "ep_clear_halt", p.epAddr, 0,
+                    p.flag ? "need_reset_active_not_healed" : nullptr);
+                break;
+            case Kind::BotReset:
+                instrument_->emitUsbEpochTinyusb(p.tUs, "msc_bot_reset", 0, 0, "msc_req_reset_0xff");
                 break;
         }
     }
@@ -261,6 +361,39 @@ bool __wrap_mscd_control_xfer_cb(uint8_t rhport, uint8_t stage,
     return ok;
 }
 
+void __real_tud_mount_cb(void);
+void __real_tud_umount_cb(void);
+void __real_dcd_set_address(uint8_t rhport, uint8_t dev_addr);
+void __real_usbd_edpt_stall(uint8_t rhport, uint8_t ep_addr);
+void __real_usbd_edpt_clear_stall(uint8_t rhport, uint8_t ep_addr);
+
+void __wrap_tud_mount_cb(void) {
+    // Queue before real so Capture-tUs ≤ any Arduino STARTED side effects; identity/phase
+    // are emitted in drain with the same tUs (no cross-task interleave).
+    MscBotTap::queueMount();
+    __real_tud_mount_cb();
+}
+
+void __wrap_tud_umount_cb(void) {
+    MscBotTap::queueUmount();
+    __real_tud_umount_cb();
+}
+
+void __wrap_dcd_set_address(uint8_t rhport, uint8_t dev_addr) {
+    MscBotTap::queueSetAddress(dev_addr);
+    __real_dcd_set_address(rhport, dev_addr);
+}
+
+void __wrap_usbd_edpt_stall(uint8_t rhport, uint8_t ep_addr) {
+    MscBotTap::queueEpStall(ep_addr);
+    __real_usbd_edpt_stall(rhport, ep_addr);
+}
+
+void __wrap_usbd_edpt_clear_stall(uint8_t rhport, uint8_t ep_addr) {
+    MscBotTap::queueEpClearHalt(ep_addr);
+    __real_usbd_edpt_clear_stall(rhport, ep_addr);
+}
+
 void tud_msc_read10_complete_cb(uint8_t lun) {
     (void)lun;
     MscBotTap::emitCsw();
@@ -283,6 +416,7 @@ void tud_msc_scsi_complete_cb(uint8_t lun, uint8_t const scsi_cmd[16]) {
 
 void MscBotTap::begin(ReadInstrument*) {}
 ReadInstrument* MscBotTap::instrument() { return nullptr; }
+void MscBotTap::setProbeSerial(const char*) {}
 void MscBotTap::emitCbwIfNew(int64_t) {}
 void MscBotTap::emitDataChunk(int64_t, uint32_t, uint32_t, uint32_t, uint32_t, const char*,
                               const char*, const char*) {}
@@ -295,12 +429,21 @@ void MscBotTap::poll() {}
 void MscBotTap::drain(int) {}
 void MscBotTap::queue(const Pending&) {}
 void MscBotTap::queueControl(uint8_t, uint8_t, uint16_t, uint16_t, uint16_t) {}
+void MscBotTap::queueSetAddress(uint8_t) {}
+void MscBotTap::queueMount() {}
+void MscBotTap::queueUmount() {}
+void MscBotTap::queueEpStall(uint8_t) {}
+void MscBotTap::queueEpClearHalt(uint8_t) {}
+void MscBotTap::clearBotEpoch() {}
 uint32_t MscBotTap::currentHostTag() { return 0; }
 
 ReadInstrument* MscBotTap::instrument_ = nullptr;
 uint32_t MscBotTap::lastCbwTag_ = 0;
 bool MscBotTap::cswPending_ = false;
 bool MscBotTap::needResetArmed_ = false;
+int64_t MscBotTap::lastMountTUs_ = 0;
+int64_t MscBotTap::lastUmountTUs_ = 0;
+char MscBotTap::probeSerial_[16] = "HP0001";
 MscBotTap::Pending MscBotTap::pending_[kPendingRing];
 volatile size_t MscBotTap::pendingHead_ = 0;
 volatile size_t MscBotTap::pendingTail_ = 0;

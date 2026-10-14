@@ -122,7 +122,8 @@ void App::begin() {
 
 void App::emitStatus() {
     if (!session_.active()) return;
-    int64_t t = ProbeClock::nowUs();
+    int64_t t = ProbeClock::eventNowUs();
+    ProbeClock::observeEventTUs(t);
     JsonDocument doc;
     doc["v"] = 2;
     doc["sid"] = session_.id();
@@ -140,7 +141,8 @@ void App::emitStatus() {
 
 void App::emitCaptureHealth() {
     if (!session_.active()) return;
-    int64_t t = ProbeClock::nowUs();
+    int64_t t = ProbeClock::eventNowUs();
+    ProbeClock::observeEventTUs(t);
     EventBus& bus = EventBus::instance();
     JsonDocument doc;
     doc["v"] = 2;

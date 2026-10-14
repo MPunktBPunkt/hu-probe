@@ -57,7 +57,9 @@ def main() -> int:
     elif len(sids - {None}) > 1:
         fails.append(f"multiple sids in events: {sorted(sids)}")
 
-    seqs = [e["seq"] for e in events if "seq" in e]
+    # TCP may deliver packets out of order — evaluate timeline by seq, not file order.
+    ordered = sorted((e for e in events if "seq" in e and "t_us" in e), key=lambda e: e["seq"])
+    seqs = [e["seq"] for e in ordered]
     if seqs:
         missing = sorted(set(range(seqs[0], seqs[-1] + 1)) - set(seqs))
         if missing:
@@ -68,7 +70,7 @@ def main() -> int:
         if nonmono:
             fails.append(f"seq non-monotonic steps={nonmono}")
 
-    tus = [e["t_us"] for e in events if "t_us" in e]
+    tus = [e["t_us"] for e in ordered]
     if tus:
         back = sum(1 for i in range(1, len(tus)) if tus[i] < tus[i - 1])
         if back:
@@ -78,6 +80,17 @@ def main() -> int:
             )
         else:
             oks.append("t_us non-decreasing")
+        file_back = sum(
+            1
+            for i in range(1, len(events))
+            if "t_us" in events[i]
+            and "t_us" in events[i - 1]
+            and events[i]["t_us"] < events[i - 1]["t_us"]
+        )
+        if file_back and not back:
+            warns.append(
+                f"file-order t_us wobble={file_back} (TCP reorder; seq-ordered timeline OK)"
+            )
 
     ev_types = {}
     for e in events:

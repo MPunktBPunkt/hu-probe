@@ -12,9 +12,9 @@ Kein weiteres Fremd-Audit für Control/STALL nötig. Nächste Arbeit = **Code in
 |------|----------|--------|---------|
 | **P0** | `t_us`-Fix: Pending Capture-Zeit + `stampAt`; Validator Regression | **done in 0.2.12** | Lab-Smoke noch ausstehend |
 | **P0b** | Restart-Timeout ~90 s → ~25 s | **done in 0.2.12** | Quick Win |
-| **P1** | Control/Enum-Hooks nach Audit-Karte: `SET_ADDRESS`, `SET_CONFIGURATION`, `tud_mount_cb`/`tud_umount_cb` | **offen** | Desk fertig; usbd-/mount-Hooks |
-| **P1** | STALL / CLEAR_HALT / BOT-Reset als getrennte Epochs; Clear-Halt ≠ NEED_RESET-Heilung | **teilweise** | `bot_need_reset` da; Stall/BOT-Reset-Epoch schärfen |
-| **P1** | State-Clear bei Mount (Replug ohne VBUS oft ohne Umount) | **offen** | Audit `007`/`008` |
+| **P1** | Control/Enum-Hooks nach Audit-Karte: `SET_ADDRESS`, `SET_CONFIGURATION`, `tud_mount_cb`/`tud_umount_cb` | **done in 0.2.13** | Lab-Dry-Run Kill 1–3 noch offen |
+| **P1** | STALL / CLEAR_HALT / BOT-Reset als getrennte Epochs; Clear-Halt ≠ NEED_RESET-Heilung | **done in 0.2.13** | note `need_reset_active_not_healed` |
+| **P1** | State-Clear bei Mount (Replug ohne VBUS oft ohne Umount) | **done in 0.2.13** | Audit `007`/`008` |
 | **P2** | Lab-Triple 0.2.12+ (nach P0): Soft+Remount+`dd`, Gap+BOT, Kill-Kriterien Control | **offen** | nicht auf 0.2.11-Rohdaten |
 | **P2** | Lange unbroken BMW-S0-Timeline | **offen** | nach Timing-Fix / stabilem WiFi |
 | **P3** | S1 Eager-EOF / S2 Prefetch / S3 Cache | **offen** | Instrument reicht nach P0 |
@@ -38,4 +38,4 @@ Kein weiteres Fremd-Audit für Control/STALL nötig. Nächste Arbeit = **Code in
 
 ## Empfohlene FW-Linie
 
-`0.2.12` (Arbeitstitel): P0 Timing + P1 Control/Mount/STALL-Epochs → Lab-Dry-Run → erst dann GATE-01 Close-Kandidat.
+`0.2.12` Timing · `0.2.13` Control/Mount/STALL → Lab-Dry-Run (Kill 1–3) + Triple → GATE-01 Close-Kandidat.

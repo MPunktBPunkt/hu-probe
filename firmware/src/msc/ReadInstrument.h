@@ -21,6 +21,8 @@ public:
     /** Known gadget identity as usb get_descriptor timeline (no host control sniff yet). */
     void emitIdentityDescriptors(const char* serial, const char* vendor, const char* product,
                                  const char* revision);
+    void emitIdentityDescriptorsAt(int64_t tUs, const char* serial, const char* vendor,
+                                   const char* product, const char* revision);
     void onBotCbw(uint32_t botTag, const char* cdbHex, const char* opcode,
                   uint32_t lba, uint16_t blocks, uint32_t xferLen, uint8_t flags);
     void onBotData(uint32_t botTag, const char* dir, uint32_t expected, uint32_t actual,
@@ -35,9 +37,14 @@ public:
                             const char* dir);
     void emitBotCswTinyusb(const uint8_t csw[13], int64_t tUs);
     void emitUsbControlTinyusb(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue,
-                               uint16_t wIndex, uint16_t wLength, int64_t tUs);
+                               uint16_t wIndex, uint16_t wLength, int64_t tUs,
+                               bool needResetActive = false);
     /** TinyUSB MSC_STAGE_NEED_RESET (invalid CBW → stall both EPs). */
     void emitBotNeedResetTinyusb(int64_t tUs);
+    /** Enum/STALL epoch: set_address, set_configuration, mount/umount, ep_stall/clear, bot_reset. */
+    void emitUsbEpochTinyusb(int64_t tUs, const char* usbEv, uint8_t ep, uint16_t wValue,
+                             const char* note);
+    void emitPhaseAt(int64_t tUs, const char* phase, const char* note);
     /** Comfort `read` only (BOT chain already emitted as tinyusb). */
     void emitReadAggregate(int64_t tUs, uint32_t botTag, uint32_t lba, uint32_t nBytes,
                            uint32_t durUs, uint32_t gapUs, const char* tag, const char* kind);

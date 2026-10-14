@@ -29,10 +29,11 @@ void ReadInstrument::begin(Session* session) {
 }
 
 void ReadInstrument::stamp(JsonDocument& doc) {
-    stampAt(doc, ProbeClock::nowUs());
+    stampAt(doc, ProbeClock::eventNowUs());
 }
 
 void ReadInstrument::stampAt(JsonDocument& doc, int64_t tUs) {
+    ProbeClock::observeEventTUs(tUs);
     doc["v"] = 2;
     if (session_) {
         doc["sid"] = session_->id();
@@ -230,11 +231,15 @@ void ReadInstrument::onUsb(const char* usbEv, uint8_t ep, const char* dir, uint3
 
 void ReadInstrument::emitIdentityDescriptors(const char* serial, const char* vendor,
                                              const char* product, const char* revision) {
+    emitIdentityDescriptorsAt(ProbeClock::nowUs(), serial, vendor, product, revision);
+}
+
+void ReadInstrument::emitIdentityDescriptorsAt(int64_t tUs, const char* serial, const char* vendor,
+                                               const char* product, const char* revision) {
     if (!session_ || !session_->active()) return;
-    int64_t t = ProbeClock::nowUs();
     auto emit = [&](const char* descType, const char* note) {
         JsonDocument doc;
-        stampAt(doc, t);
+        stampAt(doc, tUs);
         doc["ev"] = "usb";
         doc["usb_ev"] = "get_descriptor";
         doc["desc_type"] = descType;
@@ -422,7 +427,8 @@ void ReadInstrument::emitBotCswTinyusb(const uint8_t cswRaw[13], int64_t tUs) {
 }
 
 void ReadInstrument::emitUsbControlTinyusb(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue,
-                                           uint16_t wIndex, uint16_t wLength, int64_t tUs) {
+                                           uint16_t wIndex, uint16_t wLength, int64_t tUs,
+                                           bool needResetActive) {
     if (!session_ || !session_->active()) return;
 
     JsonDocument doc;
@@ -449,7 +455,10 @@ void ReadInstrument::emitUsbControlTinyusb(uint8_t bmRequestType, uint8_t bReque
             case 0x05: doc["usb_ev"] = "set_address"; break;
             case 0x06: doc["usb_ev"] = "get_descriptor"; break;
             case 0x09: doc["usb_ev"] = "set_configuration"; break;
-            case 0x01: doc["usb_ev"] = "clear_halt"; doc["note"] = "clear_feature"; break;
+            case 0x01:
+                doc["usb_ev"] = "clear_halt";
+                doc["note"] = needResetActive ? "need_reset_active_not_healed" : "clear_feature";
+                break;
             default: break;
         }
     }
@@ -469,6 +478,28 @@ void ReadInstrument::emitBotNeedResetTinyusb(int64_t tUs) {
     doc["dur_us"] = 0;
     doc["note"] = "msc_stage_need_reset";
     EventBus::instance().publish(doc);
+}
+
+void ReadInstrument::emitUsbEpochTinyusb(int64_t tUs, const char* usbEv, uint8_t ep, uint16_t wValue,
+                                         const char* note) {
+    if (!session_ || !session_->active() || !usbEv) return;
+    JsonDocument doc;
+    stampAt(doc, tUs);
+    doc["ev"] = "usb";
+    doc["usb_ev"] = usbEv;
+    doc["bot_source"] = "tinyusb";
+    doc["synthesized"] = false;
+    doc["ep"] = ep;
+    doc["dir"] = "out";
+    doc["wValue"] = wValue;
+    doc["dur_us"] = 0;
+    if (note) doc["note"] = note;
+    EventBus::instance().publish(doc);
+}
+
+void ReadInstrument::emitPhaseAt(int64_t tUs, const char* phase, const char* note) {
+    if (!session_ || !session_->active() || !phase) return;
+    session_->setPhase(phase, note ? note : "", tUs);
 }
 
 void ReadInstrument::emitReadAggregate(int64_t tUs, uint32_t botTag, uint32_t lba, uint32_t nBytes,

@@ -2,7 +2,7 @@
 
 ## HU-PROBE-GATE-01 — Measurement Integrity
 
-**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8**, Class-Driver-Hooks hardened **0.2.9**; Standard-Control/STALL: **Desk-Hook-Karte da**, Implementierung ausstehend)
+**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8**; Control/STALL-Hooks ab **0.2.13** — Lab-Dry-Run gegen Kill-Kriterien noch offen)
 
 ### Zeit & Sequenz
 
@@ -14,11 +14,11 @@
 ### USB Enumeration / Control
 
 - [x] USB attach/detach/suspend/resume sichtbar (Host + Soft)
-- [~] Control-Transfer-Visibility: **MSC-Class** (GET_MAX_LUN / BOT_RESET) ab 0.2.8; Standard-Device-Requests noch nicht vollständig
+- [x] Control-Transfer-Visibility: **MSC-Class** (GET_MAX_LUN / BOT_RESET) ab 0.2.8; Standard via `dcd_set_address` + Mount/Umount (0.2.13)
 - [~] Descriptor-Capture: **gadget_identity**-Events bei Attach (synthetisch) + ggf. Class-Control
-- [ ] SET_ADDRESS / SET_CONFIGURATION in der Timeline — Desk-Karte: [control-stall intake](feld/2026-10-14-audit-control-stall-recovery.md); usbd-Hook + `tud_mount_cb` ausstehend
-- [~] Endpoint / Direction auf USB-Events (teilweise)
-- [~] STALL / CLEAR_HALT / Reset-Recovery — `bot_need_reset` da (0.2.9); Clear-Halt ≠ NEED_RESET-Heilung (Audit); BOT-Reset-Epoch + Stall-Events ausstehend
+- [x] SET_ADDRESS (`dcd_set_address` wrap) + Mount/Umount (`tud_mount_cb`/`umount_cb`, ≡ SET_CONFIGURATION n/0) — [control-stall intake](feld/2026-10-14-audit-control-stall-recovery.md)
+- [~] Endpoint / Direction auf USB-Events (teilweise; `ep_stall`/`ep_clear_halt` mit ep_addr ab 0.2.13)
+- [x] STALL / CLEAR_HALT / Reset-Recovery — `bot_need_reset` + `ep_stall`/`ep_clear_halt` + `msc_bot_reset`; Clear-Halt heilt NEED_RESET **nicht** (note `need_reset_active_not_healed`); Mount clear BOT-Epoch
 
 ### BOT / SCSI Evidenz
 
