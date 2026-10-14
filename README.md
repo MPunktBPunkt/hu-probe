@@ -47,12 +47,13 @@ SoftAP-Setup: `ESP-HuProbe-Setup`.
 - [Szenarien](docs/SZENARIEN.md)
 - [Medienvariation](docs/MEDIA_VARIATION.md)
 
-## Status (v0.2.0) — erster Feldtest
+## Status (v0.2.2) — erster BMW-Feldlauf ausgewertet
 
-- **Echte TinyUSB-MSC** (Demo-FAT), Soft-USB-Cycle, Media-Remount
-- Auto-Session, WebUI mit Cycle/Remount, Read-Timing (`t_us`/`gap_us`)
-- GATE-01 noch offen (kein Roh-CBW/CDB) — siehe [FIELD_TEST_v0.2.md](docs/FIELD_TEST_v0.2.md)
+- TinyUSB-MSC, Soft-/Physical-Replug, UDP-µs-Timing, Collector-JSONL
+- Feld-Session: [Auswertung 2026-10-14](docs/feld/2026-10-14-bmw-s0-auswertung.md) · Daten unter `sessions/20261014-081637_bmw_s0_plug_enum/`
+- GATE-01 noch offen (kein Roh-CBW/CDB); Demo-Medium 256 KiB begrenzt Streaming-Claims
 
 ```bash
 cd firmware && pio run -e huprobe-s3 -t upload
+# oder: ./tools/ota_car_esp.sh
 ```

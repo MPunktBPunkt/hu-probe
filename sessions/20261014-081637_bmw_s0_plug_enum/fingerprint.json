@@ -1,0 +1,197 @@
+{
+  "session_id": "20261014-081637_bmw_s0_plug_enum",
+  "vehicle": "bmw",
+  "scenario": "s0_plug_enum",
+  "profile_id": "bmw_nbt_evo",
+  "fw_version": "0.2.2",
+  "mac": "68:b6:b3:2b:c5:68",
+  "started_at": "2026-10-14T08:16:37.650757+02:00",
+  "ended_at": "2026-10-14T08:22:30.457350+02:00",
+  "capture": {
+    "dropped": 0,
+    "queue_highwater": 96,
+    "tcp_disconnects": 0,
+    "complete": true
+  },
+  "counts": {
+    "events": 474,
+    "reads": 240,
+    "usb": 24,
+    "phase": 22,
+    "markers": 5,
+    "capture_health": 62,
+    "physical_plug_events": 11,
+    "physical_unplug_events": 11
+  },
+  "read": {
+    "bytes_total": 716800,
+    "n_hist": {
+      "512": 44,
+      "2048": 20,
+      "2560": 44,
+      "4096": 132
+    },
+    "n_mode": 4096,
+    "kind_hist": {
+      "boot": 44,
+      "dir": 75,
+      "fat": 66,
+      "file": 55
+    },
+    "tag_hist": {
+      "BOOT": 44,
+      "ROOT": 75,
+      "FAT": 66,
+      "DATA": 55
+    },
+    "dur_us": {
+      "min": 2,
+      "p50": 66,
+      "p95": 164,
+      "max": 278
+    },
+    "gap_us_all": {
+      "min": 658,
+      "p50": 3839,
+      "p95": 791634,
+      "max": 140452116
+    },
+    "gap_us_pace_lt_10s": {
+      "n": 233,
+      "min": 658,
+      "p50": 3724,
+      "p95": 746987,
+      "max": 7952062
+    },
+    "file": {
+      "count": 55,
+      "bytes": 174592,
+      "lba_min": 51,
+      "lba_max": 83
+    }
+  },
+  "per_plug_window": [
+    {
+      "window": 0,
+      "reads": 22,
+      "bytes": 65536,
+      "kinds": {
+        "boot": 4,
+        "dir": 7,
+        "fat": 6,
+        "file": 5
+      },
+      "gap_p50_us": 3724,
+      "t_us_first": 118791311,
+      "t_us_last": 124312092
+    },
+    {
+      "window": 1,
+      "reads": 22,
+      "bytes": 65536,
+      "kinds": {
+        "boot": 4,
+        "dir": 7,
+        "fat": 6,
+        "file": 5
+      },
+      "gap_p50_us": 3691,
+      "t_us_first": 185334364,
+      "t_us_last": 187117536
+    },
+    {
+      "window": 2,
+      "reads": 22,
+      "bytes": 65536,
+      "kinds": {
+        "boot": 4,
+        "dir": 7,
+        "fat": 6,
+        "file": 5
+      },
+      "gap_p50_us": 3773,
+      "t_us_first": 327570542,
+      "t_us_last": 329260203
+    },
+    {
+      "window": 3,
+      "reads": 14,
+      "bytes": 41472,
+      "kinds": {
+        "boot": 4,
+        "dir": 4,
+        "fat": 6
+      },
+      "gap_p50_us": 3589,
+      "t_us_first": 367237546,
+      "t_us_last": 367241309
+    },
+    {
+      "window": 7,
+      "reads": 94,
+      "bytes": 282112,
+      "kinds": {
+        "file": 25,
+        "dir": 29,
+        "boot": 16,
+        "fat": 24
+      },
+      "gap_p50_us": 3928,
+      "t_us_first": 413530112,
+      "t_us_last": 413557347
+    },
+    {
+      "window": 8,
+      "reads": 22,
+      "bytes": 65536,
+      "kinds": {
+        "boot": 4,
+        "dir": 7,
+        "fat": 6,
+        "file": 5
+      },
+      "gap_p50_us": 3839,
+      "t_us_first": 418216357,
+      "t_us_last": 418222419
+    },
+    {
+      "window": 9,
+      "reads": 22,
+      "bytes": 65536,
+      "kinds": {
+        "boot": 4,
+        "dir": 7,
+        "fat": 6,
+        "file": 5
+      },
+      "gap_p50_us": 3749,
+      "t_us_first": 434469540,
+      "t_us_last": 436162568
+    },
+    {
+      "window": 10,
+      "reads": 22,
+      "bytes": 65536,
+      "kinds": {
+        "boot": 4,
+        "dir": 7,
+        "fat": 6,
+        "file": 5
+      },
+      "gap_p50_us": 3715,
+      "t_us_first": 443964531,
+      "t_us_last": 448474674
+    }
+  ],
+  "notes": [
+    "Demo medium is 256KiB FAT12 \u2014 not comparable to PiDrive 512KiB/8MiB slot streaming.",
+    "Dominant host xfer size in this session: see n_mode.",
+    "Physical OTG replugs observed; ESP briefly unreachable on VBUS loss."
+  ],
+  "vs_bmw_nbt_evo_expectations": {
+    "read_size_4096_dominant": true,
+    "gap_ms_p50_near_4": 3.724,
+    "eager_large_body_stream": false,
+    "epistemic": "FACT from this hu-probe session only; medium geometry limits streaming claims."
+  }
+}

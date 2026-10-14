@@ -22,9 +22,13 @@ collector/dist/
 .env.*
 !.env.example
 
-# Sessions (Messdaten bleiben lokal)
+# Sessions (Messdaten lokal; ausgewählte Feld-Sessions getrackt)
 sessions/*
 !sessions/.gitkeep
+!sessions/20261014-081637_bmw_s0_plug_enum/
+!sessions/20261014-081637_bmw_s0_plug_enum/**
+sessions/**/collector.*
+!sessions/20261014-081637_bmw_s0_plug_enum/**
 
 # Firmware artifacts (release bins under firmware/dist/ are tracked)
 firmware/.pio/

@@ -1,0 +1,5 @@
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":2,"t_us":116690809,"t_ms":116690,"ev":"marker","name":"field_measure_start","note":"bmw car S0 plug enum"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":53,"t_us":154675686,"t_ms":154675,"ev":"marker","name":"observe_window_done","note":"25s after soft cycle"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":215,"t_us":336531878,"t_ms":336531,"ev":"marker","name":"before_physical_replug","note":"3 files looping autoplay; user replugs OTG now"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":468,"t_us":460035787,"t_ms":460035,"ev":"marker","name":"after_physical_replug_window","note":"3-file autoplay loop"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":475,"t_us":468899782,"t_ms":468899,"ev":"marker","name":"field_test_end","note":"user leaving; end first bmw test"}

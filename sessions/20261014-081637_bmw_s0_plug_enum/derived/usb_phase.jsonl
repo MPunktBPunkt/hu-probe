@@ -1,0 +1,51 @@
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":2,"t_us":116690809,"t_ms":116690,"ev":"marker","name":"field_measure_start","note":"bmw car S0 plug enum"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":3,"t_us":116736798,"t_ms":116736,"ev":"usb","usb_ev":"detach","ep":0,"dir":"out","dur_us":0,"note":"soft"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":4,"t_us":117536543,"t_ms":117536,"ev":"usb","usb_ev":"attach","ep":0,"dir":"out","dur_us":0,"note":"soft"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":5,"t_us":117542946,"t_ms":117542,"ev":"usb","usb_ev":"detach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":6,"t_us":117543377,"t_ms":117543,"ev":"phase","phase":"idle","note":"unplug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":7,"t_us":117786794,"t_ms":117786,"ev":"usb","usb_ev":"attach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":8,"t_us":117787291,"t_ms":117787,"ev":"phase","phase":"enum","note":"plug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":53,"t_us":154675686,"t_ms":154675,"ev":"marker","name":"observe_window_done","note":"25s after soft cycle"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":71,"t_us":181956837,"t_ms":181956,"ev":"usb","usb_ev":"detach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":72,"t_us":181957353,"t_ms":181957,"ev":"phase","phase":"idle","note":"unplug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":73,"t_us":184330183,"t_ms":184330,"ev":"usb","usb_ev":"attach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":74,"t_us":184330672,"t_ms":184330,"ev":"phase","phase":"enum","note":"plug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":181,"t_us":322679561,"t_ms":322679,"ev":"usb","usb_ev":"detach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":182,"t_us":322680028,"t_ms":322680,"ev":"phase","phase":"idle","note":"unplug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":185,"t_us":326564043,"t_ms":326564,"ev":"usb","usb_ev":"attach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":186,"t_us":326564607,"t_ms":326564,"ev":"phase","phase":"enum","note":"plug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":215,"t_us":336531878,"t_ms":336531,"ev":"marker","name":"before_physical_replug","note":"3 files looping autoplay; user replugs OTG now"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":231,"t_us":362821840,"t_ms":362821,"ev":"usb","usb_ev":"detach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":232,"t_us":362822308,"t_ms":362822,"ev":"phase","phase":"idle","note":"unplug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":233,"t_us":365751610,"t_ms":365751,"ev":"usb","usb_ev":"attach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":234,"t_us":365752089,"t_ms":365752,"ev":"phase","phase":"enum","note":"plug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":253,"t_us":369515120,"t_ms":369515,"ev":"usb","usb_ev":"detach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":254,"t_us":369515663,"t_ms":369515,"ev":"phase","phase":"idle","note":"unplug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":255,"t_us":371808718,"t_ms":371808,"ev":"usb","usb_ev":"attach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":256,"t_us":371809294,"t_ms":371809,"ev":"phase","phase":"enum","note":"plug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":257,"t_us":379069389,"t_ms":379069,"ev":"usb","usb_ev":"detach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":258,"t_us":379069865,"t_ms":379069,"ev":"phase","phase":"idle","note":"unplug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":259,"t_us":381483201,"t_ms":381483,"ev":"usb","usb_ev":"attach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":260,"t_us":381483911,"t_ms":381483,"ev":"phase","phase":"enum","note":"plug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":261,"t_us":386161064,"t_ms":386161,"ev":"usb","usb_ev":"detach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":262,"t_us":386161540,"t_ms":386161,"ev":"phase","phase":"idle","note":"unplug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":263,"t_us":389488715,"t_ms":389488,"ev":"usb","usb_ev":"attach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":264,"t_us":389489319,"t_ms":389489,"ev":"phase","phase":"enum","note":"plug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":265,"t_us":397019799,"t_ms":397019,"ev":"usb","usb_ev":"detach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":266,"t_us":397020280,"t_ms":397020,"ev":"phase","phase":"idle","note":"unplug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":267,"t_us":403031291,"t_ms":403031,"ev":"usb","usb_ev":"attach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":268,"t_us":403031778,"t_ms":403031,"ev":"phase","phase":"enum","note":"plug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":269,"t_us":410317099,"t_ms":410317,"ev":"usb","usb_ev":"detach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":270,"t_us":410317670,"t_ms":410317,"ev":"phase","phase":"idle","note":"unplug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":367,"t_us":415314740,"t_ms":415314,"ev":"usb","usb_ev":"attach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":368,"t_us":415315223,"t_ms":415315,"ev":"phase","phase":"enum","note":"plug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":399,"t_us":429023970,"t_ms":429023,"ev":"usb","usb_ev":"detach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":400,"t_us":429024565,"t_ms":429024,"ev":"phase","phase":"idle","note":"unplug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":403,"t_us":433465599,"t_ms":433465,"ev":"usb","usb_ev":"attach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":404,"t_us":433466380,"t_ms":433466,"ev":"phase","phase":"enum","note":"plug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":431,"t_us":439580433,"t_ms":439580,"ev":"usb","usb_ev":"detach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":432,"t_us":439581002,"t_ms":439581,"ev":"phase","phase":"idle","note":"unplug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":434,"t_us":442959833,"t_ms":442959,"ev":"usb","usb_ev":"attach","ep":0,"dir":"in","dur_us":0,"note":"host"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":435,"t_us":442960370,"t_ms":442960,"ev":"phase","phase":"enum","note":"plug"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":468,"t_us":460035787,"t_ms":460035,"ev":"marker","name":"after_physical_replug_window","note":"3-file autoplay loop"}
+{"v":2,"sid":"20261014-081637_bmw_s0_plug_enum","seq":475,"t_us":468899782,"t_ms":468899,"ev":"marker","name":"field_test_end","note":"user leaving; end first bmw test"}
