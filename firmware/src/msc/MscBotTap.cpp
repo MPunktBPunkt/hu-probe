@@ -276,6 +276,8 @@ void MscBotTap::drain(int maxEvents) {
                 instrument_->emitUsbEpochTinyusb(p.tUs, "msc_bot_reset", 0, 0, "msc_req_reset_0xff");
                 break;
         }
+        // Leave time for WiFi/lwIP while serializing BOT bursts.
+        if ((i & 7) == 7) yield();
     }
 }
 
@@ -288,7 +290,8 @@ void MscBotTap::poll() {
             emitCsw();
         }
     }
-    drain(96);
+    // Small batches + yield in drain: OTG host presence kills WiFi assoc otherwise.
+    drain(16);
 }
 
 uint32_t MscBotTap::currentHostTag() {

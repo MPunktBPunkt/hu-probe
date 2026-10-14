@@ -40,7 +40,8 @@ bool Session::start(const String& vehicle, const String& scenario, const String&
     active_ = true;
 
     JsonDocument doc;
-    int64_t t = ProbeClock::nowUs();
+    // Raise watermark so deferred Capture-tUs (e.g. umount) cannot stamp below start.
+    int64_t t = ProbeClock::publishUs(ProbeClock::nowUs());
     doc["v"] = 2;
     doc["sid"] = id_;
     doc["seq"] = nextSeq();
@@ -91,7 +92,7 @@ bool Session::start(const String& vehicle, const String& scenario, const String&
 void Session::stop() {
     if (!active_) return;
     JsonDocument doc;
-    int64_t t = ProbeClock::nowUs();
+    int64_t t = ProbeClock::publishUs(ProbeClock::nowUs());
     doc["v"] = 2;
     doc["sid"] = id_;
     doc["seq"] = nextSeq();
@@ -123,8 +124,7 @@ void Session::setPhase(const String& phase, const String& note, int64_t tUs) {
 void Session::marker(const String& name, const String& note) {
     if (!active_) return;
     JsonDocument doc;
-    int64_t t = ProbeClock::eventNowUs();
-    ProbeClock::observeEventTUs(t);
+    int64_t t = ProbeClock::publishUs(ProbeClock::eventNowUs());
     doc["v"] = 2;
     doc["sid"] = id_;
     doc["seq"] = nextSeq();

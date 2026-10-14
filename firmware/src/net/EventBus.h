@@ -25,8 +25,10 @@ public:
     void noteStreamLost(uint32_t n = 1) { streamLost_ += n; }
     uint32_t tcpTxOk() const { return tcpTxOk_; }
     uint32_t tcpTxFail() const { return tcpTxFail_; }
-    void noteTcpTxOk() { tcpTxOk_++; }
+    void noteTcpTxOk();
     void noteTcpTxFail() { tcpTxFail_++; }
+    /** millis() of last successful TCP event TX (0 = never). */
+    unsigned long lastTcpTxOkMs() const { return lastTcpTxOkMs_; }
     void fillCaptureHealth(JsonObject obj, uint32_t seqFirst, uint32_t seqLast,
                            bool tcpConnected) const;
 
@@ -43,5 +45,6 @@ private:
     uint32_t streamLost_ = 0;
     uint32_t tcpTxOk_ = 0;
     uint32_t tcpTxFail_ = 0;
+    unsigned long lastTcpTxOkMs_ = 0;
     portMUX_TYPE mux_ = portMUX_INITIALIZER_UNLOCKED;
 };

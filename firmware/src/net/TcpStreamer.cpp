@@ -42,11 +42,11 @@ void TcpStreamer::tryConnect() {
 
 void TcpStreamer::flushPending() {
     // Peek → write → pop. Never drop a seq on failed TX (root cause of silent gaps).
+    // Cap + yield: a 192-event flush under MSC load starved WiFi/HTTP (lab WiFi-death).
     String line;
     int n = 0;
     EventBus& bus = EventBus::instance();
-    // BOT synth emits ~4 events/read — drain faster than status cadence.
-    while (n < 192) {
+    while (n < 48) {
         if (!client_.connected()) {
             wasConnected_ = false;
             bus.noteTcpDisconnect();
@@ -67,5 +67,6 @@ void TcpStreamer::flushPending() {
         }
         bus.noteTcpTxOk();
         n++;
+        if ((n & 7) == 0) yield();
     }
 }

@@ -2,7 +2,7 @@
 
 ## HU-PROBE-GATE-01 — Measurement Integrity
 
-**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8**; Control/STALL-Hooks ab **0.2.13**; Lab-Dry-Run Kill 1–3 **PASS** — formal Close + lange BMW-Timeline noch offen)
+**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8**; Control/STALL ab **0.2.13**; Lab Kill 1–3 **PASS** — lange BMW-Timeline **blockiert** durch OTG/WiFi-Death, siehe [wifi-otg-0.2.15](feld/2026-10-14-wifi-otg-0.2.15.md))
 
 ### Zeit & Sequenz
 

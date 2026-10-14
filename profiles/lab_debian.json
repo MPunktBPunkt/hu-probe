@@ -7,8 +7,8 @@
     "epistemic": "Lab host for dry-run / GATE-01 / firmware validation only",
     "notes": "ESP .88 on Proxmox Genesys hub, passed through as /dev/sda HU_PROBE. Never treat fingerprints as BMW or Mazda facts.",
     "params_as_of": "2026-10-14",
-    "params_fw": "0.2.13",
-    "params_status": "lab_triple_0.2.13_soft_remount_dd; t_us clamp smoke 203943"
+    "params_fw": "0.2.13–0.2.15",
+    "params_status": "lab_triple_0.2.13 ok; OTG kills WiFi assoc ~5-7s on 0.2.14/0.2.15 — see wifi-otg-0.2.15.md"
   },
   "usb_host": {
     "kind": "linux_debian",

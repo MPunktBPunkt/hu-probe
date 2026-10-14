@@ -15,7 +15,13 @@ void EventBus::begin() {
     streamLost_ = 0;
     tcpTxOk_ = 0;
     tcpTxFail_ = 0;
+    lastTcpTxOkMs_ = 0;
     portEXIT_CRITICAL(&mux_);
+}
+
+void EventBus::noteTcpTxOk() {
+    tcpTxOk_++;
+    lastTcpTxOkMs_ = millis();
 }
 
 void EventBus::publish(JsonDocument& doc) {

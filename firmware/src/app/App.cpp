@@ -7,6 +7,7 @@
 #include <WiFiManager.h>
 #include <ESPmDNS.h>
 #include <esp_system.h>
+#include <esp_wifi.h>
 #include <Preferences.h>
 
 #ifndef CAPTURE_HEALTH_INTERVAL_MS
@@ -20,6 +21,13 @@
 #endif
 #ifndef WIFI_RESTART_AFTER_MS
 #define WIFI_RESTART_AFTER_MS 25000
+#endif
+/** WiFi assoc up but no TCP event progress while queue backs up → treat as link dead. */
+#ifndef WIFI_TCP_STALL_MS
+#define WIFI_TCP_STALL_MS 8000
+#endif
+#ifndef WIFI_TCP_STALL_PENDING
+#define WIFI_TCP_STALL_PENDING 32
 #endif
 
 App& App::instance() {
@@ -66,11 +74,14 @@ void App::setupWifi() {
         ESP.restart();
     }
     led_.setWifiPortal(false);
-    // USB-MSC + WiFi coexist better without modem sleep (field: WiFi death under BOT load).
+    // USB-MSC + WiFi: modem sleep + low TX were Lab OTG killers (yellow within seconds).
     WiFi.setSleep(false);
+    esp_wifi_set_ps(WIFI_PS_NONE);
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+    WiFi.setAutoReconnect(true);
     wifiDownSinceMs_ = 0;
     wifiReconnectAttempts_ = 0;
-    Serial.printf("[WIFI] %s\n", WiFi.localIP().toString().c_str());
+    Serial.printf("[WIFI] %s ps=none tx=19.5\n", WiFi.localIP().toString().c_str());
 }
 
 void App::setupMdns() {
@@ -122,8 +133,7 @@ void App::begin() {
 
 void App::emitStatus() {
     if (!session_.active()) return;
-    int64_t t = ProbeClock::eventNowUs();
-    ProbeClock::observeEventTUs(t);
+    int64_t t = ProbeClock::publishUs(ProbeClock::eventNowUs());
     JsonDocument doc;
     doc["v"] = 2;
     doc["sid"] = session_.id();
@@ -141,8 +151,7 @@ void App::emitStatus() {
 
 void App::emitCaptureHealth() {
     if (!session_.active()) return;
-    int64_t t = ProbeClock::eventNowUs();
-    ProbeClock::observeEventTUs(t);
+    int64_t t = ProbeClock::publishUs(ProbeClock::eventNowUs());
     EventBus& bus = EventBus::instance();
     JsonDocument doc;
     doc["v"] = 2;
@@ -184,16 +193,31 @@ void App::emitCaptureHealth() {
 }
 
 void App::superviseWifi() {
-    if (WiFi.status() == WL_CONNECTED) {
+    unsigned long now = millis();
+    EventBus& bus = EventBus::instance();
+    bool assoc = (WiFi.status() == WL_CONNECTED);
+
+    // TCP backlog with assoc up: log only — WiFi.disconnect() here wedged lab recovery.
+    if (assoc && config_.enableCollector && bus.pending() >= WIFI_TCP_STALL_PENDING) {
+        unsigned long lastOk = bus.lastTcpTxOkMs();
+        unsigned long idle = (lastOk == 0) ? now : (now - lastOk);
+        if (idle >= WIFI_TCP_STALL_MS && now - lastWifiReconnectMs_ >= WIFI_RECONNECT_EVERY_MS) {
+            lastWifiReconnectMs_ = now;
+            Serial.printf("[WIFI] tcp-stall pending=%u idle=%lums (no assoc bounce)\n",
+                          (unsigned)bus.pending(), idle);
+        }
+    }
+
+    if (assoc) {
         if (wifiDownSinceMs_ != 0) {
             Serial.printf("[WIFI] recovered after %lu ms (attempts=%u)\n",
-                          (unsigned long)(millis() - wifiDownSinceMs_), wifiReconnectAttempts_);
+                          (unsigned long)(now - wifiDownSinceMs_), wifiReconnectAttempts_);
         }
         wifiDownSinceMs_ = 0;
         wifiReconnectAttempts_ = 0;
         return;
     }
-    unsigned long now = millis();
+
     if (wifiDownSinceMs_ == 0) {
         wifiDownSinceMs_ = now;
         Serial.println("[WIFI] lost — supervising reconnect");
@@ -219,18 +243,30 @@ void App::loop() {
     // Drain Capture-tUs BOT/read before loop-now status/health (keeps t_us non-decreasing).
     msc_.loop();
     instrument_.tick();
-    hub_.loop();
     tcp_.loop();
     web_.loop();
+
+    const bool usbHost = msc_.plugged();
+    // Hub HTTPClient can block up to 2s — under OTG that races WiFi to death.
+    if (!usbHost) {
+        hub_.loop();
+    } else if (millis() - lastHubWhileUsbMs_ >= 60000UL) {
+        lastHubWhileUsbMs_ = millis();
+        hub_.loop();
+    }
+
     led_.tick(session_, msc_, instrument_, tcp_, EventBus::instance());
 
     unsigned long now = millis();
-    if (now - lastStatusMs_ >= STATUS_INTERVAL_MS) {
+    unsigned long statusEvery = usbHost ? (STATUS_INTERVAL_MS * 2) : STATUS_INTERVAL_MS;
+    unsigned long healthEvery = usbHost ? (CAPTURE_HEALTH_INTERVAL_MS * 2) : CAPTURE_HEALTH_INTERVAL_MS;
+    if (now - lastStatusMs_ >= statusEvery) {
         lastStatusMs_ = now;
         emitStatus();
     }
-    if (now - lastCaptureHealthMs_ >= CAPTURE_HEALTH_INTERVAL_MS) {
+    if (now - lastCaptureHealthMs_ >= healthEvery) {
         lastCaptureHealthMs_ = now;
         emitCaptureHealth();
     }
+    if (usbHost) yield();
 }
