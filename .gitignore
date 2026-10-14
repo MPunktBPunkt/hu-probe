@@ -5,11 +5,11 @@ venv/
 __pycache__/
 *.pyc
 *.egg-info/
-dist/
 build/
 .pytest_cache/
 collector/.venv/
 collector/*.egg-info/
+collector/dist/
 
 # IDE / OS
 .idea/
@@ -26,9 +26,10 @@ collector/*.egg-info/
 sessions/*
 !sessions/.gitkeep
 
-# Firmware artifacts
+# Firmware artifacts (release bins under firmware/dist/ are tracked)
 firmware/.pio/
 *.bin
+!firmware/dist/
 !firmware/dist/*.bin
 !firmware/src/msc/demo_fat.bin
 !profiles/**
