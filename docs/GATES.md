@@ -2,7 +2,7 @@
 
 ## HU-PROBE-GATE-01 — Measurement Integrity
 
-**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8** über TinyUSB `_mscd_itf`; Standard-Control-Sniff noch lückenhaft)
+**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8**, Class-Driver-Hooks hardened **0.2.9**; Standard-Control-Sniff noch lückenhaft)
 
 ### Zeit & Sequenz
 
@@ -27,6 +27,8 @@
 - [x] CSW: Host-CSW bytes (`synthesized=false`)
 - [x] Inter-command gap (`gap_us`) aus Capture-Zeit
 - [x] Echte CBW/CSW-Bytes aus TinyUSB Device-State (nicht Wire-Capture)
+- [x] Class-Driver-Hook `--wrap=mscd_xfer_cb` (CBW/STATUS nach Real-Call) + `usb_ev=bot_need_reset` (0.2.9)
+- [ ] Wire-Paketebene / NBT-Sense/Timing — bewusst UNKNOWN (Audit)
 
 ### Capture Health / Forensik
 
@@ -40,7 +42,7 @@
 
 ### Freigabe
 
-**Closed** erst wenn Stufe B vollständig (BOT ok ab 0.2.8 + Standard-Control-Sniff) + Lab-Dry-Run `dropped=0` / keine `recv_seq_gaps`.  
-Stufe A (0.2.6) = Synth. Stufe B BOT (0.2.8) = TinyUSB-Host-CBW/CSW; Wire-Paketebene bleibt UNKNOWN.
+**Closed** erst wenn Stufe B vollständig (BOT ok ab 0.2.8/0.2.9 + Standard-Control-Sniff) + Lab-Dry-Run `dropped=0` / keine `recv_seq_gaps`.  
+Stufe A (0.2.6) = Synth. Stufe B BOT (0.2.8) = TinyUSB-Host-CBW/CSW; **0.2.9** = Class-Driver-Hooks (`mscd_xfer_cb` / NEED_RESET). Wire-Paketebene bleibt UNKNOWN.
 
-Verwandt: Technology-Audit HU-A\*. GATE-01 ist die **Instrumenten**-Voraussetzung.
+Verwandt: Technology-Audit `usb-bot-observation-2026-instrument-sources` · [Audit-Intake](feld/2026-10-14-audit-instrument-sources.md). GATE-01 ist die **Instrumenten**-Voraussetzung.

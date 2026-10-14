@@ -108,9 +108,11 @@ sessions/YYYYMMDD-HHMMSS_<vehicle>_<scenario>/
 }
 ```
 
-`usb_ev`: `attach` | `detach` | `reset` | `get_descriptor` | `set_address` | `set_configuration` | `clear_halt` | `stall` | `control` | `other`
+`usb_ev`: `attach` | `detach` | `reset` | `get_descriptor` | `set_address` | `set_configuration` | `clear_halt` | `stall` | `control` | `bot_need_reset` | `other`
 
 Descriptor-Payloads: `data_hex` (roh) + optional `desc_type` (`device`/`config`/`string`).
+
+`bot_need_reset` (FW ≥0.2.9): TinyUSB `MSC_STAGE_NEED_RESET` nach invalidem CBW (beide Bulk-EPs gestallt). Device-Stack-Sicht, kein Wire-Capture. `bot_source=tinyusb`, `synthesized=false`, typisch `note=msc_stage_need_reset`.
 
 ---
 

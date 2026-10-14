@@ -4,8 +4,9 @@
 #include "ReadInstrument.h"
 
 /**
- * GATE-01B: snapshot TinyUSB MSC BOT state (`_mscd_itf.cbw/csw`) at callback time.
- * Epistemic: host CBW/CDB/CSW bytes as seen by TinyUSB device stack — not wire packets.
+ * GATE-01B: TinyUSB MSC BOT tap — primary via `--wrap=mscd_xfer_cb` (0.2.9),
+ * fallback snapshot of `_mscd_itf` at app callback time (0.2.8).
+ * Epistemic: host CBW/CDB/CSW as seen by TinyUSB device stack — not wire packets.
  */
 class MscBotTap {
 public:
@@ -19,9 +20,15 @@ public:
                               const char* tag, const char* kind, const char* dir);
     /** Emit bot_csw from current TinyUSB CSW. */
     static void emitCsw();
+    /** Emit usb bot_need_reset when TinyUSB enters MSC_STAGE_NEED_RESET. */
+    static void emitNeedResetIfNew();
+    /** MSC BOT_RESET recovered the class driver — allow a later need_reset event. */
+    static void onBotReset();
 
     /** Non-data SCSI path (TUR / INQUIRY / …): CBW now, CSW via poll/complete. */
     static void onNonDataScsiEnter();
+    /** After mscd_xfer_cb: CBW / CSW / NEED_RESET from stage. */
+    static void afterMscdXfer();
     /** Call from MscGadget::loop — catches CSW after builtin SCSI callbacks. */
     static void poll();
 
@@ -32,4 +39,5 @@ private:
     static ReadInstrument* instrument_;
     static uint32_t lastCbwTag_;
     static bool cswPending_;
+    static bool needResetArmed_;
 };

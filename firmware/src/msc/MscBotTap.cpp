@@ -13,8 +13,11 @@ enum {
     kOffCbw = 0,
     kOffCsw = 32,
     kOffStage = 48,
+    kStageCmd = 0,
+    kStageData = 1,
     kStageStatus = 2,
-    kStageStatusSent = 3
+    kStageStatusSent = 3,
+    kStageNeedReset = 4
 };
 
 static const uint8_t* itfCbw() { return _mscd_itf + kOffCbw; }
@@ -28,11 +31,13 @@ static uint32_t readLe32(const uint8_t* p) {
 ReadInstrument* MscBotTap::instrument_ = nullptr;
 uint32_t MscBotTap::lastCbwTag_ = 0xFFFFFFFFu;
 bool MscBotTap::cswPending_ = false;
+bool MscBotTap::needResetArmed_ = false;
 
 void MscBotTap::begin(ReadInstrument* instrument) {
     instrument_ = instrument;
     lastCbwTag_ = 0xFFFFFFFFu;
     cswPending_ = false;
+    needResetArmed_ = false;
 }
 
 ReadInstrument* MscBotTap::instrument() { return instrument_; }
@@ -45,6 +50,7 @@ void MscBotTap::emitCbwIfNew() {
     if (tag == lastCbwTag_ && cswPending_) return;
     lastCbwTag_ = tag;
     cswPending_ = true;
+    needResetArmed_ = false;
     instrument_->emitBotCbwTinyusb(cbw);
 }
 
@@ -62,10 +68,41 @@ void MscBotTap::emitCsw() {
     cswPending_ = false;
 }
 
+void MscBotTap::emitNeedResetIfNew() {
+    if (!instrument_ || needResetArmed_) return;
+    needResetArmed_ = true;
+    cswPending_ = false;
+    instrument_->emitBotNeedResetTinyusb();
+}
+
+void MscBotTap::onBotReset() { needResetArmed_ = false; }
+
 void MscBotTap::onNonDataScsiEnter() { emitCbwIfNew(); }
+
+void MscBotTap::afterMscdXfer() {
+    uint8_t st = itfStage();
+    if (st == kStageNeedReset) {
+        emitNeedResetIfNew();
+        return;
+    }
+    // CBW is in _mscd_itf once TinyUSB leaves CMD for DATA (bulk) or STATUS (no-data).
+    // Do not emit on CMD/STATUS_SENT — residual CBW bytes would duplicate after CSW.
+    if (st == kStageData) {
+        emitCbwIfNew();
+    } else if (st == kStageStatus) {
+        emitCbwIfNew();
+        emitCsw();
+    } else if (st == kStageStatusSent) {
+        emitCsw();
+    }
+}
 
 void MscBotTap::poll() {
     // TUR/INQUIRY/CAPACITY build CSW after the Arduino callback returns — catch STATUS stage.
+    if (itfStage() == kStageNeedReset) {
+        emitNeedResetIfNew();
+        return;
+    }
     if (!cswPending_) return;
     uint8_t st = itfStage();
     if (st == kStageStatus || st == kStageStatusSent) {
@@ -91,6 +128,15 @@ bool __real_tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool sta
                                   bool load_eject);
 bool __real_mscd_control_xfer_cb(uint8_t rhport, uint8_t stage,
                                  tusb_control_request_t const* request);
+bool __real_mscd_xfer_cb(uint8_t rhport, uint8_t ep_addr, xfer_result_t result,
+                         uint32_t xferred_bytes);
+
+bool __wrap_mscd_xfer_cb(uint8_t rhport, uint8_t ep_addr, xfer_result_t result,
+                         uint32_t xferred_bytes) {
+    bool ok = __real_mscd_xfer_cb(rhport, ep_addr, result, xferred_bytes);
+    MscBotTap::afterMscdXfer();
+    return ok;
+}
 
 bool __wrap_tud_msc_test_unit_ready_cb(uint8_t lun) {
     MscBotTap::onNonDataScsiEnter();
@@ -127,7 +173,13 @@ bool __wrap_mscd_control_xfer_cb(uint8_t rhport, uint8_t stage,
             request->bmRequestType, request->bRequest, request->wValue, request->wIndex,
             request->wLength);
     }
-    return __real_mscd_control_xfer_cb(rhport, stage, request);
+    bool ok = __real_mscd_control_xfer_cb(rhport, stage, request);
+    // BOT_RESET clears NEED_RESET; allow a later need_reset event.
+    if (request && stage == CONTROL_STAGE_SETUP && (request->bmRequestType & 0x60) == 0x20 &&
+        request->bRequest == 0xFF) {
+        MscBotTap::onBotReset();
+    }
+    return ok;
 }
 
 void tud_msc_read10_complete_cb(uint8_t lun) {
@@ -156,12 +208,16 @@ void MscBotTap::emitCbwIfNew() {}
 void MscBotTap::emitDataChunk(uint32_t, uint32_t, uint32_t, uint32_t, const char*, const char*,
                               const char*) {}
 void MscBotTap::emitCsw() {}
+void MscBotTap::emitNeedResetIfNew() {}
+void MscBotTap::onBotReset() {}
 void MscBotTap::onNonDataScsiEnter() {}
+void MscBotTap::afterMscdXfer() {}
 void MscBotTap::poll() {}
 uint32_t MscBotTap::currentHostTag() { return 0; }
 
 ReadInstrument* MscBotTap::instrument_ = nullptr;
 uint32_t MscBotTap::lastCbwTag_ = 0;
 bool MscBotTap::cswPending_ = false;
+bool MscBotTap::needResetArmed_ = false;
 
 #endif

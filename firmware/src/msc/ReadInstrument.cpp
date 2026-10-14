@@ -453,6 +453,21 @@ void ReadInstrument::emitUsbControlTinyusb(uint8_t bmRequestType, uint8_t bReque
     EventBus::instance().publish(doc);
 }
 
+void ReadInstrument::emitBotNeedResetTinyusb() {
+    if (!session_ || !session_->active()) return;
+    JsonDocument doc;
+    stamp(doc);
+    doc["ev"] = "usb";
+    doc["usb_ev"] = "bot_need_reset";
+    doc["bot_source"] = "tinyusb";
+    doc["synthesized"] = false;
+    doc["ep"] = 0;
+    doc["dir"] = "out";
+    doc["dur_us"] = 0;
+    doc["note"] = "msc_stage_need_reset";
+    EventBus::instance().publish(doc);
+}
+
 void ReadInstrument::emitReadAggregate(int64_t tUs, uint32_t botTag, uint32_t lba, uint32_t nBytes,
                                        uint32_t durUs, uint32_t gapUs, const char* tag,
                                        const char* kind) {

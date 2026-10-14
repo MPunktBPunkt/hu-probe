@@ -27,6 +27,7 @@ def _prepare(env):
     env.Prepend(LIBPATH=[str(build_dir)])
     env.Append(
         LINKFLAGS=[
+            "-Wl,--wrap=mscd_xfer_cb",
             "-Wl,--wrap=tud_msc_test_unit_ready_cb",
             "-Wl,--wrap=tud_msc_inquiry_cb",
             "-Wl,--wrap=tud_msc_capacity_cb",
