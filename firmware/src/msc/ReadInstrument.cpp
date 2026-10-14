@@ -135,6 +135,22 @@ void ReadInstrument::emitBotRead10Synth(int64_t tUs, uint32_t lba, uint32_t nByt
         EventBus::instance().publish(doc);
     }
 
+    // Comfort aggregate before CSW so t_us stays non-decreasing in the chain.
+    {
+        JsonDocument doc;
+        stampAt(doc, tUs);
+        doc["ev"] = "read";
+        doc["bot_tag"] = botTag;
+        doc["bot_source"] = "msc_synth";
+        doc["lba"] = lba;
+        doc["n"] = nBytes;
+        doc["dur_us"] = durUs;
+        doc["gap_us"] = gapUs;
+        if (tag) doc["tag"] = tag;
+        if (kind) doc["kind"] = kind;
+        EventBus::instance().publish(doc);
+    }
+
     // CSW (13 bytes), signature USBS
     uint8_t csw[13] = {0};
     csw[0] = 'U';
@@ -161,21 +177,6 @@ void ReadInstrument::emitBotRead10Synth(int64_t tUs, uint32_t lba, uint32_t nByt
         doc["raw_hex"] = cswHex;
         doc["residue"] = 0;
         doc["status"] = 0;
-        EventBus::instance().publish(doc);
-    }
-
-    {
-        JsonDocument doc;
-        stampAt(doc, tUs);
-        doc["ev"] = "read";
-        doc["bot_tag"] = botTag;
-        doc["bot_source"] = "msc_synth";
-        doc["lba"] = lba;
-        doc["n"] = nBytes;
-        doc["dur_us"] = durUs;
-        doc["gap_us"] = gapUs;
-        if (tag) doc["tag"] = tag;
-        if (kind) doc["kind"] = kind;
         EventBus::instance().publish(doc);
     }
 

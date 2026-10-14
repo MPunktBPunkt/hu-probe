@@ -1,0 +1,111 @@
+{
+  "session_id": "20261014-125119_lab_debian_s0_plug_enum",
+  "vehicle": "lab_debian",
+  "scenario": "s0_plug_enum",
+  "profile_id": "lab_debian",
+  "fw_version": "0.2.6",
+  "mac": "68:b6:b3:29:33:9c",
+  "started_at": "2026-10-14T12:51:19.192636+02:00",
+  "ended_at": "2026-10-14T12:51:49.415566+02:00",
+  "capture": {
+    "dropped": 0,
+    "queue_highwater": 72,
+    "tcp_disconnects": 0,
+    "complete": true
+  },
+  "counts": {
+    "events": 203,
+    "reads": 43,
+    "usb": 6,
+    "phase": 3,
+    "markers": 2,
+    "capture_health": 6,
+    "physical_plug_events": 1,
+    "physical_unplug_events": 1
+  },
+  "read": {
+    "bytes_total": 165376,
+    "n_hist": {
+      "512": 3,
+      "4096": 40
+    },
+    "n_mode": 4096,
+    "kind_hist": {
+      "boot": 8,
+      "dir": 10,
+      "fat": 5,
+      "file": 20
+    },
+    "tag_hist": {
+      "BOOT": 8,
+      "ROOT": 10,
+      "FAT": 5,
+      "DATA": 20
+    },
+    "dur_us": {
+      "n": 43,
+      "min": 6,
+      "p50": 162,
+      "p95": 279,
+      "max": 293
+    },
+    "gap_us_all": {
+      "n": 43,
+      "min": 3954,
+      "p50": 4137,
+      "p95": 19129,
+      "max": 15941095
+    },
+    "gap_us_pace_lt_10s": {
+      "n": 42,
+      "min": 3954,
+      "p50": 4136,
+      "p95": 18243,
+      "max": 8186609
+    },
+    "file": {
+      "count": 20,
+      "bytes": 81920,
+      "lba_min": 64,
+      "lba_max": 512
+    }
+  },
+  "host_detach_attach_us": {
+    "n": 1,
+    "min": 297160,
+    "max": 297160,
+    "values": [
+      297160
+    ]
+  },
+  "per_plug_window": [
+    {
+      "window": 0,
+      "reads": 43,
+      "bytes": 165376,
+      "kinds": {
+        "boot": 8,
+        "dir": 10,
+        "fat": 5,
+        "file": 20
+      },
+      "gap_p50_us": 4136,
+      "t_us_first": 17980690,
+      "t_us_last": 26404592,
+      "attach_t_us": 16935596,
+      "detach_t_us": null,
+      "reads_after_detach_orphan": 0
+    }
+  ],
+  "notes": [
+    "Windows indexed by host attach order; empty windows omitted unless --include-empty-windows.",
+    "Pre-0.2.3 sessions may stamp read t_us at drain time \u2014 prefer gap_us for pacing."
+  ],
+  "vs_bmw_nbt_evo_expectations": {
+    "read_size_4096_dominant": true,
+    "gap_ms_p50_near_4": 4.136,
+    "eager_large_body_stream": false,
+    "epistemic": "FACT from this hu-probe session only; medium geometry limits streaming claims."
+  },
+  "tool": "tools/fingerprint_session.py"
+}

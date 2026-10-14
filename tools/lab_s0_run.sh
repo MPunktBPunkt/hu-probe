@@ -8,7 +8,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IP="${IP:-192.168.178.88}"
-FW_NAME="${FW_NAME:-hu-probe.0.2.6.esp32s3.bin}"
+FW_NAME="${FW_NAME:-hu-probe.0.2.7.esp32s3.bin}"
 FW_SRC="$ROOT/firmware/dist/$FW_NAME"
 COLLECTOR_PORT="${COLLECTOR_PORT:-9100}"
 WEB_PORT="${WEB_PORT:-8088}"
@@ -95,9 +95,13 @@ measure() {
   curl -s -m 5 -X POST "http://$IP/api/marker" -H 'Content-Type: application/json' \
     -d '{"name":"lab_s0_start","note":"debian usb-host dry-run; not a vehicle HU"}'
   echo
-  step "Soft-Cycle + ${HOLD_S}s beobachten (USB-Stick am Debian-Host stecken)"
+  step "Soft-Cycle + Media-Remount + ${HOLD_S}s (USB am Debian-Host)"
   curl -s -m 5 -X POST "http://$IP/api/usb/cycle" -H 'Content-Type: application/json' \
     -d '{"holdMs":600}'
+  echo
+  sleep 2
+  curl -s -m 5 -X POST "http://$IP/api/usb/remount" -H 'Content-Type: application/json' \
+    -d '{"bumpSerial":true}'
   echo
   sleep "$HOLD_S"
   curl -s -m 5 -X POST "http://$IP/api/marker" -H 'Content-Type: application/json' \
@@ -132,7 +136,7 @@ case "$mode" in
     if echo "$body" | grep -q 'hu-probe'; then
       ver="$(echo "$body" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("fw",""))' 2>/dev/null || true)"
       echo "    already hu-probe fw=$ver"
-      if [ "$ver" != "0.2.6" ] && [ -f "$FW_SRC" ]; then
+      if [ "$ver" != "0.2.7" ] && [ -f "$FW_SRC" ]; then
         flash_direct
         wait_huprobe
       fi

@@ -1,0 +1,2 @@
+{"v":2,"sid":"20261014-125119_lab_debian_s0_plug_enum","seq":2,"t_us":16011349,"t_ms":16011,"ev":"marker","name":"lab_s0_start","note":"debian usb-host; fw 0.2.6 GATE-01A"}
+{"v":2,"sid":"20261014-125119_lab_debian_s0_plug_enum","seq":202,"t_us":46195244,"t_ms":46195,"ev":"marker","name":"lab_s0_end","note":"end lab dry-run 0.2.6"}

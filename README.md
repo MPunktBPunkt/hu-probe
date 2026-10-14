@@ -48,13 +48,13 @@ SoftAP-Setup: `ESP-HuProbe-Setup`.
 - [Medienvariation](docs/MEDIA_VARIATION.md)
 - [Feldauswertung BMW S0](docs/feld/2026-10-14-bmw-s0-auswertung.md) · [Review-Triage](docs/feld/2026-10-14-review-triage.md)
 
-## Status (v0.2.6) — GATE-01 Stufe A (BOT-Synth)
+## Status (v0.2.7) — GATE-01 Stufe A (BOT-Synth)
 
 - BMW-S0-Baseline (FW 0.2.2): 4 KiB Mode, Gap-p50 3724 µs, 6/8 Fenster = 22-Read
-- FW **0.2.6**: synthetische BOT-Kette (`bot_cbw`/`bot_data`/`bot_csw`, `bot_source=msc_synth`), `fw_sha`/`fw_build_id`, `probe_identity`
-- Lab vs Auto: `lab_debian` vs `bmw` · Tools: `lab_s0_run.sh`, `ota_car_esp.sh`
+- FW **0.2.7**: BOT-Synth-Kette CBW→DATA→read→CSW (t_us monoton), `fw_sha`/`probe_identity`
+- Lab vs Auto: `lab_debian` vs `bmw` · [Lab 0.2.7](docs/feld/2026-10-14-lab-debian-s0-0.2.7.md) · Tools: `lab_s0_run.sh`
 - GATE-01 **offen** (Stufe B = echter Bus-CBW + Control-Sniff) · Mazda-Profil null
-- Lab-ESP: Flash wartet auf BOOT/UART — Bin ready unter `firmware/dist/`
+- Lab-ESP `.88` aktuell 0.2.7 · Bin unter `firmware/dist/`
 
 ```bash
 cd firmware && pio run -e huprobe-s3 -t upload
