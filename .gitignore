@@ -27,6 +27,18 @@ sessions/*
 !sessions/.gitkeep
 !sessions/20261014-081637_bmw_s0_plug_enum/
 !sessions/20261014-081637_bmw_s0_plug_enum/**
+!sessions/20261014-165304_bmw_s0_plug_enum/
+!sessions/20261014-165304_bmw_s0_plug_enum/**
+!sessions/20261014-171815_bmw_s0_plug_enum/
+!sessions/20261014-171815_bmw_s0_plug_enum/**
+!sessions/20261014-172103_bmw_s0_plug_enum/
+!sessions/20261014-172103_bmw_s0_plug_enum/**
+!sessions/2218_bmw_s0_plug_enum/
+!sessions/2218_bmw_s0_plug_enum/**
+!sessions/2296_bmw_s0_plug_enum/
+!sessions/2296_bmw_s0_plug_enum/**
+!sessions/2334_bmw_s0_plug_enum/
+!sessions/2334_bmw_s0_plug_enum/**
 sessions/**/collector.*
 
 # Firmware artifacts (release bins under firmware/dist/ are tracked)

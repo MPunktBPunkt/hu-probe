@@ -1,0 +1,4 @@
+{"v":2,"sid":"20261014-165304_bmw_s0_plug_enum","seq":2,"t_us":7440765,"t_ms":7440,"ev":"marker","name":"after_rst2","note":"WiFi yellow blink recovery; user pressed RST again"}
+{"v":2,"sid":"20261014-165304_bmw_s0_plug_enum","seq":146,"t_us":48403386,"t_ms":48403,"ev":"marker","name":"track1_autoplay","note":"user: track 1 running in autoplay"}
+{"v":2,"sid":"20261014-165304_bmw_s0_plug_enum","seq":167,"t_us":62533863,"t_ms":62533,"ev":"marker","name":"track2_autoplay","note":"user: track 2 started automatically after track 1"}
+{"v":2,"sid":"20261014-165304_bmw_s0_plug_enum","seq":191,"t_us":76194892,"t_ms":76194,"ev":"marker","name":"track3_autoplay","note":"user: track 3 coming next in autoplay"}
