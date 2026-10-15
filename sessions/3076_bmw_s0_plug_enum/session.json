@@ -1,0 +1,44 @@
+{
+  "schema": 2,
+  "session_id": "3076_bmw_s0_plug_enum",
+  "started_at": "2026-10-15T07:59:42.139051+02:00",
+  "ended_at": null,
+  "vehicle": "bmw",
+  "profile_id": "bmw_nbt_evo",
+  "scenario": "s0_plug_enum",
+  "fw_version": "0.2.17",
+  "fw_type": "hu-probe",
+  "fw_sha": "3b9f957c978c",
+  "mac": "68:b6:b3:2b:c5:68",
+  "clock": {
+    "domain": "probe_monotonic_us",
+    "source": "esp_timer"
+  },
+  "capture": {
+    "dropped": 0,
+    "queue_highwater": 26,
+    "tcp_disconnects": 0,
+    "published": 381,
+    "stream_lost": 0,
+    "tcp_tx_fail": 0,
+    "msc_sample_overflow": 0,
+    "recv_seq_gaps": [],
+    "recv_events": 382,
+    "parse_errors": 1,
+    "complete": true
+  },
+  "gates": [
+    "HU-PROBE-GATE-01"
+  ],
+  "notes": "",
+  "fw_build_id": "3b9f957c978c-20261014T215815Z",
+  "usb_host_kind": "bmw_nbt_evo",
+  "usb_host_role": "vehicle_hu",
+  "probe_identity": {
+    "mac": "68:b6:b3:2b:c5:68",
+    "usb_serial": "HP0001",
+    "volume_label": "HUPROBE",
+    "board": "ESP32-S3",
+    "hw_type": "esp32s3"
+  }
+}

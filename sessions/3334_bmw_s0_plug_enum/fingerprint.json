@@ -1,0 +1,101 @@
+{
+  "session_id": "3334_bmw_s0_plug_enum",
+  "vehicle": "bmw",
+  "scenario": "s0_plug_enum",
+  "profile_id": "bmw_nbt_evo",
+  "fw_version": "0.2.17",
+  "mac": "68:b6:b3:2b:c5:68",
+  "started_at": "2026-10-15T08:31:14.475608+02:00",
+  "ended_at": null,
+  "capture": {
+    "dropped": 0,
+    "queue_highwater": 30,
+    "tcp_disconnects": 0,
+    "published": 260,
+    "stream_lost": 0,
+    "tcp_tx_fail": 0,
+    "msc_sample_overflow": 0,
+    "recv_seq_gaps": [],
+    "recv_events": 261,
+    "parse_errors": 1,
+    "complete": true
+  },
+  "counts": {
+    "events": 439,
+    "reads": 70,
+    "usb": 37,
+    "phase": 5,
+    "markers": 1,
+    "capture_health": 4,
+    "physical_plug_events": 0,
+    "physical_unplug_events": 0
+  },
+  "read": {
+    "bytes_total": 249344,
+    "n_hist": {
+      "512": 6,
+      "1024": 2,
+      "1536": 2,
+      "2560": 3,
+      "4096": 57
+    },
+    "n_mode": 4096,
+    "kind_hist": {
+      "boot": 8,
+      "dir": 4,
+      "fat": 10,
+      "file": 48
+    },
+    "tag_hist": {
+      "BOOT": 8,
+      "ROOT": 4,
+      "FAT": 10,
+      "DATA": 48
+    },
+    "dur_us": {
+      "n": 70,
+      "min": 3,
+      "p50": 164,
+      "p95": 305,
+      "max": 316
+    },
+    "gap_us_all": {
+      "n": 70,
+      "min": 0,
+      "p50": 3829,
+      "p95": 109637,
+      "max": 7999331
+    },
+    "gap_us_pace_lt_10s": {
+      "n": 70,
+      "min": 0,
+      "p50": 3829,
+      "p95": 109637,
+      "max": 7999331
+    },
+    "file": {
+      "count": 48,
+      "bytes": 195072,
+      "lba_min": 627,
+      "lba_max": 931
+    }
+  },
+  "host_detach_attach_us": {
+    "n": 0,
+    "min": null,
+    "max": null,
+    "values": []
+  },
+  "per_plug_window": [],
+  "notes": [
+    "Windows indexed by host attach order; empty windows omitted unless --include-empty-windows.",
+    "Pre-0.2.3 sessions may stamp read t_us at drain time \u2014 prefer gap_us for pacing."
+  ],
+  "vs_bmw_nbt_evo_expectations": {
+    "read_size_4096_dominant": true,
+    "gap_ms_p50_near_4": 3.829,
+    "eager_large_body_stream": false,
+    "epistemic": "FACT from this hu-probe session only; medium geometry limits streaming claims."
+  },
+  "tool": "tools/fingerprint_session.py"
+}
