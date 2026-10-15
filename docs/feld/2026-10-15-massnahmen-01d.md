@@ -24,7 +24,7 @@
 | **P0c** | Zeitkette Mount→INQUIRY→TUR→READ10 + TUR-Rate | **done** | Mount→INQUIRY p50 ~997 ms; Session-TUR-Hz p50 ~2,1 (nicht idle) |
 | **P0d** | QD aus BOT-Tag-Folgen (offline) | **done** | max outstanding Tags p50=1 (INFERENCE) |
 | **P1a** | `t_us`-Regression in langen Sessions (`2176`/`2199`) | **offen** | Pace weiter über `gap_us`; Fix vor S1-Längenstreams |
-| **P1b** | MODE_SENSE6 korrekt beantworten (oder A/B: Stall vs Fix) | **offen** | Instrumentartefakt entfernen vor S5-Interpretation |
+| **P1b** | MODE_SENSE6 korrekt beantworten (oder A/B: Stall vs Fix) | **done (0.2.18)** | TinyUSB Case-5: builtin lieferte 4 B, BMW CBW 192 B → ep_in-STALL; `usbd_edpt_xfer`-Wrap padet auf CBW-Länge (+ Caching-Page). Feld-A/B noch offen |
 | **P1c** | Profil `bmw_nbt_evo.json`: nur S0-FACTs mit `origin: hu_probe_field`, `fw: 0.2.17` | **offen** | Gap µs, read 4096, writes=false, BOT-Hinweis; PiDrive-Semantik `unverified` belassen; Burst nur INFERENCE |
 | **P1d** | README auf 0.2.17; Short-SID-Mapping dokumentieren | **offen** | Hygiene |
 | **P1e** | GATE-01: Burst-Epistemik formal dokumentieren | **offen** | Kriterien: Burst-Def, min. Bursts, dropped=0, Pace=`gap_us`; Gate bleibt OPEN |
@@ -65,4 +65,4 @@ Aus `msc-host-read-semantics-s1s2s3-2026`:
 
 ## FW-Linie (Vorschlag)
 
-`0.2.18` = t_us-Härtung unter Coex-Flush + MODE_SENSE6-Fix (A/B) → dann S2/S3-Feld auf diesem Stand.
+`0.2.18` = MODE_SENSE6-Pad (kein Case-5-STALL mehr) · t_us-Härtung (P1a) noch offen → Feld-A/B dann S2/S3.

@@ -369,6 +369,37 @@ void __real_tud_umount_cb(void);
 void __real_dcd_set_address(uint8_t rhport, uint8_t dev_addr);
 void __real_usbd_edpt_stall(uint8_t rhport, uint8_t ep_addr);
 void __real_usbd_edpt_clear_stall(uint8_t rhport, uint8_t ep_addr);
+bool __real_usbd_edpt_xfer(uint8_t rhport, uint8_t ep_addr, uint8_t* buffer,
+                           uint16_t total_bytes);
+
+// TinyUSB 0.15 builtin MODE_SENSE6 returns only the 4-byte header. BMW CBWs ask
+// for 192 bytes → Case 5 (Hi > Di) → usbd_edpt_stall(ep_in) before CSW → host
+// CLEAR_HALT + retry (ms6/cap≈2). Pad the IN buffer to the CBW length so residue
+// is 0 and the Case-5 stall never fires.
+static uint16_t expandModeSense6IfNeeded(uint8_t ep_addr, uint8_t* buffer,
+                                         uint16_t total_bytes) {
+    if (!buffer || (ep_addr & 0x80) == 0 || total_bytes != 4) return total_bytes;
+    const uint8_t* cbw = itfCbw();
+    if (readLe32(cbw) != MSC_CBW_SIGNATURE) return total_bytes;
+    if (cbw[15] != 0x1a) return total_bytes;  // SCSI MODE_SENSE(6)
+    uint32_t expect = readLe32(cbw + 8);
+    if (expect <= 4 || expect > 4096) return total_bytes;
+    memset(buffer + 4, 0, (size_t)(expect - 4));
+    buffer[0] = (uint8_t)(expect - 1);  // mode data length (bytes following)
+    // Keep medium_type / WP bit from TinyUSB; no block descriptors (byte 3 = 0).
+    // Optional Caching page — many hosts accept zeros-only after the header.
+    if (expect >= 12) {
+        buffer[4] = 0x08;  // page code: Caching
+        buffer[5] = 0x0A;  // page length
+    }
+    // Keep mscd total_len in sync so DATA-complete compares xferred >= total_len.
+    uint8_t* itf = _mscd_itf;
+    itf[52] = (uint8_t)(expect);
+    itf[53] = (uint8_t)(expect >> 8);
+    itf[54] = (uint8_t)(expect >> 16);
+    itf[55] = (uint8_t)(expect >> 24);
+    return (uint16_t)expect;
+}
 
 void __wrap_tud_mount_cb(void) {
     // Queue before real so Capture-tUs ≤ any Arduino STARTED side effects; identity/phase
@@ -395,6 +426,12 @@ void __wrap_usbd_edpt_stall(uint8_t rhport, uint8_t ep_addr) {
 void __wrap_usbd_edpt_clear_stall(uint8_t rhport, uint8_t ep_addr) {
     MscBotTap::queueEpClearHalt(ep_addr);
     __real_usbd_edpt_clear_stall(rhport, ep_addr);
+}
+
+bool __wrap_usbd_edpt_xfer(uint8_t rhport, uint8_t ep_addr, uint8_t* buffer,
+                           uint16_t total_bytes) {
+    total_bytes = expandModeSense6IfNeeded(ep_addr, buffer, total_bytes);
+    return __real_usbd_edpt_xfer(rhport, ep_addr, buffer, total_bytes);
 }
 
 void tud_msc_read10_complete_cb(uint8_t lun) {

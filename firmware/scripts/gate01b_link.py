@@ -40,6 +40,8 @@ def _prepare(env):
             "-Wl,--wrap=dcd_set_address",
             "-Wl,--wrap=usbd_edpt_stall",
             "-Wl,--wrap=usbd_edpt_clear_stall",
+            # 0.2.18: expand MODE_SENSE6 IN to CBW length (avoid TinyUSB Case-5 stall)
+            "-Wl,--wrap=usbd_edpt_xfer",
         ]
     )
 
