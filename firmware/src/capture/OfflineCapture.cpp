@@ -139,17 +139,30 @@ bool OfflineCapture::beginCapture(const String& vehicle, const String& scenario,
     softUsb_ = softUsb;
     autoDetachMs_ = autoDetachMs;
     autoDetached_ = false;
+    stopRequested_ = false;
+    stopReason_ = "";
     captureStartedMs_ = millis();
-    wasPlugged_ = msc_ && msc_->plugged();
+    wasPlugged_ = false;  // set after re-enum — else softDetach looks like host unplug
     state_ = State::Capturing;
 
     if (softUsb_ && msc_) {
         // Clean re-enum entirely inside the WiFi-off window (Messkonzept ARMING).
+        // Soft-detach produces umount — must not end the capture.
+        ignoreUnplugUntilMs_ = millis() + 2500;
         Serial.println("[OFFLINE] soft USB re-enum");
         msc_->softDetach(0);
         delay(400);
         msc_->softAttach();
-        delay(100);
+        delay(200);
+        wasPlugged_ = msc_->plugged();
+        // Drop a spurious stop from umount during re-enum.
+        if (stopRequested_ && stopReason_ == "umount") {
+            stopRequested_ = false;
+            stopReason_ = "";
+        }
+    } else {
+        ignoreUnplugUntilMs_ = 0;
+        wasPlugged_ = msc_ && msc_->plugged();
     }
 
     Serial.printf("[OFFLINE] capturing vehicle=%s scenario=%s soft_usb=%d auto_detach_ms=%u\n",
@@ -217,8 +230,8 @@ bool OfflineCapture::appendPending(uint8_t kind, int64_t tUs, const uint8_t* raw
     memcpy(buf_ + used_, &rec, sizeof(Rec));
     used_ += sizeof(Rec);
     recordCount_++;
-    // Host unmount is a reliable end-of-window signal (plugged_ can lag).
-    if (kind == kKindUmount && capturing()) {
+    // Host unmount ends the window — but not during soft re-enum grace.
+    if (kind == kKindUmount && capturing() && millis() >= ignoreUnplugUntilMs_) {
         requestStop("umount");
     }
     return true;
@@ -384,7 +397,7 @@ void OfflineCapture::poll(MscGadget* msc) {
         if (plugged) {
             wasPlugged_ = true;
             unplugSinceMs_ = 0;
-        } else if (wasPlugged_) {
+        } else if (wasPlugged_ && millis() >= ignoreUnplugUntilMs_) {
             if (unplugSinceMs_ == 0) unplugSinceMs_ = millis();
             if (millis() - unplugSinceMs_ >= kUnplugIdleMs) {
                 requestStop("unplug_idle");

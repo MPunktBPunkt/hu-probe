@@ -125,6 +125,8 @@ private:
     bool softUsb_ = true;
     uint32_t autoDetachMs_ = 0;
     bool autoDetached_ = false;
+    /** Ignore umount/unplug auto-stop during initial soft re-enum. */
+    unsigned long ignoreUnplugUntilMs_ = 0;
 
     unsigned long bootDownMs_ = 0;
     bool bootWasDown_ = false;
