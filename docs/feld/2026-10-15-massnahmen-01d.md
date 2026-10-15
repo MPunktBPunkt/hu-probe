@@ -1,6 +1,6 @@
 # Maßnahmen — 2026-10-15 (nach BMW 0.2.17-Review + S1–S3-Audit)
 
-**Quellen:** [bmw-s0-0.2.17-review](2026-10-15-bmw-s0-0.2.17-review.md) (Cursor/Mistral/GPT/Grok) · [auswertung](2026-10-15-bmw-s0-0.2.17-auswertung.md) · Desk-Audit `msc-host-read-semantics-s1s2s3-2026` (technology-audit PR #9, gemerged) · Vorgänger: [massnahmen-01c](2026-10-14-massnahmen-01c.md)
+**Quellen:** [bmw-s0-0.2.17-review](2026-10-15-bmw-s0-0.2.17-review.md) (Cursor/Mistral/GPT/Grok) · [auswertung](2026-10-15-bmw-s0-0.2.17-auswertung.md) · [S2-Abend](2026-10-15-bmw-s2-0.2.23-auswertung.md) · [Übergabe Multi-KI](2026-10-15-uebergabe-abend-multi-ki.md) (Mistral/GPT/Claude + Rohdaten-Check) · Desk-Audit `msc-host-read-semantics-s1s2s3-2026` (technology-audit PR #9, gemerged) · Vorgänger: [massnahmen-01c](2026-10-14-massnahmen-01c.md)
 
 **Kernurteil (Konsens):** S0-**Transportschicht** NBT ist hu-probe-FACT (4 KiB, Gap-p50 ~3739 µs, tinyusb-BOT, SCSI-Mix, dropped=0). Semantik (Eager/Prefetch/Cache/Busy/Identity) bleibt **PiDrive-Erbe** — S1–S3/S5/S6 **nie gefahren**. GATE-01 bleibt **OPEN**. WiFi-Root-Cause parallel, **kein Blocker** mehr für Burst-Feld.
 
