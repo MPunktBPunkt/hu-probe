@@ -25,6 +25,8 @@ private:
     void handleSimulateRead();
     void handleUsbCycle();
     void handleUsbRemount();
+    void handleOfflineStart();
+    void handleOfflineStop();
     void handleOtaUpload();
     void handleOtaDone();
 

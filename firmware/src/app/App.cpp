@@ -1,6 +1,7 @@
 #include "App.h"
 #include "BuildFlags.h"
 #include "BuildId.h"
+#include "capture/OfflineCapture.h"
 #include "core/ProbeClock.h"
 #include "msc/MscBotTap.h"
 #include <WiFi.h>
@@ -148,7 +149,10 @@ void App::begin() {
 void App::wifiCoexTask(void* arg) {
     App* self = static_cast<App*>(arg);
     for (;;) {
-        self->superviseWifi();
+        // Offline-Capture owns WiFi — coex soft-detach must not fight WIFI_OFF.
+        if (!OfflineCapture::instance().blocksWifiSupervise()) {
+            self->superviseWifi();
+        }
         if (self->coexDetachedForWifi_) {
             self->tcp_.loop();  // flush ring while USB is off
         }
@@ -157,6 +161,7 @@ void App::wifiCoexTask(void* arg) {
 }
 
 void App::emitStatus() {
+    if (OfflineCapture::instance().capturing()) return;
     if (!session_.active()) return;
     int64_t t = ProbeClock::publishUs(ProbeClock::eventNowUs());
     JsonDocument doc;
@@ -175,6 +180,7 @@ void App::emitStatus() {
 }
 
 void App::emitCaptureHealth() {
+    if (OfflineCapture::instance().capturing()) return;
     if (!session_.active()) return;
     int64_t t = ProbeClock::publishUs(ProbeClock::eventNowUs());
     EventBus& bus = EventBus::instance();
@@ -295,6 +301,7 @@ void App::loop() {
     // WiFi/coex soft-detach runs in wifiCoexTask (loop starves under USB Bulk).
     // Drain Capture-tUs BOT/read before loop-now status/health (keeps t_us non-decreasing).
     msc_.loop();
+    OfflineCapture::instance().poll(&msc_);
     instrument_.tick();
     tcp_.loop();
     web_.loop();

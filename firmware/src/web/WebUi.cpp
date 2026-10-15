@@ -1,5 +1,6 @@
 #include "WebUi.h"
 #include "BuildFlags.h"
+#include "capture/OfflineCapture.h"
 #include <Update.h>
 #include <WiFi.h>
 
@@ -39,6 +40,11 @@ static const char* PAGE =
     "<button class=sec onclick=cycle()>USB Soft-Cycle</button>"
     "<button class=sec onclick=remount()>Media Remount</button>"
     "</div>"
+    "<p class=muted>Offline-Capture (0.2.19): WiFi aus während Messung, RAM-Puffer, Upload danach. "
+    "Stop: Unplug+2.5s Idle, BOOT lang, oder max 3&nbsp;min. Marker: BOOT kurz.</p>"
+    "<div class=row>"
+    "<button onclick=offline()>Offline Capture</button>"
+    "</div>"
     "<pre id=st>loading…</pre>"
     "<script>"
     "const PROFILE={lab_debian:'lab_debian',bmw:'bmw_nbt_evo',mazda_cx30:'mazda_cx30'};"
@@ -52,6 +58,9 @@ static const char* PAGE =
     "body:JSON.stringify({holdMs:600})});refresh()}"
     "async function remount(){await fetch('/api/usb/remount',{method:'POST',headers:{'Content-Type':'application/json'},"
     "body:JSON.stringify({bumpSerial:true})});refresh()}"
+    "async function offline(){const r=await fetch('/api/offline/start',{method:'POST',headers:{'Content-Type':'application/json'},"
+    "body:JSON.stringify({vehicle:v.value,scenario:s.value,profile_id:PROFILE[v.value]||v.value})});"
+    "st.textContent=await r.text();}"
     "setInterval(refresh,1000);refresh()"
     "</script></body></html>";
 
@@ -74,6 +83,8 @@ void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
     server_.on("/api/debug/sim-read", HTTP_POST, [this]() { handleSimulateRead(); });
     server_.on("/api/usb/cycle", HTTP_POST, [this]() { handleUsbCycle(); });
     server_.on("/api/usb/remount", HTTP_POST, [this]() { handleUsbRemount(); });
+    server_.on("/api/offline/start", HTTP_POST, [this]() { handleOfflineStart(); });
+    server_.on("/api/offline/stop", HTTP_POST, [this]() { handleOfflineStop(); });
     server_.on(
         "/ota-upload", HTTP_POST,
         [this]() { handleOtaDone(); },
@@ -120,6 +131,10 @@ void WebUi::handleStatus() {
         doc["vehicle"] = cfg_->vehicleId;
         doc["scenario"] = cfg_->scenarioId;
         doc["collector"] = cfg_->collectorHost + ":" + String(cfg_->collectorPort);
+    }
+    {
+        JsonObject oc = doc["offline"].to<JsonObject>();
+        OfflineCapture::instance().toStatusJson(oc);
     }
     String out;
     serializeJson(doc, out);
@@ -258,6 +273,58 @@ void WebUi::handleUsbRemount() {
     String body;
     serializeJson(out, body);
     server_.send(200, "application/json", body);
+}
+
+void WebUi::handleOfflineStart() {
+    OfflineCapture& oc = OfflineCapture::instance();
+    if (oc.active()) {
+        server_.send(409, "application/json", "{\"ok\":false,\"err\":\"already_active\"}");
+        return;
+    }
+    String vehicle = cfg_ ? cfg_->vehicleId : "lab_debian";
+    String scenario = cfg_ ? cfg_->scenarioId : "s0_plug_enum";
+    String profile = cfg_ ? cfg_->profileId : "lab_debian";
+    if (server_.hasArg("plain")) {
+        JsonDocument doc;
+        if (!deserializeJson(doc, server_.arg("plain"))) {
+            if (doc["vehicle"].is<const char*>()) vehicle = doc["vehicle"].as<String>();
+            if (doc["scenario"].is<const char*>()) scenario = doc["scenario"].as<String>();
+            if (doc["profile_id"].is<const char*>()) profile = doc["profile_id"].as<String>();
+        }
+    }
+    if (cfg_) {
+        cfg_->vehicleId = vehicle;
+        cfg_->scenarioId = scenario;
+        cfg_->profileId = profile;
+        cfg_->save();
+    }
+    // Respond before WiFi dies so the client sees ok.
+    server_.send(200, "application/json",
+                 "{\"ok\":true,\"action\":\"offline_arm\",\"note\":\"wifi_off_next\"}");
+    delay(50);
+    server_.client().flush();
+    delay(50);
+
+    if (!oc.arm(session_, msc_, inst_)) {
+        Serial.println("[OFFLINE] arm failed");
+        return;
+    }
+    if (!oc.beginCapture(vehicle, scenario, profile)) {
+        Serial.println("[OFFLINE] beginCapture failed");
+        oc.requestStop("begin_failed");
+    }
+}
+
+void WebUi::handleOfflineStop() {
+    OfflineCapture& oc = OfflineCapture::instance();
+    if (!oc.capturing()) {
+        server_.send(409, "application/json", "{\"ok\":false,\"err\":\"not_capturing\"}");
+        return;
+    }
+    // WiFi is off — this only works if stop is triggered while somehow still connected
+    // (e.g. race) or after reconnect. Prefer Unplug/BOOT. Still accept the request.
+    oc.requestStop("api_stop");
+    server_.send(200, "application/json", "{\"ok\":true,\"action\":\"offline_stop_requested\"}");
 }
 
 void WebUi::handleOtaUpload() {

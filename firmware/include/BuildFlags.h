@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef FW_VERSION
-#define FW_VERSION "0.2.18"
+#define FW_VERSION "0.2.19"
 #endif
 
 #ifndef FW_TYPE

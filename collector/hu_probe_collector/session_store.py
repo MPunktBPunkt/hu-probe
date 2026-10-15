@@ -39,6 +39,7 @@ class SessionStore:
                 "profile_id": (meta or {}).get("profile_id"),
                 "scenario": (meta or {}).get("scenario"),
                 "fw_version": (meta or {}).get("fw_version"),
+                "transport": (meta or {}).get("transport") or "tcp_live",
                 "fw_type": "hu-probe",
                 "fw_sha": None,
                 "mac": (meta or {}).get("mac"),
@@ -83,6 +84,7 @@ class SessionStore:
                 "profile_id": event.get("profile_id"),
                 "fw_version": event.get("fw_version"),
                 "mac": event.get("mac"),
+                "transport": event.get("transport"),
             }
         folder = self.ensure_session(str(sid), meta)
         sid_s = str(sid)

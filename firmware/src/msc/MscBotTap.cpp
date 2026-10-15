@@ -1,5 +1,6 @@
 #include "MscBotTap.h"
 #include "BuildFlags.h"
+#include "capture/OfflineCapture.h"
 #include "core/ProbeClock.h"
 #include "tusb.h"
 #include "class/msc/msc.h"
@@ -226,10 +227,18 @@ void MscBotTap::drain(int maxEvents) {
         pendingHead_ = pendingTail_ = pendingCount_ = 0;
         return;
     }
+    const bool offline = OfflineCapture::instance().capturing();
     for (int i = 0; i < maxEvents && pendingCount_ > 0; i++) {
         Pending p = pending_[pendingHead_];
         pendingHead_ = (pendingHead_ + 1) % kPendingRing;
         pendingCount_--;
+        if (offline) {
+            OfflineCapture::instance().appendPending(
+                static_cast<uint8_t>(p.kind), p.tUs, p.raw, p.botTag, p.lba, p.nBytes, p.durUs,
+                p.gapUs, p.wValue, p.wIndex, p.wLength, p.bmRequestType, p.bRequest, p.epAddr,
+                p.flag, p.tag, p.kindStr, p.dir);
+            continue;
+        }
         switch (p.kind) {
             case Kind::Cbw:
                 instrument_->emitBotCbwTinyusb(p.raw, p.tUs);

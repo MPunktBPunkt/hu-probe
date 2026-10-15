@@ -20,6 +20,7 @@ class EventBus;
  *   blue dim      — WiFi OK, stick not plugged (waiting for HU)
  *   yellow blink  — WiFi portal / connecting
  *   white flash   — boot
+ *   purple solid  — Offline-Capture active (WiFi intentionally OFF)
  */
 class StatusLed {
 public:
@@ -38,7 +39,8 @@ private:
         Measuring,
         TcpDown,
         NeedReset,
-        Unhealthy
+        Unhealthy,
+        OfflineCapture
     };
 
     void write(uint8_t r, uint8_t g, uint8_t b);

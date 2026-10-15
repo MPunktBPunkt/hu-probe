@@ -15,11 +15,13 @@ void Session::begin() {
 }
 
 bool Session::start(const String& vehicle, const String& scenario, const String& profileId,
-                    const char* probeSerial, const char* volumeLabel) {
+                    const char* probeSerial, const char* volumeLabel, const char* transport,
+                    const char* wallclockUtc) {
     if (active_) stop();
     vehicle_ = vehicle;
     scenario_ = scenario;
     profileId_ = profileId;
+    transport_ = transport ? transport : "tcp_live";
     seq_ = 0;
     startedMs_ = millis();
     phase_ = "enum";
@@ -57,6 +59,8 @@ bool Session::start(const String& vehicle, const String& scenario, const String&
     doc["fw_type"] = FW_TYPE;
     doc["fw_sha"] = FW_GIT_SHA;
     doc["fw_build_id"] = FW_BUILD_ID;
+    doc["transport"] = transport_;
+    if (wallclockUtc && wallclockUtc[0]) doc["wallclock_utc"] = wallclockUtc;
     // Explicit host class so lab Debian can never be mistaken for a car HU.
     if (vehicle_ == "lab_debian") {
         doc["usb_host_kind"] = "linux_debian";
@@ -143,6 +147,7 @@ void Session::toStatusJson(JsonObject obj) const {
     obj["scenario"] = scenario_;
     obj["profile_id"] = profileId_;
     obj["phase"] = phase_;
+    obj["transport"] = transport_;
     obj["seq"] = seq();
     obj["seq_first"] = seqFirst_;
 }

@@ -3,6 +3,7 @@
 #include "msc/MscGadget.h"
 #include "msc/ReadInstrument.h"
 #include "msc/MscBotTap.h"
+#include "capture/OfflineCapture.h"
 #include "net/TcpStreamer.h"
 #include "net/EventBus.h"
 #include <WiFi.h>
@@ -49,7 +50,10 @@ void StatusLed::tick(const Session& session, const MscGadget& msc, const ReadIns
     bool recentRead = (lastReadMs_ > 0) && (now - lastReadMs_ < 1500);
 
     Mode next = Mode::IdleWifi;
-    if (wifiPortal_ || WiFi.status() != WL_CONNECTED) {
+    if (OfflineCapture::instance().active()) {
+        // Offline: green while host reads, purple otherwise (WiFi intentionally off).
+        next = (msc.plugged() && recentRead) ? Mode::Measuring : Mode::OfflineCapture;
+    } else if (wifiPortal_ || WiFi.status() != WL_CONNECTED) {
         next = Mode::WifiPortal;
     } else if (bus.dropped() > 0 || msc.sampleOverflow() > 0) {
         next = Mode::Unhealthy;
@@ -105,6 +109,9 @@ void StatusLed::apply(Mode mode, unsigned long now) {
             break;
         case Mode::Unhealthy:
             write(blinkOn_ ? 55 : 0, 0, 0);  // red
+            break;
+        case Mode::OfflineCapture:
+            write(28, 0, 40);  // purple — WiFi OFF, RAM capture
             break;
         case Mode::Off:
         default:
