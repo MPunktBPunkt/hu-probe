@@ -69,6 +69,26 @@ sessions/*
 !sessions/3129_bmw_s0_plug_enum/**
 !sessions/3085_bmw_s0_plug_enum/
 !sessions/3085_bmw_s0_plug_enum/**
+!sessions/20261015-181642_lab_debian_s0_plug_enum/
+!sessions/20261015-181642_lab_debian_s0_plug_enum/**
+!sessions/2280_bmw_s2_prefetch/
+!sessions/2280_bmw_s2_prefetch/**
+!sessions/2276_bmw_s2_prefetch/
+!sessions/2276_bmw_s2_prefetch/**
+!sessions/2210_bmw_s2_prefetch/
+!sessions/2210_bmw_s2_prefetch/**
+!sessions/20261015-195128_bmw_s2_prefetch/
+!sessions/20261015-195128_bmw_s2_prefetch/**
+!sessions/20261015-195417_bmw_s2_prefetch/
+!sessions/20261015-195417_bmw_s2_prefetch/**
+!sessions/20261015-195657_bmw_s2_prefetch/
+!sessions/20261015-195657_bmw_s2_prefetch/**
+!sessions/20261015-200036_bmw_s2_prefetch/
+!sessions/20261015-200036_bmw_s2_prefetch/**
+!sessions/20261015-200319_bmw_s2_prefetch/
+!sessions/20261015-200319_bmw_s2_prefetch/**
+!sessions/20261015-200722_bmw_s2_prefetch/
+!sessions/20261015-200722_bmw_s2_prefetch/**
 sessions/**/collector.*
 
 # Firmware artifacts (release bins under firmware/dist/ are tracked)

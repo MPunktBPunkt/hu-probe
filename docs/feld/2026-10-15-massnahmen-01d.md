@@ -28,10 +28,10 @@
 | **P1c** | Profil `bmw_nbt_evo.json`: nur S0-FACTs mit `origin: hu_probe_field`, `fw: 0.2.17` | **offen** | Gap µs, read 4096, writes=false, BOT-Hinweis; PiDrive-Semantik `unverified` belassen; Burst nur INFERENCE |
 | **P1d** | README auf 0.2.17; Short-SID-Mapping dokumentieren | **offen** | Hygiene |
 | **P1e** | GATE-01: Burst-Epistemik formal dokumentieren | **offen** | Kriterien: Burst-Def, min. Bursts, dropped=0, Pace=`gap_us`; Gate bleibt OPEN |
-| **P2** | Feld **S2/S3** (höchster Nutzen/Minute) | **offen** | Marker laut Audit: `play_start`, `track_next`, `audible_change`, `replay`, `stop`; A→B→A ohne Replug; ≥3 Wdh.; unterscheidbare Tracks |
 | **P2b** | Lab WiFi-Last-Schwelle (optional, ≤2 h) | **offen** | Burst 1/3/10 s oder KB/s-Stufen → Zeit bis Gelb; **nicht** Root-Cause |
 | **P2c** | USB↔WiFi Root-Cause (Power 5 V + `WIFI_OFF`-Diskriminierung) | **offen** | parallel; Soft-Detach bleibt Workaround |
-| **P1f** | RAM Offline-Capture (WLAN aus, Stufe 1) | **done (0.2.19)** | `OfflineCapture`: WIFI_OFF→RAM→Upload; UI „Offline Capture“; Stop Unplug/BOOT; `transport=ram_offline` |
+| **P1f** | RAM Offline-Capture (WLAN aus, Stufe 1) | **done (0.2.19–0.2.23)** | Lab E2E `ram_offline` 0.2.23 (`181642`); Soft-USB+TCP-Pump. **Auto Offline noch fail** — siehe [s2-auswertung](2026-10-15-bmw-s2-0.2.23-auswertung.md) |
+| **P2** | Feld **S2/S3** (höchster Nutzen/Minute) | **teilweise (S2 Abend)** | S2 Live 0.2.23: 8 brauchbare Sessions, File-Gap-p50 ~3783 µs; Marker Autoplay/Tip/RST; S3 noch offen |
 | **P3** | S1 Eager-EOF | **offen** | Medium: Mess-Slots **≥4 MiB** (Audit); 512 KiB nur Kontrolle |
 | **P4** | S5 Fehler-Recovery (STALL/CHECK/BOT-Reset-Injektion) | **offen** | nach P1b; natürliche STALL-Baseline aus P0b |
 | **P5** | S6 Identity-Matrix · S7 Lifecycle | **offen** | nach Semantik-Kern |

@@ -1,0 +1,4 @@
+{"v":2,"sid":"20261015-195128_bmw_s2_prefetch","seq":338,"t_us":21004882,"t_ms":21004,"ev":"marker","name":"reconnect","note":"wifi/hu wieder da"}
+{"v":2,"sid":"20261015-195128_bmw_s2_prefetch","seq":339,"t_us":21026935,"t_ms":21026,"ev":"marker","name":"druecke_1","note":"dr\u00fccke 1 (nachgezogen, ESP war offline)"}
+{"v":2,"sid":"20261015-195128_bmw_s2_prefetch","seq":353,"t_us":32377727,"t_ms":32377,"ev":"marker","name":"track_1","note":"track 1 gr\u00fcn blau"}
+{"v":2,"sid":"20261015-195128_bmw_s2_prefetch","seq":372,"t_us":48910096,"t_ms":48910,"ev":"marker","name":"tippe_2","note":"ich tippe 2"}

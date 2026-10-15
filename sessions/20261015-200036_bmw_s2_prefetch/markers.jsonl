@@ -1,0 +1,6 @@
+{"v":2,"sid":"20261015-200036_bmw_s2_prefetch","seq":234,"t_us":3387223,"t_ms":3387,"ev":"marker","name":"dann_gelb","note":"nach einer weile blau dann gelb blinkend"}
+{"v":2,"sid":"20261015-200036_bmw_s2_prefetch","seq":248,"t_us":13551029,"t_ms":13551,"ev":"marker","name":"reconnect","note":"wieder da"}
+{"v":2,"sid":"20261015-200036_bmw_s2_prefetch","seq":249,"t_us":13571445,"t_ms":13571,"ev":"marker","name":"vor_ende_1_kurz_gruen","note":"war vor ende von 1 kurz gr\u00fcn (nachgezogen)"}
+{"v":2,"sid":"20261015-200036_bmw_s2_prefetch","seq":250,"t_us":13592172,"t_ms":13592,"ev":"marker","name":"tippe_1_nochmal","note":"habe nochmal 1 getippt (nachgezogen)"}
+{"v":2,"sid":"20261015-200036_bmw_s2_prefetch","seq":251,"t_us":13612147,"t_ms":13612,"ev":"marker","name":"dann_gelb","note":"nach einer weile blau dann gelb blinkend (nachgezogen)"}
+{"v":2,"sid":"20261015-200036_bmw_s2_prefetch","seq":393,"t_us":62838025,"t_ms":62838,"ev":"marker","name":"autoplay_sprung_2","note":"ist zu track 2 gesprungen im autoplay"}
