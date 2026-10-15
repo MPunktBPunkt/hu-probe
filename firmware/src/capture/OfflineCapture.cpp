@@ -129,17 +129,31 @@ bool OfflineCapture::arm(Session* session, MscGadget* msc, ReadInstrument* inst)
 }
 
 bool OfflineCapture::beginCapture(const String& vehicle, const String& scenario,
-                                  const String& profileId) {
+                                  const String& profileId, bool softUsb,
+                                  uint32_t autoDetachMs) {
     if (state_ != State::Arming && state_ != State::Idle) return false;
     if (state_ == State::Idle) return false;
     vehicle_ = vehicle;
     scenario_ = scenario;
     profileId_ = profileId;
+    softUsb_ = softUsb;
+    autoDetachMs_ = autoDetachMs;
+    autoDetached_ = false;
     captureStartedMs_ = millis();
     wasPlugged_ = msc_ && msc_->plugged();
     state_ = State::Capturing;
-    Serial.printf("[OFFLINE] capturing vehicle=%s scenario=%s\n", vehicle_.c_str(),
-                  scenario_.c_str());
+
+    if (softUsb_ && msc_) {
+        // Clean re-enum entirely inside the WiFi-off window (Messkonzept ARMING).
+        Serial.println("[OFFLINE] soft USB re-enum");
+        msc_->softDetach(0);
+        delay(400);
+        msc_->softAttach();
+        delay(100);
+    }
+
+    Serial.printf("[OFFLINE] capturing vehicle=%s scenario=%s soft_usb=%d auto_detach_ms=%u\n",
+                  vehicle_.c_str(), scenario_.c_str(), softUsb_ ? 1 : 0, autoDetachMs_);
     return true;
 }
 
@@ -356,6 +370,16 @@ void OfflineCapture::poll(MscGadget* msc) {
     bootWasDown_ = down;
 
     if (capturing()) {
+        // Timed SW unplug — enables full lab cycle without HTTP after WiFi stop.
+        if (autoDetachMs_ > 0 && !autoDetached_ &&
+            (millis() - captureStartedMs_ >= autoDetachMs_)) {
+            autoDetached_ = true;
+            Serial.println("[OFFLINE] auto soft-detach");
+            if (msc) msc->softDetach(0);
+            // umount / plugged_ path will requestStop shortly
+            requestStop("auto_soft_detach");
+        }
+
         bool plugged = msc && msc->plugged();
         if (plugged) {
             wasPlugged_ = true;
@@ -385,4 +409,6 @@ void OfflineCapture::toStatusJson(JsonObject obj) const {
     obj["overflow"] = overflow_;
     obj["wallclock"] = wallclock_;
     obj["stop_reason"] = stopReason_;
+    obj["soft_usb"] = softUsb_;
+    obj["auto_detach_ms"] = autoDetachMs_;
 }

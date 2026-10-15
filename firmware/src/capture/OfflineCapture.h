@@ -39,9 +39,13 @@ public:
 
     /** UI/API: stop live session, grab wallclock, WiFi OFF, alloc buffer. */
     bool arm(Session* session, MscGadget* msc, ReadInstrument* inst);
-    /** After arm: start session metadata (no TCP yet) and enter Capturing. */
-    bool beginCapture(const String& vehicle, const String& scenario, const String& profileId);
-    /** End capture (button / unplug+idle / max duration). */
+    /**
+     * After arm: enter Capturing. If softUsb, D+ re-enum after WiFi stop.
+     * If autoDetachMs>0, soft-detach after that many ms (SW unplug — no HTTP needed).
+     */
+    bool beginCapture(const String& vehicle, const String& scenario, const String& profileId,
+                      bool softUsb = true, uint32_t autoDetachMs = 0);
+    /** End capture (button / unplug+idle / max duration / auto soft-detach). */
     void requestStop(const char* reason);
     /** App loop: auto-stop, BOOT marker/stop, upload when requested. */
     void poll(MscGadget* msc);
@@ -118,6 +122,9 @@ private:
     unsigned long unplugSinceMs_ = 0;
     bool stopRequested_ = false;
     bool wasPlugged_ = false;
+    bool softUsb_ = true;
+    uint32_t autoDetachMs_ = 0;
+    bool autoDetached_ = false;
 
     unsigned long bootDownMs_ = 0;
     bool bootWasDown_ = false;

@@ -284,12 +284,19 @@ void WebUi::handleOfflineStart() {
     String vehicle = cfg_ ? cfg_->vehicleId : "lab_debian";
     String scenario = cfg_ ? cfg_->scenarioId : "s0_plug_enum";
     String profile = cfg_ ? cfg_->profileId : "lab_debian";
+    bool softUsb = true;
+    uint32_t autoDetachMs = 0;
     if (server_.hasArg("plain")) {
         JsonDocument doc;
         if (!deserializeJson(doc, server_.arg("plain"))) {
             if (doc["vehicle"].is<const char*>()) vehicle = doc["vehicle"].as<String>();
             if (doc["scenario"].is<const char*>()) scenario = doc["scenario"].as<String>();
             if (doc["profile_id"].is<const char*>()) profile = doc["profile_id"].as<String>();
+            if (!doc["soft_usb"].isNull()) softUsb = doc["soft_usb"].as<bool>();
+            if (!doc["auto_detach_ms"].isNull()) autoDetachMs = doc["auto_detach_ms"].as<uint32_t>();
+            if (!doc["measure_ms"].isNull() && autoDetachMs == 0) {
+                autoDetachMs = doc["measure_ms"].as<uint32_t>();
+            }
         }
     }
     if (cfg_) {
@@ -299,8 +306,15 @@ void WebUi::handleOfflineStart() {
         cfg_->save();
     }
     // Respond before WiFi dies so the client sees ok.
-    server_.send(200, "application/json",
-                 "{\"ok\":true,\"action\":\"offline_arm\",\"note\":\"wifi_off_next\"}");
+    JsonDocument out;
+    out["ok"] = true;
+    out["action"] = "offline_arm";
+    out["soft_usb"] = softUsb;
+    out["auto_detach_ms"] = autoDetachMs;
+    out["note"] = "wifi_off_then_soft_enum";
+    String body;
+    serializeJson(out, body);
+    server_.send(200, "application/json", body);
     delay(50);
     server_.client().flush();
     delay(50);
@@ -309,7 +323,7 @@ void WebUi::handleOfflineStart() {
         Serial.println("[OFFLINE] arm failed");
         return;
     }
-    if (!oc.beginCapture(vehicle, scenario, profile)) {
+    if (!oc.beginCapture(vehicle, scenario, profile, softUsb, autoDetachMs)) {
         Serial.println("[OFFLINE] beginCapture failed");
         oc.requestStop("begin_failed");
     }
