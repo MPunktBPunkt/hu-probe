@@ -4,6 +4,7 @@
 #include "msc/ReadInstrument.h"
 #include "session/Session.h"
 #include "msc/MscGadget.h"
+#include "net/TcpStreamer.h"
 
 /**
  * 0.2.19 Stufe-1: RAM Offline-Capture (Messkonzept Offline-Capture).
@@ -38,7 +39,7 @@ public:
     const char* stateName() const;
 
     /** UI/API: stop live session, grab wallclock, WiFi OFF, alloc buffer. */
-    bool arm(Session* session, MscGadget* msc, ReadInstrument* inst);
+    bool arm(Session* session, MscGadget* msc, ReadInstrument* inst, TcpStreamer* tcp);
     /**
      * After arm: enter Capturing. If softUsb, D+ re-enum after WiFi stop.
      * If autoDetachMs>0, soft-detach after that many ms (SW unplug — no HTTP needed).
@@ -105,6 +106,8 @@ private:
     Session* session_ = nullptr;
     MscGadget* msc_ = nullptr;
     ReadInstrument* inst_ = nullptr;
+    TcpStreamer* tcp_ = nullptr;
+    void pumpTcp(uint32_t maxMs);
 
     uint8_t* buf_ = nullptr;
     size_t cap_ = 0;

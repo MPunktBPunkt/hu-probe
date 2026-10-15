@@ -319,7 +319,7 @@ void WebUi::handleOfflineStart() {
     server_.client().flush();
     delay(50);
 
-    if (!oc.arm(session_, msc_, inst_)) {
+    if (!oc.arm(session_, msc_, inst_, tcp_)) {
         Serial.println("[OFFLINE] arm failed");
         return;
     }

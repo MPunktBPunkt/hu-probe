@@ -85,11 +85,23 @@ bool OfflineCapture::wifiOn() {
     return true;
 }
 
-bool OfflineCapture::arm(Session* session, MscGadget* msc, ReadInstrument* inst) {
+void OfflineCapture::pumpTcp(uint32_t maxMs) {
+    if (!tcp_) return;
+    unsigned long t0 = millis();
+    while (millis() - t0 < maxMs) {
+        tcp_->loop();
+        yield();
+        delay(20);
+        if (EventBus::instance().pending() == 0 && tcp_->connected()) break;
+    }
+}
+
+bool OfflineCapture::arm(Session* session, MscGadget* msc, ReadInstrument* inst, TcpStreamer* tcp) {
     if (active()) return false;
     session_ = session;
     msc_ = msc;
     inst_ = inst;
+    tcp_ = tcp;
     state_ = State::Arming;
     stopRequested_ = false;
     stopReason_ = "";
@@ -344,11 +356,15 @@ bool OfflineCapture::finalizeAndUpload() {
         Serial.println("[OFFLINE] WiFi failed — will retry in poll()");
         return false;
     }
+    // Must establish TCP before/during replay — App::loop is blocked here.
+    pumpTcp(8000);
     bool okReplay = replayAll();
+    pumpTcp(20000);
+    Serial.printf("[OFFLINE] done replay=%d records=%u pending=%u tcp=%d\n",
+                  okReplay ? 1 : 0, recordCount_, (unsigned)EventBus::instance().pending(),
+                  tcp_ && tcp_->connected() ? 1 : 0);
     freeBuffer();
     state_ = State::Idle;
-    Serial.printf("[OFFLINE] done replay=%d pending=%u (TCP drains in App::loop)\n",
-                  okReplay ? 1 : 0, (unsigned)EventBus::instance().pending());
     return okReplay;
 }
 
