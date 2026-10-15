@@ -19,10 +19,10 @@
 
 | Prio | Maßnahme | Status | Hinweis |
 |------|----------|--------|---------|
-| **P0a** | Offline-Auswertung der 8 BMW-0.2.17-Sessions | **offen** | Burst-Def (Idle-Gap-Schwelle), Bytes/LBA-Range/Burst, H-Quant (~39 vs ~48), Pause-Hist; Skript unter `tools/` |
-| **P0b** | STALL vs MODE_SENSE6 Artefakt-Test (Rohdaten) | **offen** | `ep_stall`/`clear_halt` gegen `mode_sense6`-CBW legen; Zählung 48 vs capacity 24 |
-| **P0c** | Zeitkette Mount→INQUIRY→TUR→READ10 + TUR-Rate je Zustand | **offen** | p50/p90 über Sessions; `tur_hz` nicht aus einem Statuspunkt |
-| **P0d** | QD aus BOT-Tag-Folgen (offline) | **offen** | INFERENCE, kein Profil-FACT ohne Systematik |
+| **P0a** | Offline-Auswertung der 8 BMW-0.2.17-Sessions | **done** | [offline-p0](2026-10-15-offline-p0.md): Burst via `gap_us`>500 ms; H-Quant **39×4096=158208**; Pause p50 ~10 s |
+| **P0b** | STALL vs MODE_SENSE6 Artefakt-Test (Rohdaten) | **done** | 70/84 Stalls same-`t_us` wie ms6; ms6/cap=2,0 → Instrument-Hypothese erhärtet |
+| **P0c** | Zeitkette Mount→INQUIRY→TUR→READ10 + TUR-Rate | **done** | Mount→INQUIRY p50 ~997 ms; Session-TUR-Hz p50 ~2,1 (nicht idle) |
+| **P0d** | QD aus BOT-Tag-Folgen (offline) | **done** | max outstanding Tags p50=1 (INFERENCE) |
 | **P1a** | `t_us`-Regression in langen Sessions (`2176`/`2199`) | **offen** | Pace weiter über `gap_us`; Fix vor S1-Längenstreams |
 | **P1b** | MODE_SENSE6 korrekt beantworten (oder A/B: Stall vs Fix) | **offen** | Instrumentartefakt entfernen vor S5-Interpretation |
 | **P1c** | Profil `bmw_nbt_evo.json`: nur S0-FACTs mit `origin: hu_probe_field`, `fw: 0.2.17` | **offen** | Gap µs, read 4096, writes=false, BOT-Hinweis; PiDrive-Semantik `unverified` belassen; Burst nur INFERENCE |

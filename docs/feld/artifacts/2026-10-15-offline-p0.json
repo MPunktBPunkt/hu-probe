@@ -1,0 +1,1287 @@
+{
+  "aggregate": {
+    "sessions": 8,
+    "h_quant": {
+      "file_reads_per_burst_hist": {
+        "39": 8,
+        "67": 1,
+        "37": 1,
+        "8": 1,
+        "34": 1,
+        "78": 1,
+        "5": 1,
+        "68": 1,
+        "11": 1,
+        "62": 1,
+        "9": 1,
+        "20": 1,
+        "18": 1
+      },
+      "file_reads_per_burst_p50": 39.0,
+      "bytes_per_burst_hist_top": [
+        [
+          185344,
+          5
+        ],
+        [
+          158208,
+          3
+        ],
+        [
+          347648,
+          1
+        ],
+        [
+          150016,
+          1
+        ],
+        [
+          47616,
+          1
+        ],
+        [
+          168960,
+          1
+        ],
+        [
+          370688,
+          1
+        ],
+        [
+          20480,
+          1
+        ],
+        [
+          295936,
+          1
+        ],
+        [
+          45056,
+          1
+        ]
+      ],
+      "bytes_per_burst_p50": 163584.0,
+      "dur_ms_p50": 170.155,
+      "inter_burst_ms_p50": 10210.7205,
+      "inter_burst_ms_n": 18,
+      "inference": "Dominant file-count clusters indicate Host batch size candidates; do not publish as FACT until burst definition validated against markers."
+    },
+    "stall_artifact": {
+      "ep_stall_total": 84,
+      "stall_same_t_us_mode_sense6": 70,
+      "mode_sense6_cbw": 84,
+      "read_capacity10_cbw": 42,
+      "mode_sense6_per_capacity": 2.0,
+      "inference": "High fraction of stalls sharing t_us with mode_sense6 CBW + ~2\u00d7 mode_sense6 vs capacity supports Instrument-STALL hypothesis (P1b), not HU recovery FACT."
+    },
+    "enum": {
+      "mount_to_inquiry_us_p50": 997142.0,
+      "mount_to_tur_us_p50": 998555.0,
+      "mount_to_read10_us_p50": 1043660.5,
+      "mount_to_first_read_us_p50": 1045953.5,
+      "n_chains": 12,
+      "note": "Mount\u2192SCSI intervals are device-callback times; not PiDrive enum_s\u22481s (attach\u2192usable). Drain stamps may collapse to 0."
+    },
+    "tur_hz_session_p50": 2.057533973986723,
+    "tur_hz_session_values": [
+      0.315,
+      2.585,
+      1.93,
+      2.185,
+      2.697,
+      4.193,
+      1.055,
+      1.23
+    ],
+    "qd_max_hist": {
+      "1": 6,
+      "2": 2
+    },
+    "qd_max_p50": 1.0
+  },
+  "sessions": [
+    {
+      "session_id": "3076_bmw_s0_plug_enum",
+      "fw": "0.2.17",
+      "events": 383,
+      "reads": 50,
+      "file_reads": 39,
+      "file_n_hist": {
+        "4096": 38,
+        "2560": 1
+      },
+      "file_gap_p50_us": 3805.0,
+      "file_gap_n": 39,
+      "bursts": {
+        "idle_split_us": 500000,
+        "n": 5,
+        "rows": [
+          {
+            "i": 0,
+            "n_reads": 1,
+            "n_file": 0,
+            "bytes": 4096,
+            "kinds": {
+              "boot": 1
+            },
+            "dur_ms": 0.0,
+            "lba_min": 0,
+            "lba_max": 0
+          },
+          {
+            "i": 1,
+            "n_reads": 3,
+            "n_file": 0,
+            "bytes": 12288,
+            "kinds": {
+              "boot": 2,
+              "dir": 1
+            },
+            "dur_ms": 179.688,
+            "lba_min": 0,
+            "lba_max": 24
+          },
+          {
+            "i": 2,
+            "n_reads": 3,
+            "n_file": 0,
+            "bytes": 3072,
+            "kinds": {
+              "boot": 1,
+              "fat": 2
+            },
+            "dur_ms": 3.408,
+            "lba_min": 0,
+            "lba_max": 7
+          },
+          {
+            "i": 3,
+            "n_reads": 4,
+            "n_file": 0,
+            "bytes": 7680,
+            "kinds": {
+              "fat": 3,
+              "dir": 1
+            },
+            "dur_ms": 4.923,
+            "lba_min": 1,
+            "lba_max": 24
+          },
+          {
+            "i": 4,
+            "n_reads": 39,
+            "n_file": 39,
+            "bytes": 158208,
+            "kinds": {
+              "file": 39
+            },
+            "dur_ms": 144.9,
+            "lba_min": 627,
+            "lba_max": 931
+          }
+        ],
+        "file_counts_hist": {
+          "39": 1
+        },
+        "bytes_hist_top": [
+          [
+            158208,
+            1
+          ]
+        ],
+        "dur_ms_p50": 4.923,
+        "inter_burst_ms": [
+          1577.669,
+          1132.483,
+          545.383,
+          9507.723
+        ],
+        "inter_burst_ms_p50": 1355.076,
+        "inter_burst_ms_n": 4
+      },
+      "stall": {
+        "ep_stall": 6,
+        "clear_halt": 6,
+        "mode_sense6_cbw": 6,
+        "read_capacity10_cbw": 3,
+        "stall_attr_prev_cbw": {
+          "mode_sense6": 6
+        },
+        "stall_same_t_us_as_mode_sense6": 5,
+        "mode_sense6_vs_capacity_ratio": 2.0
+      },
+      "enum_chains": [
+        {
+          "mount_t_us": 3076793,
+          "mount_seq": 5,
+          "to_inquiry_us": 674458,
+          "to_tur_us": 676626,
+          "to_read10_us": 687630,
+          "to_first_read_us": 687630
+        }
+      ],
+      "tur": {
+        "n": 56,
+        "session_hz": 0.3148816668791837,
+        "span_us": 177844587,
+        "by_phase": {
+          "idle": {
+            "tur": 0,
+            "span_us": 112510070,
+            "windows": 2,
+            "hz": 0.0
+          },
+          "enum": {
+            "tur": 56,
+            "span_us": 65334518,
+            "windows": 1,
+            "hz": 0.8571273151506221
+          }
+        }
+      },
+      "qd": {
+        "max_outstanding_tags": 1,
+        "outstanding_p50": 1.0,
+        "cbw_to_csw_us_p50": 0.0,
+        "note": "Device-stack tag concurrency; not wire QD. Drain stamps may collapse latencies to 0."
+      },
+      "scsi": {
+        "inquiry": 1,
+        "tur": 56,
+        "read_capacity10": 3,
+        "mode_sense6": 6,
+        "prevent_allow": 7,
+        "read10": 13
+      }
+    },
+    {
+      "session_id": "2199_bmw_s0_plug_enum",
+      "fw": "0.2.17",
+      "events": 871,
+      "reads": 189,
+      "file_reads": 146,
+      "file_n_hist": {
+        "4096": 142,
+        "2560": 4
+      },
+      "file_gap_p50_us": 3737.0,
+      "file_gap_n": 145,
+      "bursts": {
+        "idle_split_us": 500000,
+        "n": 4,
+        "rows": [
+          {
+            "i": 0,
+            "n_reads": 94,
+            "n_file": 67,
+            "bytes": 347648,
+            "kinds": {
+              "boot": 8,
+              "dir": 8,
+              "fat": 11,
+              "file": 67
+            },
+            "dur_ms": 1320.907,
+            "lba_min": 0,
+            "lba_max": 622
+          },
+          {
+            "i": 1,
+            "n_reads": 37,
+            "n_file": 37,
+            "bytes": 150016,
+            "kinds": {
+              "file": 37
+            },
+            "dur_ms": 136.469,
+            "lba_min": 273,
+            "lba_max": 867
+          },
+          {
+            "i": 2,
+            "n_reads": 12,
+            "n_file": 8,
+            "bytes": 47616,
+            "kinds": {
+              "boot": 3,
+              "file": 8,
+              "dir": 1
+            },
+            "dur_ms": 77.693,
+            "lba_min": 0,
+            "lba_max": 931
+          },
+          {
+            "i": 3,
+            "n_reads": 46,
+            "n_file": 34,
+            "bytes": 168960,
+            "kinds": {
+              "file": 34,
+              "boot": 1,
+              "fat": 6,
+              "dir": 5
+            },
+            "dur_ms": 289.031,
+            "lba_min": 0,
+            "lba_max": 313
+          }
+        ],
+        "file_counts_hist": {
+          "67": 1,
+          "37": 1,
+          "8": 1,
+          "34": 1
+        },
+        "bytes_hist_top": [
+          [
+            347648,
+            1
+          ],
+          [
+            150016,
+            1
+          ],
+          [
+            47616,
+            1
+          ],
+          [
+            168960,
+            1
+          ]
+        ],
+        "dur_ms_p50": 212.75,
+        "inter_burst_ms": [
+          2506.56,
+          10913.718,
+          26325.368
+        ],
+        "inter_burst_ms_p50": 10913.718,
+        "inter_burst_ms_n": 3
+      },
+      "stall": {
+        "ep_stall": 18,
+        "clear_halt": 18,
+        "mode_sense6_cbw": 18,
+        "read_capacity10_cbw": 9,
+        "stall_attr_prev_cbw": {
+          "mode_sense6": 18
+        },
+        "stall_same_t_us_as_mode_sense6": 16,
+        "mode_sense6_vs_capacity_ratio": 2.0
+      },
+      "enum_chains": [
+        {
+          "mount_t_us": 2199734,
+          "mount_seq": 5,
+          "to_inquiry_us": 5002,
+          "to_tur_us": 5710,
+          "to_read10_us": null,
+          "to_first_read_us": null
+        },
+        {
+          "mount_t_us": 22526015,
+          "mount_seq": 22,
+          "to_inquiry_us": 996828,
+          "to_tur_us": -20320571,
+          "to_read10_us": -20320571,
+          "to_first_read_us": -20320571
+        },
+        {
+          "mount_t_us": 34119010,
+          "mount_seq": 276,
+          "to_inquiry_us": 997703,
+          "to_tur_us": 999911,
+          "to_read10_us": -28820794,
+          "to_first_read_us": -28896068
+        }
+      ],
+      "tur": {
+        "n": 106,
+        "session_hz": 2.5849339175056385,
+        "span_us": 41006851,
+        "by_phase": {
+          "idle": {
+            "tur": 2,
+            "span_us": 5118854,
+            "windows": 6,
+            "hz": 0.39071245243564284
+          },
+          "enum": {
+            "tur": 103,
+            "span_us": 35888075,
+            "windows": 3,
+            "hz": 2.870034126934922
+          }
+        }
+      },
+      "qd": {
+        "max_outstanding_tags": 2,
+        "outstanding_p50": 2.0,
+        "cbw_to_csw_us_p50": -21369059.0,
+        "note": "Device-stack tag concurrency; not wire QD. Drain stamps may collapse latencies to 0."
+      },
+      "scsi": {
+        "inquiry": 3,
+        "tur": 106,
+        "read_capacity10": 9,
+        "mode_sense6": 18,
+        "prevent_allow": 21,
+        "read10": 41
+      }
+    },
+    {
+      "session_id": "2363_bmw_s0_plug_enum",
+      "fw": "0.2.17",
+      "events": 370,
+      "reads": 56,
+      "file_reads": 39,
+      "file_n_hist": {
+        "4096": 38,
+        "2560": 1
+      },
+      "file_gap_p50_us": 3588.0,
+      "file_gap_n": 39,
+      "bursts": {
+        "idle_split_us": 500000,
+        "n": 2,
+        "rows": [
+          {
+            "i": 0,
+            "n_reads": 51,
+            "n_file": 39,
+            "bytes": 185344,
+            "kinds": {
+              "boot": 4,
+              "dir": 2,
+              "fat": 6,
+              "file": 39
+            },
+            "dur_ms": 608.777,
+            "lba_min": 0,
+            "lba_max": 931
+          },
+          {
+            "i": 1,
+            "n_reads": 5,
+            "n_file": 0,
+            "bytes": 16896,
+            "kinds": {
+              "boot": 4,
+              "dir": 1
+            },
+            "dur_ms": 160.622,
+            "lba_min": 0,
+            "lba_max": 24
+          }
+        ],
+        "file_counts_hist": {
+          "39": 1
+        },
+        "bytes_hist_top": [
+          [
+            185344,
+            1
+          ]
+        ],
+        "dur_ms_p50": 384.69950000000006,
+        "inter_burst_ms": [
+          17452.029
+        ],
+        "inter_burst_ms_p50": 17452.029,
+        "inter_burst_ms_n": 1
+      },
+      "stall": {
+        "ep_stall": 12,
+        "clear_halt": 12,
+        "mode_sense6_cbw": 12,
+        "read_capacity10_cbw": 6,
+        "stall_attr_prev_cbw": {
+          "mode_sense6": 12
+        },
+        "stall_same_t_us_as_mode_sense6": 11,
+        "mode_sense6_vs_capacity_ratio": 2.0
+      },
+      "enum_chains": [
+        {
+          "mount_t_us": 7458252,
+          "mount_seq": 10,
+          "to_inquiry_us": 997764,
+          "to_tur_us": 1004620,
+          "to_read10_us": 1333964,
+          "to_first_read_us": 1333964
+        },
+        {
+          "mount_t_us": 25529054,
+          "mount_seq": 273,
+          "to_inquiry_us": 997008,
+          "to_tur_us": 998555,
+          "to_read10_us": 1047204,
+          "to_first_read_us": 1169100
+        }
+      ],
+      "tur": {
+        "n": 48,
+        "session_hz": 1.929625434778781,
+        "span_us": 24875294,
+        "by_phase": {
+          "idle": {
+            "tur": 2,
+            "span_us": 13019201,
+            "windows": 5,
+            "hz": 0.1536192582017898
+          },
+          "enum": {
+            "tur": 44,
+            "span_us": 11856093,
+            "windows": 2,
+            "hz": 3.71117196870841
+          }
+        }
+      },
+      "qd": {
+        "max_outstanding_tags": 1,
+        "outstanding_p50": 1.0,
+        "cbw_to_csw_us_p50": 0.0,
+        "note": "Device-stack tag concurrency; not wire QD. Drain stamps may collapse latencies to 0."
+      },
+      "scsi": {
+        "inquiry": 2,
+        "tur": 48,
+        "read_capacity10": 6,
+        "mode_sense6": 12,
+        "prevent_allow": 14,
+        "read10": 19
+      }
+    },
+    {
+      "session_id": "2176_bmw_s0_plug_enum",
+      "fw": "0.2.17",
+      "events": 913,
+      "reads": 256,
+      "file_reads": 224,
+      "file_n_hist": {
+        "4096": 218,
+        "2560": 6
+      },
+      "file_gap_p50_us": 3748.0,
+      "file_gap_n": 223,
+      "bursts": {
+        "idle_split_us": 500000,
+        "n": 5,
+        "rows": [
+          {
+            "i": 0,
+            "n_reads": 100,
+            "n_file": 78,
+            "bytes": 370688,
+            "kinds": {
+              "boot": 8,
+              "dir": 4,
+              "fat": 10,
+              "file": 78
+            },
+            "dur_ms": 1233.469,
+            "lba_min": 0,
+            "lba_max": 931
+          },
+          {
+            "i": 1,
+            "n_reads": 5,
+            "n_file": 5,
+            "bytes": 20480,
+            "kinds": {
+              "file": 5
+            },
+            "dur_ms": 15.234,
+            "lba_min": 249,
+            "lba_max": 281
+          },
+          {
+            "i": 2,
+            "n_reads": 73,
+            "n_file": 68,
+            "bytes": 295936,
+            "kinds": {
+              "file": 68,
+              "fat": 1,
+              "dir": 4
+            },
+            "dur_ms": 266.976,
+            "lba_min": 9,
+            "lba_max": 931
+          },
+          {
+            "i": 3,
+            "n_reads": 11,
+            "n_file": 11,
+            "bytes": 45056,
+            "kinds": {
+              "file": 11
+            },
+            "dur_ms": 37.831,
+            "lba_min": 318,
+            "lba_max": 398
+          },
+          {
+            "i": 4,
+            "n_reads": 67,
+            "n_file": 62,
+            "bytes": 271360,
+            "kinds": {
+              "fat": 1,
+              "file": 62,
+              "dir": 4
+            },
+            "dur_ms": 246.168,
+            "lba_min": 9,
+            "lba_max": 622
+          }
+        ],
+        "file_counts_hist": {
+          "78": 1,
+          "5": 1,
+          "68": 1,
+          "11": 1,
+          "62": 1
+        },
+        "bytes_hist_top": [
+          [
+            370688,
+            1
+          ],
+          [
+            20480,
+            1
+          ],
+          [
+            295936,
+            1
+          ],
+          [
+            45056,
+            1
+          ],
+          [
+            271360,
+            1
+          ]
+        ],
+        "dur_ms_p50": 246.168,
+        "inter_burst_ms": [
+          3706.859,
+          15657.925,
+          7237.277,
+          19274.706
+        ],
+        "inter_burst_ms_p50": 11447.600999999999,
+        "inter_burst_ms_n": 4
+      },
+      "stall": {
+        "ep_stall": 12,
+        "clear_halt": 12,
+        "mode_sense6_cbw": 12,
+        "read_capacity10_cbw": 6,
+        "stall_attr_prev_cbw": {
+          "mode_sense6": 12
+        },
+        "stall_same_t_us_as_mode_sense6": 8,
+        "mode_sense6_vs_capacity_ratio": 2.0
+      },
+      "enum_chains": [
+        {
+          "mount_t_us": 2176807,
+          "mount_seq": 5,
+          "to_inquiry_us": null,
+          "to_tur_us": null,
+          "to_read10_us": null,
+          "to_first_read_us": null
+        },
+        {
+          "mount_t_us": 5874755,
+          "mount_seq": 10,
+          "to_inquiry_us": 997142,
+          "to_tur_us": -3691006,
+          "to_read10_us": -3682285,
+          "to_first_read_us": -3682285
+        }
+      ],
+      "tur": {
+        "n": 98,
+        "session_hz": 2.185442513194665,
+        "span_us": 44842177,
+        "by_phase": {
+          "idle": {
+            "tur": 0,
+            "span_us": 241525,
+            "windows": 3,
+            "hz": 0.0
+          },
+          "enum": {
+            "tur": 97,
+            "span_us": 44600665,
+            "windows": 2,
+            "hz": 2.1748554645990144
+          }
+        }
+      },
+      "qd": {
+        "max_outstanding_tags": 2,
+        "outstanding_p50": 2.0,
+        "cbw_to_csw_us_p50": 0.0,
+        "note": "Device-stack tag concurrency; not wire QD. Drain stamps may collapse latencies to 0."
+      },
+      "scsi": {
+        "inquiry": 2,
+        "tur": 98,
+        "read_capacity10": 6,
+        "mode_sense6": 12,
+        "prevent_allow": 14,
+        "read10": 34
+      }
+    },
+    {
+      "session_id": "3334_bmw_s0_plug_enum",
+      "fw": "0.2.17",
+      "events": 439,
+      "reads": 70,
+      "file_reads": 48,
+      "file_n_hist": {
+        "4096": 47,
+        "2560": 1
+      },
+      "file_gap_p50_us": 3817.0,
+      "file_gap_n": 48,
+      "bursts": {
+        "idle_split_us": 500000,
+        "n": 2,
+        "rows": [
+          {
+            "i": 0,
+            "n_reads": 50,
+            "n_file": 39,
+            "bytes": 185344,
+            "kinds": {
+              "boot": 4,
+              "dir": 2,
+              "fat": 5,
+              "file": 39
+            },
+            "dur_ms": 618.387,
+            "lba_min": 0,
+            "lba_max": 931
+          },
+          {
+            "i": 1,
+            "n_reads": 20,
+            "n_file": 9,
+            "bytes": 64000,
+            "kinds": {
+              "boot": 4,
+              "dir": 2,
+              "fat": 5,
+              "file": 9
+            },
+            "dur_ms": 502.418,
+            "lba_min": 0,
+            "lba_max": 691
+          }
+        ],
+        "file_counts_hist": {
+          "39": 1,
+          "9": 1
+        },
+        "bytes_hist_top": [
+          [
+            185344,
+            1
+          ],
+          [
+            64000,
+            1
+          ]
+        ],
+        "dur_ms_p50": 560.4024999999999,
+        "inter_burst_ms": [
+          7999.331
+        ],
+        "inter_burst_ms_p50": 7999.331,
+        "inter_burst_ms_n": 1
+      },
+      "stall": {
+        "ep_stall": 12,
+        "clear_halt": 12,
+        "mode_sense6_cbw": 12,
+        "read_capacity10_cbw": 6,
+        "stall_attr_prev_cbw": {
+          "mode_sense6": 12
+        },
+        "stall_same_t_us_as_mode_sense6": 8,
+        "mode_sense6_vs_capacity_ratio": 2.0
+      },
+      "enum_chains": [
+        {
+          "mount_t_us": 16560673,
+          "mount_seq": 17,
+          "to_inquiry_us": 997298,
+          "to_tur_us": 998931,
+          "to_read10_us": 1045472,
+          "to_first_read_us": 1045472
+        },
+        {
+          "mount_t_us": 25185900,
+          "mount_seq": 266,
+          "to_inquiry_us": 997337,
+          "to_tur_us": 999198,
+          "to_read10_us": 1044664,
+          "to_first_read_us": 1049234
+        }
+      ],
+      "tur": {
+        "n": 63,
+        "session_hz": 2.6968060570092813,
+        "span_us": 23360968,
+        "by_phase": {
+          "idle": {
+            "tur": 0,
+            "span_us": 17185669,
+            "windows": 3,
+            "hz": 0.0
+          },
+          "enum": {
+            "tur": 63,
+            "span_us": 6175299,
+            "windows": 2,
+            "hz": 10.201935161358179
+          }
+        }
+      },
+      "qd": {
+        "max_outstanding_tags": 1,
+        "outstanding_p50": 1.0,
+        "cbw_to_csw_us_p50": 0.0,
+        "note": "Device-stack tag concurrency; not wire QD. Drain stamps may collapse latencies to 0."
+      },
+      "scsi": {
+        "inquiry": 2,
+        "tur": 63,
+        "read_capacity10": 6,
+        "mode_sense6": 12,
+        "prevent_allow": 14,
+        "read10": 25
+      }
+    },
+    {
+      "session_id": "2310_bmw_s0_plug_enum",
+      "fw": "0.2.17",
+      "events": 407,
+      "reads": 61,
+      "file_reads": 39,
+      "file_n_hist": {
+        "4096": 38,
+        "2560": 1
+      },
+      "file_gap_p50_us": 3658.0,
+      "file_gap_n": 39,
+      "bursts": {
+        "idle_split_us": 500000,
+        "n": 2,
+        "rows": [
+          {
+            "i": 0,
+            "n_reads": 50,
+            "n_file": 39,
+            "bytes": 185344,
+            "kinds": {
+              "boot": 4,
+              "dir": 2,
+              "fat": 5,
+              "file": 39
+            },
+            "dur_ms": 599.035,
+            "lba_min": 0,
+            "lba_max": 931
+          },
+          {
+            "i": 1,
+            "n_reads": 11,
+            "n_file": 0,
+            "bytes": 27136,
+            "kinds": {
+              "boot": 4,
+              "dir": 2,
+              "fat": 5
+            },
+            "dur_ms": 190.85,
+            "lba_min": 0,
+            "lba_max": 24
+          }
+        ],
+        "file_counts_hist": {
+          "39": 1
+        },
+        "bytes_hist_top": [
+          [
+            185344,
+            1
+          ]
+        ],
+        "dur_ms_p50": 394.9425,
+        "inter_burst_ms": [
+          8607.9
+        ],
+        "inter_burst_ms_p50": 8607.9,
+        "inter_burst_ms_n": 1
+      },
+      "stall": {
+        "ep_stall": 12,
+        "clear_halt": 12,
+        "mode_sense6_cbw": 12,
+        "read_capacity10_cbw": 6,
+        "stall_attr_prev_cbw": {
+          "mode_sense6": 12
+        },
+        "stall_same_t_us_as_mode_sense6": 11,
+        "mode_sense6_vs_capacity_ratio": 2.0
+      },
+      "enum_chains": [
+        {
+          "mount_t_us": 5734921,
+          "mount_seq": 10,
+          "to_inquiry_us": 997908,
+          "to_tur_us": 999436,
+          "to_read10_us": 1052614,
+          "to_first_read_us": 1192520
+        },
+        {
+          "mount_t_us": 14949829,
+          "mount_seq": 262,
+          "to_inquiry_us": 997835,
+          "to_tur_us": 1005530,
+          "to_read10_us": 1046435,
+          "to_first_read_us": 1046435
+        }
+      ],
+      "tur": {
+        "n": 59,
+        "session_hz": 4.192864966154342,
+        "span_us": 14071524,
+        "by_phase": {
+          "idle": {
+            "tur": 0,
+            "span_us": 8368549,
+            "windows": 4,
+            "hz": 0.0
+          },
+          "enum": {
+            "tur": 53,
+            "span_us": 5702975,
+            "windows": 2,
+            "hz": 9.293395113953682
+          }
+        }
+      },
+      "qd": {
+        "max_outstanding_tags": 1,
+        "outstanding_p50": 1.0,
+        "cbw_to_csw_us_p50": 0.0,
+        "note": "Device-stack tag concurrency; not wire QD. Drain stamps may collapse latencies to 0."
+      },
+      "scsi": {
+        "inquiry": 2,
+        "tur": 59,
+        "read_capacity10": 6,
+        "mode_sense6": 12,
+        "prevent_allow": 14,
+        "read10": 24
+      }
+    },
+    {
+      "session_id": "3129_bmw_s0_plug_enum",
+      "fw": "0.2.17",
+      "events": 436,
+      "reads": 114,
+      "file_reads": 98,
+      "file_n_hist": {
+        "4096": 96,
+        "2560": 2
+      },
+      "file_gap_p50_us": 3786.0,
+      "file_gap_n": 97,
+      "bursts": {
+        "idle_split_us": 500000,
+        "n": 3,
+        "rows": [
+          {
+            "i": 0,
+            "n_reads": 50,
+            "n_file": 39,
+            "bytes": 185344,
+            "kinds": {
+              "boot": 4,
+              "dir": 2,
+              "fat": 5,
+              "file": 39
+            },
+            "dur_ms": 663.684,
+            "lba_min": 0,
+            "lba_max": 622
+          },
+          {
+            "i": 1,
+            "n_reads": 39,
+            "n_file": 39,
+            "bytes": 158208,
+            "kinds": {
+              "file": 39
+            },
+            "dur_ms": 144.144,
+            "lba_min": 627,
+            "lba_max": 931
+          },
+          {
+            "i": 2,
+            "n_reads": 25,
+            "n_file": 20,
+            "bytes": 102400,
+            "kinds": {
+              "fat": 1,
+              "dir": 4,
+              "file": 20
+            },
+            "dur_ms": 88.361,
+            "lba_min": 9,
+            "lba_max": 201
+          }
+        ],
+        "file_counts_hist": {
+          "39": 2,
+          "20": 1
+        },
+        "bytes_hist_top": [
+          [
+            185344,
+            1
+          ],
+          [
+            158208,
+            1
+          ],
+          [
+            102400,
+            1
+          ]
+        ],
+        "dur_ms_p50": 144.144,
+        "inter_burst_ms": [
+          14534.834,
+          21375.962
+        ],
+        "inter_burst_ms_p50": 17955.398,
+        "inter_burst_ms_n": 2
+      },
+      "stall": {
+        "ep_stall": 6,
+        "clear_halt": 6,
+        "mode_sense6_cbw": 6,
+        "read_capacity10_cbw": 3,
+        "stall_attr_prev_cbw": {
+          "mode_sense6": 6
+        },
+        "stall_same_t_us_as_mode_sense6": 5,
+        "mode_sense6_vs_capacity_ratio": 2.0
+      },
+      "enum_chains": [
+        {
+          "mount_t_us": 3129789,
+          "mount_seq": 5,
+          "to_inquiry_us": null,
+          "to_tur_us": null,
+          "to_read10_us": null,
+          "to_first_read_us": null
+        },
+        {
+          "mount_t_us": 10744777,
+          "mount_seq": 20,
+          "to_inquiry_us": 996907,
+          "to_tur_us": 998509,
+          "to_read10_us": 1042657,
+          "to_first_read_us": 1047259
+        }
+      ],
+      "tur": {
+        "n": 48,
+        "session_hz": 1.0549358967103473,
+        "span_us": 45500395,
+        "by_phase": {
+          "idle": {
+            "tur": 0,
+            "span_us": 7614989,
+            "windows": 3,
+            "hz": 0.0
+          },
+          "enum": {
+            "tur": 48,
+            "span_us": 37885408,
+            "windows": 2,
+            "hz": 1.2669785686351853
+          }
+        }
+      },
+      "qd": {
+        "max_outstanding_tags": 1,
+        "outstanding_p50": 1.0,
+        "cbw_to_csw_us_p50": 0.0,
+        "note": "Device-stack tag concurrency; not wire QD. Drain stamps may collapse latencies to 0."
+      },
+      "scsi": {
+        "inquiry": 1,
+        "tur": 48,
+        "read_capacity10": 3,
+        "mode_sense6": 6,
+        "prevent_allow": 7,
+        "read10": 16
+      }
+    },
+    {
+      "session_id": "3085_bmw_s0_plug_enum",
+      "fw": "0.2.17",
+      "events": 426,
+      "reads": 112,
+      "file_reads": 96,
+      "file_n_hist": {
+        "4096": 93,
+        "2560": 3
+      },
+      "file_gap_p50_us": 3637.0,
+      "file_gap_n": 94,
+      "bursts": {
+        "idle_split_us": 500000,
+        "n": 3,
+        "rows": [
+          {
+            "i": 0,
+            "n_reads": 50,
+            "n_file": 39,
+            "bytes": 185344,
+            "kinds": {
+              "boot": 4,
+              "dir": 2,
+              "fat": 5,
+              "file": 39
+            },
+            "dur_ms": 608.257,
+            "lba_min": 0,
+            "lba_max": 622
+          },
+          {
+            "i": 1,
+            "n_reads": 39,
+            "n_file": 39,
+            "bytes": 158208,
+            "kinds": {
+              "file": 39
+            },
+            "dur_ms": 139.476,
+            "lba_min": 627,
+            "lba_max": 931
+          },
+          {
+            "i": 2,
+            "n_reads": 23,
+            "n_file": 18,
+            "bytes": 92672,
+            "kinds": {
+              "file": 18,
+              "fat": 1,
+              "dir": 4
+            },
+            "dur_ms": 79.726,
+            "lba_min": 9,
+            "lba_max": 313
+          }
+        ],
+        "file_counts_hist": {
+          "39": 2,
+          "18": 1
+        },
+        "bytes_hist_top": [
+          [
+            185344,
+            1
+          ],
+          [
+            158208,
+            1
+          ],
+          [
+            92672,
+            1
+          ]
+        ],
+        "dur_ms_p50": 139.476,
+        "inter_burst_ms": [
+          15259.286,
+          25579.532
+        ],
+        "inter_burst_ms_p50": 20419.409,
+        "inter_burst_ms_n": 2
+      },
+      "stall": {
+        "ep_stall": 6,
+        "clear_halt": 6,
+        "mode_sense6_cbw": 6,
+        "read_capacity10_cbw": 3,
+        "stall_attr_prev_cbw": {
+          "mode_sense6": 6
+        },
+        "stall_same_t_us_as_mode_sense6": 6,
+        "mode_sense6_vs_capacity_ratio": 2.0
+      },
+      "enum_chains": [
+        {
+          "mount_t_us": 3085792,
+          "mount_seq": 5,
+          "to_inquiry_us": 0,
+          "to_tur_us": 0,
+          "to_read10_us": 0,
+          "to_first_read_us": 0
+        }
+      ],
+      "tur": {
+        "n": 50,
+        "session_hz": 1.23027727127946,
+        "span_us": 40641245,
+        "by_phase": {
+          "idle": {
+            "tur": 0,
+            "span_us": 1,
+            "windows": 1,
+            "hz": 0.0
+          },
+          "enum": {
+            "tur": 50,
+            "span_us": 40641245,
+            "windows": 1,
+            "hz": 1.23027727127946
+          }
+        }
+      },
+      "qd": {
+        "max_outstanding_tags": 1,
+        "outstanding_p50": 1.0,
+        "cbw_to_csw_us_p50": 0.0,
+        "note": "Device-stack tag concurrency; not wire QD. Drain stamps may collapse latencies to 0."
+      },
+      "scsi": {
+        "inquiry": 1,
+        "tur": 50,
+        "read_capacity10": 3,
+        "mode_sense6": 6,
+        "prevent_allow": 7,
+        "read10": 17
+      }
+    }
+  ]
+}
