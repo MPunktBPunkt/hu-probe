@@ -2,7 +2,7 @@
 
 ## HU-PROBE-GATE-01 — Measurement Integrity
 
-**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8**; Control/STALL ab **0.2.13**; Lab Kill 1–3 **PASS** — lange BMW-Timeline **blockiert** durch OTG/WiFi-Death, siehe [wifi-otg-0.2.15](feld/2026-10-14-wifi-otg-0.2.15.md))
+**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8**; Control/STALL ab **0.2.13**; Lab Kill 1–3 **PASS** — lange BMW-Timeline **blockiert** durch OTG/WiFi-Death, siehe [wifi-otg-0.2.15](feld/2026-10-14-wifi-otg-0.2.15.md); **Burst-Epistemik** (kurze Blau→Grün→Blau-Fenster) als brauchbare Messform akzeptiert, formale Kriterien noch offen — [massnahmen-01d](feld/2026-10-15-massnahmen-01d.md) · [0.2.17-review](feld/2026-10-15-bmw-s0-0.2.17-review.md))
 
 ### Zeit & Sequenz
 
