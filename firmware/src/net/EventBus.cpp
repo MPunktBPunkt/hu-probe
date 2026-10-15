@@ -6,8 +6,8 @@ EventBus& EventBus::instance() {
 }
 
 void EventBus::begin() {
+    clear();
     portENTER_CRITICAL(&mux_);
-    head_ = tail_ = count_ = 0;
     dropped_ = 0;
     highwater_ = 0;
     tcpDisconnects_ = 0;
@@ -16,6 +16,17 @@ void EventBus::begin() {
     tcpTxOk_ = 0;
     tcpTxFail_ = 0;
     lastTcpTxOkMs_ = 0;
+    portEXIT_CRITICAL(&mux_);
+}
+
+void EventBus::clear() {
+    portENTER_CRITICAL(&mux_);
+    while (count_ > 0) {
+        ring_[head_] = String();
+        head_ = (head_ + 1) % EVENT_RING_SIZE;
+        count_--;
+    }
+    head_ = tail_ = count_ = 0;
     portEXIT_CRITICAL(&mux_);
 }
 

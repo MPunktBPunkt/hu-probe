@@ -51,24 +51,29 @@ void OfflineCapture::freeBuffer() {
 }
 
 bool OfflineCapture::wifiOff() {
-    Serial.println("[OFFLINE] WiFi OFF");
-    WiFi.disconnect(true, false);
-    delay(20);
-    WiFi.mode(WIFI_OFF);
-    delay(50);
+    // Soft stop — WIFI_OFF/mode switch correlated with field reboots under OTG.
+    Serial.println("[OFFLINE] esp_wifi_stop()");
+    WiFi.setAutoReconnect(false);
+    WiFi.disconnect(false, false);
+    delay(30);
+    esp_err_t err = esp_wifi_stop();
+    delay(100);
+    Serial.printf("[OFFLINE] wifi_stop err=%d\n", (int)err);
     return true;
 }
 
 bool OfflineCapture::wifiOn() {
-    Serial.println("[OFFLINE] WiFi ON (STA reconnect)");
+    Serial.println("[OFFLINE] WiFi ON (esp_wifi_start + begin)");
     WiFi.mode(WIFI_STA);
+    esp_wifi_start();
+    delay(50);
     WiFi.setSleep(false);
     esp_wifi_set_ps(WIFI_PS_NONE);
     WiFi.setTxPower(WIFI_POWER_19_5dBm);
     WiFi.setAutoReconnect(true);
     WiFi.begin();  // NVS creds from WiFiManager
     unsigned long t0 = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - t0 < 20000) {
+    while (WiFi.status() != WL_CONNECTED && millis() - t0 < 25000) {
         delay(200);
         yield();
     }
@@ -92,12 +97,9 @@ bool OfflineCapture::arm(Session* session, MscGadget* msc, ReadInstrument* inst)
     unplugSinceMs_ = 0;
 
     if (session_ && session_->active()) session_->stop();
-    // Drain any live TCP backlog before killing WiFi.
-    for (int i = 0; i < 40; i++) {
-        // TcpStreamer not passed — EventBus will flush when WiFi returns.
-        delay(50);
-        yield();
-    }
+    // Free EventBus String heap before large capture malloc (OOM→reboot risk).
+    EventBus::instance().clear();
+    delay(100);
 
     wallclock_[0] = 0;
     time_t now = time(nullptr);
@@ -201,6 +203,10 @@ bool OfflineCapture::appendPending(uint8_t kind, int64_t tUs, const uint8_t* raw
     memcpy(buf_ + used_, &rec, sizeof(Rec));
     used_ += sizeof(Rec);
     recordCount_++;
+    // Host unmount is a reliable end-of-window signal (plugged_ can lag).
+    if (kind == kKindUmount && capturing()) {
+        requestStop("umount");
+    }
     return true;
 }
 
@@ -297,16 +303,18 @@ bool OfflineCapture::replayAll() {
 }
 
 bool OfflineCapture::finalizeAndUpload() {
-    if (state_ != State::Capturing && state_ != State::Finalizing) return false;
-    state_ = State::Finalizing;
+    if (state_ != State::Capturing && state_ != State::Finalizing &&
+        state_ != State::Uploading) {
+        return false;
+    }
+    if (state_ == State::Capturing) state_ = State::Finalizing;
     Serial.printf("[OFFLINE] finalize reason=%s records=%u bytes=%u overflow=%u\n",
                   stopReason_.c_str(), recordCount_, (unsigned)used_, overflow_);
 
     state_ = State::Uploading;
     bool okWifi = wifiOn();
     if (!okWifi) {
-        Serial.println("[OFFLINE] keeping RAM buffer — WiFi failed (retry via /api/offline/upload)");
-        // Stay in Uploading with buffer retained so a later retry can work.
+        Serial.println("[OFFLINE] WiFi failed — will retry in poll()");
         return false;
     }
     bool okReplay = replayAll();
@@ -319,6 +327,16 @@ bool OfflineCapture::finalizeAndUpload() {
 
 void OfflineCapture::poll(MscGadget* msc) {
     if (state_ == State::Idle) return;
+
+    // Retry upload if WiFi failed after capture end.
+    if (state_ == State::Uploading && buf_) {
+        static unsigned long lastRetryMs = 0;
+        if (millis() - lastRetryMs >= 3000) {
+            lastRetryMs = millis();
+            finalizeAndUpload();
+        }
+        return;
+    }
 
     // BOOT button (GPIO0): short = marker, long >=1.5s = stop.
     pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);

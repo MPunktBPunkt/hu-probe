@@ -9,6 +9,8 @@ class EventBus {
 public:
     static EventBus& instance();
     void begin();
+    /** Drop all pending lines (frees String heap) — use before Offline RAM alloc. */
+    void clear();
     void publish(JsonDocument& doc);
     /** Copy head without removing (for TCP flush-before-pop). */
     bool peek(String& out);

@@ -67,10 +67,11 @@ private:
     bool replayAll();
     void appendMarkerRec(int64_t tUs, const char* name);
 
-    static constexpr size_t kDefaultCap = 96 * 1024;
+    static constexpr size_t kDefaultCap = 64 * 1024;
     static constexpr uint32_t kMaxCaptureMs = 180000;   // 3 min safety
-    static constexpr uint32_t kUnplugIdleMs = 2500;
+    static constexpr uint32_t kUnplugIdleMs = 1500;
     static constexpr uint8_t kKindMarker = 100;
+    static constexpr uint8_t kKindUmount = 8;
 
 #pragma pack(push, 1)
     struct Rec {
