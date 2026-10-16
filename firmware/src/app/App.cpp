@@ -3,6 +3,7 @@
 #include "BuildId.h"
 #include "capture/OfflineCapture.h"
 #include "core/ProbeClock.h"
+#include "core/PanicTail.h"
 #include "msc/MscBotTap.h"
 #include <WiFi.h>
 #include <WiFiManager.h>
@@ -112,6 +113,7 @@ void App::begin() {
     delay(200);
     Serial.println("\n[hu-probe] " FW_VERSION);
 
+    PanicTail::begin();
     led_.begin();
     config_.begin();
     EventBus::instance().begin();
@@ -191,21 +193,16 @@ void App::emitCaptureHealth() {
     doc["t_us"] = (long long)t;
     doc["t_ms"] = ProbeClock::nowMsCompat(t);
     doc["ev"] = "capture_health";
-    doc["event_seq_first"] = session_.seqFirst();
-    doc["event_seq_last"] = session_.seq();
-    doc["dropped"] = bus.dropped();
-    doc["published"] = bus.published();
-    doc["stream_lost"] = bus.streamLost();
-    doc["tcp_tx_ok"] = bus.tcpTxOk();
-    doc["tcp_tx_fail"] = bus.tcpTxFail();
-    doc["queue_pending"] = (uint32_t)bus.pending();
-    doc["queue_highwater"] = bus.highwater();
-    doc["tcp_connected"] = tcp_.connected();
-    doc["tcp_disconnects"] = bus.tcpDisconnects();
-    doc["ring_size"] = EVENT_RING_SIZE;
+    bus.fillCaptureHealth(doc.as<JsonObject>(), session_.seqFirst(), session_.seq(),
+                          tcp_.connected());
     doc["msc_sample_overflow"] = msc_.sampleOverflow();
     doc["bot_pending_overflow"] = MscBotTap::pendingOverflow();
     doc["msc_reads"] = msc_.readCount();
+    doc["transport"] = session_.transport();
+    doc["transport_epoch"] = msc_.transportEpoch();
+    doc["end_reason"] = session_.active() ? "active" : "session_stop";
+    doc["upload_status"] = tcp_.connected() ? "streaming" : "pending";
+    PanicTail::appendPrevious(doc.as<JsonObject>());
     doc["fw_sha"] = FW_GIT_SHA;
     doc["fw_build_id"] = FW_BUILD_ID;
     bus.publish(doc);

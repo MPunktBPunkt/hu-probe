@@ -18,6 +18,7 @@ public:
     bool suspended() const { return suspended_; }
     bool mediaPresented() const { return mediaPresented_; }
     bool usbSoftAttached() const { return softAttached_; }
+    uint32_t transportEpoch() const { return transportEpoch_; }
 
     const char* identitySerial() const { return serial_; }
     const char* volumeLabel() const { return label_; }
@@ -30,6 +31,9 @@ public:
     bool softCycle(uint16_t holdMs = 600);
     /** SCSI media not-ready window then present again (≠ bus cycle). */
     void remountMedia(bool bumpIdentity = true);
+    /** Hide/restore only the LUN while keeping the USB transport attached. */
+    bool hideMedia();
+    bool restoreMedia();
 
     void onUsbPlugged(bool on);
     void onUsbSuspend(bool on);
@@ -75,6 +79,7 @@ private:
     uint32_t plugCount_ = 0;
     uint32_t unplugCount_ = 0;
     uint32_t readCount_ = 0;
+    uint32_t transportEpoch_ = 0;
     int64_t lastReadEndUs_ = 0;
 
     static constexpr size_t kSampleRing = 512;

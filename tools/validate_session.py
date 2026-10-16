@@ -24,6 +24,14 @@ def load_jsonl(path: Path) -> list[dict]:
     return rows
 
 
+def version_at_least(value: object, expected: tuple[int, int, int]) -> bool:
+    try:
+        parts = tuple(int(x) for x in str(value).split(".")[:3])
+        return len(parts) == 3 and parts >= expected
+    except ValueError:
+        return False
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("session_dir", type=Path)
@@ -97,6 +105,42 @@ def main() -> int:
         k = e.get("ev", "?")
         ev_types[k] = ev_types.get(k, 0) + 1
     oks.append("ev_counts=" + ",".join(f"{k}:{v}" for k, v in sorted(ev_types.items())))
+
+    # Device-stack evidence must remain explicit; this is not a wire capture claim.
+    bot_events = [e for e in events if e.get("ev") in {"bot_cbw", "bot_data", "bot_csw"}]
+    bad_evidence = [
+        e
+        for e in bot_events
+        if e.get("bot_source") is None or e.get("synthesized") is None
+    ]
+    if bad_evidence:
+        fails.append(f"BOT device-stack evidence fields missing={len(bad_evidence)}")
+    elif bot_events:
+        oks.append("BOT evidence source/synthesized explicit")
+
+    starts = [
+        e for e in events if e.get("ev") == "session" and e.get("action") == "start"
+    ]
+    fw_version = starts[0].get("fw_version") if starts else meta.get("fw_version")
+    offline = any(e.get("transport") == "ram_offline" for e in starts)
+    health = [e for e in events if e.get("ev") == "capture_health"]
+    if offline and version_at_least(fw_version, (0, 2, 24)):
+        required = {
+            "reset_reason",
+            "transport_epoch_start",
+            "transport_epoch_end",
+            "end_reason",
+            "end_strategy",
+            "upload_status",
+        }
+        if not health:
+            fails.append("offline session missing capture_health")
+        else:
+            missing_health = sorted(required - set(health[-1]))
+            if missing_health:
+                fails.append(f"offline capture_health missing {missing_health}")
+            else:
+                oks.append("offline reset/epoch/end/upload health present")
 
     if not any(e.get("ev") == "session" and e.get("action") == "start" for e in events):
         fails.append("missing session start")

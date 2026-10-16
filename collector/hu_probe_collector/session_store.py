@@ -163,6 +163,18 @@ class SessionStore:
                     "stream_lost",
                     "tcp_tx_fail",
                     "msc_sample_overflow",
+                    "bot_pending_overflow",
+                    "reset_reason",
+                    "transport",
+                    "transport_epoch",
+                    "transport_epoch_start",
+                    "transport_epoch_end",
+                    "end_reason",
+                    "end_strategy",
+                    "upload_status",
+                    "offline_records",
+                    "offline_bytes",
+                    "offline_overflow",
                 ):
                     if key in event:
                         cap[key] = event.get(key)
@@ -176,9 +188,14 @@ class SessionStore:
                 disc = int(cap.get("tcp_disconnects") or 0)
                 stream_lost = int(cap.get("stream_lost") or 0)
                 gaps = cap.get("recv_seq_gaps") or []
+                probe_complete = event.get("complete")
+                offline_overflow = int(cap.get("offline_overflow") or 0)
                 cap["complete"] = (
                     dropped == 0 and disc == 0 and stream_lost == 0 and not gaps
+                    and offline_overflow == 0 and probe_complete is not False
                 )
+                if isinstance(event.get("panic_tail"), dict):
+                    cap["panic_tail"] = event.get("panic_tail")
                 dirty_meta = True
         elif ev == "session" and event.get("action") == "stop":
             data = load()

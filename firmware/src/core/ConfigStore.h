@@ -23,6 +23,8 @@ public:
     String vehicleId = "lab_debian";
     String profileId = "lab_debian";
     String scenarioId = "s0_plug_enum";
+    /** Offline timer end: media_hide (default) or soft_detach (legacy). */
+    String offlineEndStrategy = "media_hide";
 
     bool enableNtp = true;
     String ntpServer = NTP_SERVER_DEFAULT;

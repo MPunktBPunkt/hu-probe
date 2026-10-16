@@ -262,7 +262,14 @@ Periodisch und bei Session-Ende. Ohne dieses Event ist die Session forensisch nu
   "tcp_disconnects": 0,
   "ring_size": 2048,
   "msc_sample_overflow": 0,
-  "msc_reads": 240
+  "msc_reads": 240,
+  "reset_reason": "power_on",
+  "transport": "ram_offline",
+  "transport_epoch_start": 2,
+  "transport_epoch_end": 2,
+  "end_reason": "auto_media_hide",
+  "end_strategy": "media_hide",
+  "upload_status": "delivered"
 }
 ```
 
@@ -270,6 +277,10 @@ Collector spiegelt zusätzlich in `session.json` → `capture`:
 
 - `recv_seq_gaps` — Empfänger-Sicht (nach `seq`)
 - `recv_events` / `parse_errors`
+- `reset_reason`, Transport-Epoch(en), `end_reason` / `end_strategy` und
+  `upload_status` — Abschluss- und Transportdiagnose (keine Wire-Evidenz)
+- `panic_tail` — optionaler, nach Reset aus RTC-RAM gelesener Session-/Breadcrumb-Tail;
+  wird ohne Flash-Schreibzugriff im USB-Hotpath geführt
 
 Analyse-Regel:
 

@@ -17,6 +17,7 @@ void ConfigStore::applyDefaults() {
     vehicleId = "lab_debian";
     profileId = "lab_debian";
     scenarioId = "s0_plug_enum";
+    offlineEndStrategy = "media_hide";
     enableNtp = true;
     ntpServer = NTP_SERVER_DEFAULT;
     tz = TZ_DEFAULT;
@@ -44,6 +45,10 @@ void ConfigStore::load() {
         vehicleId = prefs.getString("vehicle", vehicleId);
         profileId = prefs.getString("profile", profileId);
         scenarioId = prefs.getString("scenario", scenarioId);
+        offlineEndStrategy = prefs.getString("off_end", offlineEndStrategy);
+        if (offlineEndStrategy != "media_hide" && offlineEndStrategy != "soft_detach") {
+            offlineEndStrategy = "media_hide";
+        }
         enableNtp = prefs.getBool("ntp", enableNtp);
         ntpServer = prefs.getString("ntp_srv", ntpServer);
         tz = prefs.getString("tz", tz);
@@ -70,6 +75,7 @@ void ConfigStore::save() {
         prefs.putString("vehicle", vehicleId);
         prefs.putString("profile", profileId);
         prefs.putString("scenario", scenarioId);
+        prefs.putString("off_end", offlineEndStrategy);
         prefs.putBool("ntp", enableNtp);
         prefs.putString("ntp_srv", ntpServer);
         prefs.putString("tz", tz);
@@ -102,6 +108,7 @@ void ConfigStore::toJson(JsonObject obj) const {
     obj["vehicleId"] = vehicleId;
     obj["profileId"] = profileId;
     obj["scenarioId"] = scenarioId;
+    obj["offlineEndStrategy"] = offlineEndStrategy;
     obj["enableNtp"] = enableNtp;
     obj["ntpServer"] = ntpServer;
     obj["tz"] = tz;
@@ -123,6 +130,12 @@ bool ConfigStore::fromJson(JsonVariantConst obj) {
     if (obj["vehicleId"].is<const char*>()) vehicleId = obj["vehicleId"].as<String>();
     if (obj["profileId"].is<const char*>()) profileId = obj["profileId"].as<String>();
     if (obj["scenarioId"].is<const char*>()) scenarioId = obj["scenarioId"].as<String>();
+    if (obj["offlineEndStrategy"].is<const char*>()) {
+        String strategy = obj["offlineEndStrategy"].as<String>();
+        if (strategy == "media_hide" || strategy == "soft_detach") {
+            offlineEndStrategy = strategy;
+        }
+    }
     if (!obj["enableNtp"].isNull()) enableNtp = obj["enableNtp"].as<bool>();
     if (obj["ntpServer"].is<const char*>()) ntpServer = obj["ntpServer"].as<String>();
     if (obj["tz"].is<const char*>()) tz = obj["tz"].as<String>();

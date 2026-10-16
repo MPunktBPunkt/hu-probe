@@ -40,8 +40,9 @@ static const char* PAGE =
     "<button class=sec onclick=cycle()>USB Soft-Cycle</button>"
     "<button class=sec onclick=remount()>Media Remount</button>"
     "</div>"
-    "<p class=muted>Offline-Capture (0.2.19): WiFi aus während Messung, RAM-Puffer, Upload danach. "
-    "Stop: Unplug+2.5s Idle, BOOT lang, oder max 3&nbsp;min. Marker: BOOT kurz.</p>"
+    "<p class=muted>Offline-Capture: WiFi aus, RAM-Puffer, Upload danach. "
+    "Timer-Ende verbirgt standardmäßig nur das Medium; Soft-Detach bleibt Fallback. "
+    "Stop: Unplug+Idle, BOOT lang, oder max 3&nbsp;min. Marker: BOOT kurz.</p>"
     "<div class=row>"
     "<button onclick=offline()>Offline Capture</button>"
     "</div>"
@@ -284,8 +285,9 @@ void WebUi::handleOfflineStart() {
     String vehicle = cfg_ ? cfg_->vehicleId : "lab_debian";
     String scenario = cfg_ ? cfg_->scenarioId : "s0_plug_enum";
     String profile = cfg_ ? cfg_->profileId : "lab_debian";
-    bool softUsb = true;
+    bool softUsb = false;
     uint32_t autoDetachMs = 0;
+    String endStrategy = cfg_ ? cfg_->offlineEndStrategy : "media_hide";
     if (server_.hasArg("plain")) {
         JsonDocument doc;
         if (!deserializeJson(doc, server_.arg("plain"))) {
@@ -297,12 +299,19 @@ void WebUi::handleOfflineStart() {
             if (!doc["measure_ms"].isNull() && autoDetachMs == 0) {
                 autoDetachMs = doc["measure_ms"].as<uint32_t>();
             }
+            if (doc["end_strategy"].is<const char*>()) {
+                String requested = doc["end_strategy"].as<String>();
+                if (requested == "media_hide" || requested == "soft_detach") {
+                    endStrategy = requested;
+                }
+            }
         }
     }
     if (cfg_) {
         cfg_->vehicleId = vehicle;
         cfg_->scenarioId = scenario;
         cfg_->profileId = profile;
+        cfg_->offlineEndStrategy = endStrategy;
         cfg_->save();
     }
     // Respond before WiFi dies so the client sees ok.
@@ -311,7 +320,8 @@ void WebUi::handleOfflineStart() {
     out["action"] = "offline_arm";
     out["soft_usb"] = softUsb;
     out["auto_detach_ms"] = autoDetachMs;
-    out["note"] = "wifi_off_then_soft_enum";
+    out["end_strategy"] = endStrategy;
+    out["note"] = "wifi_off_then_capture";
     String body;
     serializeJson(out, body);
     server_.send(200, "application/json", body);
@@ -323,7 +333,7 @@ void WebUi::handleOfflineStart() {
         Serial.println("[OFFLINE] arm failed");
         return;
     }
-    if (!oc.beginCapture(vehicle, scenario, profile, softUsb, autoDetachMs)) {
+    if (!oc.beginCapture(vehicle, scenario, profile, softUsb, autoDetachMs, endStrategy)) {
         Serial.println("[OFFLINE] beginCapture failed");
         oc.requestStop("begin_failed");
     }

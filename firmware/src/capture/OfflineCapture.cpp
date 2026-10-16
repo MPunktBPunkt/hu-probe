@@ -1,6 +1,7 @@
 #include "capture/OfflineCapture.h"
 #include "BuildFlags.h"
 #include "core/ProbeClock.h"
+#include "core/PanicTail.h"
 #include "net/EventBus.h"
 #include "net/TcpStreamer.h"
 #include <WiFi.h>
@@ -105,6 +106,9 @@ bool OfflineCapture::arm(Session* session, MscGadget* msc, ReadInstrument* inst,
     state_ = State::Arming;
     stopRequested_ = false;
     stopReason_ = "";
+    uploadStatus_ = "arming";
+    mediaHidden_ = false;
+    fallbackDetached_ = false;
     wasPlugged_ = false;
     unplugSinceMs_ = 0;
 
@@ -127,6 +131,7 @@ bool OfflineCapture::arm(Session* session, MscGadget* msc, ReadInstrument* inst,
     if (!allocBuffer()) {
         Serial.println("[OFFLINE] malloc capture buffer failed");
         state_ = State::Idle;
+        uploadStatus_ = "buffer_alloc_failed";
         return false;
     }
     if (!wifiOff()) {
@@ -136,13 +141,14 @@ bool OfflineCapture::arm(Session* session, MscGadget* msc, ReadInstrument* inst,
     }
     // Settling so assoc teardown does not overlap MSC.
     delay(500);
+    PanicTail::breadcrumb(PanicTail::OfflineArm);
     Serial.printf("[OFFLINE] armed wallclock=%s buf=%u\n", wallclock_, (unsigned)cap_);
     return true;
 }
 
 bool OfflineCapture::beginCapture(const String& vehicle, const String& scenario,
                                   const String& profileId, bool softUsb,
-                                  uint32_t autoDetachMs) {
+                                  uint32_t autoDetachMs, const String& endStrategy) {
     if (state_ != State::Arming && state_ != State::Idle) return false;
     if (state_ == State::Idle) return false;
     vehicle_ = vehicle;
@@ -150,7 +156,13 @@ bool OfflineCapture::beginCapture(const String& vehicle, const String& scenario,
     profileId_ = profileId;
     softUsb_ = softUsb;
     autoDetachMs_ = autoDetachMs;
+    endStrategy_ = (endStrategy == "soft_detach") ? "soft_detach" : "media_hide";
     autoDetached_ = false;
+    mediaHidden_ = false;
+    fallbackDetached_ = false;
+    uploadStatus_ = "capturing";
+    transportEpochStart_ = msc_ ? msc_->transportEpoch() : 0;
+    transportEpochEnd_ = transportEpochStart_;
     stopRequested_ = false;
     stopReason_ = "";
     captureStartedMs_ = millis();
@@ -177,8 +189,10 @@ bool OfflineCapture::beginCapture(const String& vehicle, const String& scenario,
         wasPlugged_ = msc_ && msc_->plugged();
     }
 
-    Serial.printf("[OFFLINE] capturing vehicle=%s scenario=%s soft_usb=%d auto_detach_ms=%u\n",
-                  vehicle_.c_str(), scenario_.c_str(), softUsb_ ? 1 : 0, autoDetachMs_);
+    PanicTail::breadcrumb(PanicTail::OfflineCapture, transportEpochStart_);
+    Serial.printf("[OFFLINE] capturing vehicle=%s scenario=%s soft_usb=%d auto_detach_ms=%u end=%s\n",
+                  vehicle_.c_str(), scenario_.c_str(), softUsb_ ? 1 : 0, autoDetachMs_,
+                  endStrategy_.c_str());
     return true;
 }
 
@@ -332,6 +346,13 @@ bool OfflineCapture::replayAll() {
     foot["offline_overflow"] = overflow_;
     foot["offline_wallclock"] = wallclock_;
     foot["offline_stop"] = stopReason_;
+    foot["end_reason"] = stopReason_;
+    foot["end_strategy"] = endStrategy_;
+    foot["transport_epoch_start"] = transportEpochStart_;
+    foot["transport_epoch_end"] = transportEpochEnd_;
+    foot["transport_epoch"] = transportEpochEnd_;
+    foot["upload_status"] = uploadStatus_;
+    PanicTail::appendPrevious(foot.as<JsonObject>());
     foot["dropped"] = EventBus::instance().dropped();
     foot["published"] = EventBus::instance().published();
     foot["complete"] = (overflow_ == 0);
@@ -347,23 +368,81 @@ bool OfflineCapture::finalizeAndUpload() {
         return false;
     }
     if (state_ == State::Capturing) state_ = State::Finalizing;
+    if (msc_ && msc_->plugged()) {
+        if (endStrategy_ == "media_hide" && !mediaHidden_) {
+            mediaHidden_ = msc_->hideMedia();
+            PanicTail::breadcrumb(PanicTail::MediaHide);
+            if (!mediaHidden_) {
+                fallbackDetached_ = msc_->softDetach(0);
+                if (fallbackDetached_) PanicTail::breadcrumb(PanicTail::SoftDetach);
+            }
+        } else if (endStrategy_ == "soft_detach" && !fallbackDetached_ &&
+                   msc_->usbSoftAttached()) {
+            fallbackDetached_ = msc_->softDetach(0);
+            if (fallbackDetached_) PanicTail::breadcrumb(PanicTail::SoftDetach);
+        }
+    }
+    transportEpochEnd_ = msc_ ? msc_->transportEpoch() : transportEpochStart_;
     Serial.printf("[OFFLINE] finalize reason=%s records=%u bytes=%u overflow=%u\n",
                   stopReason_.c_str(), recordCount_, (unsigned)used_, overflow_);
 
     state_ = State::Uploading;
+    uploadStatus_ = "wifi_connecting";
+    PanicTail::breadcrumb(PanicTail::WifiUpload, transportEpochEnd_);
     bool okWifi = wifiOn();
     if (!okWifi) {
+        uploadStatus_ = "wifi_retry";
+        // Media-hide is the non-disruptive first choice. Keep the old detach path
+        // as recovery when coexistence still prevents WiFi from returning.
+        if (mediaHidden_ && !fallbackDetached_ && msc_) {
+            fallbackDetached_ = msc_->softDetach(0);
+            if (fallbackDetached_) PanicTail::breadcrumb(PanicTail::SoftDetach);
+        }
         Serial.println("[OFFLINE] WiFi failed — will retry in poll()");
         return false;
     }
     // Must establish TCP before/during replay — App::loop is blocked here.
     pumpTcp(8000);
+    uploadStatus_ = "replay_enqueued";
     bool okReplay = replayAll();
     pumpTcp(20000);
+    uploadStatus_ = okReplay
+                        ? ((EventBus::instance().pending() == 0) ? "delivered" : "queued")
+                        : "replay_failed";
+    if (session_ && session_->id().length()) {
+        JsonDocument health;
+        int64_t t = ProbeClock::publishUs(ProbeClock::nowUs());
+        health["v"] = 2;
+        health["sid"] = session_->id();
+        health["seq"] = session_->nextSeq();
+        health["t_us"] = (long long)t;
+        health["t_ms"] = ProbeClock::nowMsCompat(t);
+        health["ev"] = "capture_health";
+        health["transport"] = "ram_offline";
+        health["offline_records"] = recordCount_;
+        health["offline_bytes"] = (uint32_t)used_;
+        health["offline_overflow"] = overflow_;
+        health["end_reason"] = stopReason_;
+        health["end_strategy"] = endStrategy_;
+        health["transport_epoch_start"] = transportEpochStart_;
+        health["transport_epoch_end"] = transportEpochEnd_;
+        health["transport_epoch"] = transportEpochEnd_;
+        health["upload_status"] = uploadStatus_;
+        health["dropped"] = EventBus::instance().dropped();
+        health["published"] = EventBus::instance().published();
+        health["complete"] = okReplay && overflow_ == 0;
+        PanicTail::appendPrevious(health.as<JsonObject>());
+        EventBus::instance().publish(health);
+        pumpTcp(5000);
+    }
     Serial.printf("[OFFLINE] done replay=%d records=%u pending=%u tcp=%d\n",
                   okReplay ? 1 : 0, recordCount_, (unsigned)EventBus::instance().pending(),
                   tcp_ && tcp_->connected() ? 1 : 0);
     freeBuffer();
+    if (msc_) {
+        if (fallbackDetached_) msc_->softAttach();
+        if (mediaHidden_) msc_->restoreMedia();
+    }
     state_ = State::Idle;
     return okReplay;
 }
@@ -399,14 +478,26 @@ void OfflineCapture::poll(MscGadget* msc) {
     bootWasDown_ = down;
 
     if (capturing()) {
-        // Timed SW unplug — enables full lab cycle without HTTP after WiFi stop.
+        // Timed end: hide LUN first so USB transport/device-stack evidence remains
+        // continuous. Legacy soft detach remains selectable and is also a WiFi fallback.
         if (autoDetachMs_ > 0 && !autoDetached_ &&
             (millis() - captureStartedMs_ >= autoDetachMs_)) {
             autoDetached_ = true;
-            Serial.println("[OFFLINE] auto soft-detach");
-            if (msc) msc->softDetach(0);
-            // umount / plugged_ path will requestStop shortly
-            requestStop("auto_soft_detach");
+            if (endStrategy_ == "soft_detach") {
+                Serial.println("[OFFLINE] auto soft-detach (legacy)");
+                fallbackDetached_ = msc && msc->softDetach(0);
+                PanicTail::breadcrumb(PanicTail::SoftDetach);
+                requestStop("auto_soft_detach");
+            } else {
+                Serial.println("[OFFLINE] auto media-hide");
+                mediaHidden_ = msc && msc->hideMedia();
+                PanicTail::breadcrumb(PanicTail::MediaHide);
+                if (!mediaHidden_ && msc) {
+                    fallbackDetached_ = msc->softDetach(0);
+                    if (fallbackDetached_) PanicTail::breadcrumb(PanicTail::SoftDetach);
+                }
+                requestStop(mediaHidden_ ? "auto_media_hide" : "media_hide_failed");
+            }
         }
 
         bool plugged = msc && msc->plugged();
@@ -440,4 +531,10 @@ void OfflineCapture::toStatusJson(JsonObject obj) const {
     obj["stop_reason"] = stopReason_;
     obj["soft_usb"] = softUsb_;
     obj["auto_detach_ms"] = autoDetachMs_;
+    obj["end_strategy"] = endStrategy_;
+    obj["upload_status"] = uploadStatus_;
+    obj["media_hidden"] = mediaHidden_;
+    obj["fallback_detached"] = fallbackDetached_;
+    obj["transport_epoch_start"] = transportEpochStart_;
+    obj["transport_epoch_end"] = transportEpochEnd_;
 }

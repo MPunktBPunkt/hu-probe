@@ -42,10 +42,11 @@ public:
     bool arm(Session* session, MscGadget* msc, ReadInstrument* inst, TcpStreamer* tcp);
     /**
      * After arm: enter Capturing. If softUsb, D+ re-enum after WiFi stop.
-     * If autoDetachMs>0, soft-detach after that many ms (SW unplug — no HTTP needed).
+     * If autoDetachMs>0, end using endStrategy (media_hide default, soft_detach legacy).
      */
     bool beginCapture(const String& vehicle, const String& scenario, const String& profileId,
-                      bool softUsb = true, uint32_t autoDetachMs = 0);
+                      bool softUsb = true, uint32_t autoDetachMs = 0,
+                      const String& endStrategy = "media_hide");
     /** End capture (button / unplug+idle / max duration / auto soft-detach). */
     void requestStop(const char* reason);
     /** App loop: auto-stop, BOOT marker/stop, upload when requested. */
@@ -120,6 +121,8 @@ private:
     String scenario_;
     String profileId_;
     String stopReason_;
+    String endStrategy_ = "media_hide";
+    String uploadStatus_ = "idle";
 
     unsigned long captureStartedMs_ = 0;
     unsigned long unplugSinceMs_ = 0;
@@ -128,6 +131,10 @@ private:
     bool softUsb_ = true;
     uint32_t autoDetachMs_ = 0;
     bool autoDetached_ = false;
+    bool mediaHidden_ = false;
+    bool fallbackDetached_ = false;
+    uint32_t transportEpochStart_ = 0;
+    uint32_t transportEpochEnd_ = 0;
     /** Ignore umount/unplug auto-stop during initial soft re-enum. */
     unsigned long ignoreUnplugUntilMs_ = 0;
 

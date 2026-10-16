@@ -1,6 +1,7 @@
 #include "MscBotTap.h"
 #include "BuildFlags.h"
 #include "capture/OfflineCapture.h"
+#include "core/PanicTail.h"
 #include "core/ProbeClock.h"
 #include "tusb.h"
 #include "class/msc/msc.h"
@@ -145,6 +146,7 @@ void MscBotTap::emitNeedResetIfNew() {
     Pending p;
     p.kind = Kind::NeedReset;
     p.tUs = ProbeClock::nowUs();
+    PanicTail::breadcrumb(PanicTail::NeedReset);
     queue(p);
 }
 
@@ -152,6 +154,7 @@ void MscBotTap::onBotReset() {
     Pending p;
     p.kind = Kind::BotReset;
     p.tUs = ProbeClock::nowUs();
+    PanicTail::breadcrumb(PanicTail::BotReset);
     queue(p);
     clearBotEpoch();
 }
@@ -171,6 +174,7 @@ void MscBotTap::queueMount() {
     p.kind = Kind::Mount;
     p.tUs = ProbeClock::nowUs();
     lastMountTUs_ = p.tUs;
+    PanicTail::breadcrumb(PanicTail::UsbMount);
     p.wValue = 1;  // SET_CONFIGURATION n≠0 implied; exact n not exposed by tud_mount_cb
     queue(p);
 }
@@ -180,6 +184,7 @@ void MscBotTap::queueUmount() {
     p.kind = Kind::Umount;
     p.tUs = ProbeClock::nowUs();
     lastUmountTUs_ = p.tUs;
+    PanicTail::breadcrumb(PanicTail::UsbUmount);
     p.wValue = 0;  // cfg 0 or bus-level unmount
     queue(p);
     clearBotEpoch();
@@ -190,6 +195,7 @@ void MscBotTap::queueEpStall(uint8_t epAddr) {
     p.kind = Kind::EpStall;
     p.tUs = ProbeClock::nowUs();
     p.epAddr = epAddr;
+    PanicTail::breadcrumb(PanicTail::EpStall, epAddr);
     queue(p);
 }
 

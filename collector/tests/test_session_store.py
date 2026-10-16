@@ -55,12 +55,24 @@ def test_append_session_events(tmp_path: Path) -> None:
             "published": 3,
             "stream_lost": 0,
             "msc_sample_overflow": 0,
+            "reset_reason": "power_on",
+            "transport_epoch_start": 2,
+            "transport_epoch_end": 2,
+            "end_reason": "auto_media_hide",
+            "end_strategy": "media_hide",
+            "upload_status": "replay_enqueued",
+            "offline_overflow": 0,
         }
     )
     meta = json.loads((folder / "session.json").read_text(encoding="utf-8"))
     assert meta["capture"]["complete"] is True
     assert meta["capture"]["queue_highwater"] == 4
     assert meta["capture"]["recv_events"] == 3
+    assert meta["capture"]["reset_reason"] == "power_on"
+    assert meta["capture"]["transport_epoch_start"] == 2
+    assert meta["capture"]["end_reason"] == "auto_media_hide"
+    assert meta["capture"]["end_strategy"] == "media_hide"
+    assert meta["capture"]["upload_status"] == "replay_enqueued"
 
     # Seq gap must mark incomplete
     store.append_event(
@@ -76,3 +88,42 @@ def test_append_session_events(tmp_path: Path) -> None:
     meta = json.loads((folder / "session.json").read_text(encoding="utf-8"))
     assert meta["capture"]["complete"] is False
     assert meta["capture"]["recv_seq_gaps"][0]["missing"] == [4, 5]
+
+
+def test_offline_health_overflow_is_incomplete(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    sid = "20261016-120000_bmw_s0_plug_enum"
+    store.append_event(
+        {
+            "v": 2,
+            "sid": sid,
+            "seq": 1,
+            "t_us": 1,
+            "ev": "session",
+            "action": "start",
+            "vehicle": "bmw",
+            "scenario": "s0_plug_enum",
+            "profile_id": "bmw_nbt_evo",
+            "transport": "ram_offline",
+        }
+    )
+    store.append_event(
+        {
+            "v": 2,
+            "sid": sid,
+            "seq": 2,
+            "t_us": 2,
+            "ev": "capture_health",
+            "dropped": 0,
+            "tcp_disconnects": 0,
+            "stream_lost": 0,
+            "offline_overflow": 1,
+            "complete": False,
+            "upload_status": "delivered",
+        }
+    )
+
+    meta = json.loads((tmp_path / sid / "session.json").read_text(encoding="utf-8"))
+    assert meta["capture"]["offline_overflow"] == 1
+    assert meta["capture"]["upload_status"] == "delivered"
+    assert meta["capture"]["complete"] is False

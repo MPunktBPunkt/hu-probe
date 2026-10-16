@@ -137,6 +137,7 @@ bool MscGadget::softAttach() {
     bool ok = tud_connect();
     if (ok) {
         softAttached_ = true;
+        transportEpoch_++;
         softReattachAtMs_ = 0;
         if (instrument_ && session_ && session_->active()) {
             instrument_->onUsb("attach", 0, "out", 0, "soft");
@@ -149,6 +150,21 @@ bool MscGadget::softAttach() {
 bool MscGadget::softCycle(uint16_t holdMs) {
     if (holdMs < 50) holdMs = 50;
     return softDetach(holdMs);
+}
+
+bool MscGadget::hideMedia() {
+    if (!ready_ || !mediaPresented_) return ready_;
+    MSC.mediaPresent(false);
+    mediaPresented_ = false;
+    remountHoldUntilMs_ = 0;
+    Serial.println("[MSC] media hidden");
+    return true;
+}
+
+bool MscGadget::restoreMedia() {
+    if (!ready_) return false;
+    presentMedia("offline_restore");
+    return mediaPresented_;
 }
 
 void MscGadget::remountMedia(bool bumpIdentity) {
@@ -171,6 +187,7 @@ void MscGadget::onUsbPlugged(bool on) {
     suspended_ = false;
     if (on) {
         plugCount_++;
+        transportEpoch_++;
         // mount/identity/phase come from MscBotTap::drain(Kind::Mount) — same Capture-tUs.
         Serial.println("[MSC] USB plugged (host started / mount)");
     } else {
@@ -309,6 +326,8 @@ bool MscGadget::softDetach(uint16_t) { return false; }
 bool MscGadget::softAttach() { return false; }
 bool MscGadget::softCycle(uint16_t) { return false; }
 void MscGadget::remountMedia(bool) {}
+bool MscGadget::hideMedia() { return false; }
+bool MscGadget::restoreMedia() { return false; }
 void MscGadget::onUsbPlugged(bool) {}
 void MscGadget::onUsbSuspend(bool) {}
 int32_t MscGadget::onRead(uint32_t, uint32_t, void*, uint32_t) { return -1; }

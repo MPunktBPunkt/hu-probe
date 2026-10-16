@@ -2,6 +2,7 @@
 #include "BuildFlags.h"
 #include "BuildId.h"
 #include "core/ProbeClock.h"
+#include "core/PanicTail.h"
 #include "net/EventBus.h"
 #include <WiFi.h>
 #include <time.h>
@@ -40,6 +41,7 @@ bool Session::start(const String& vehicle, const String& scenario, const String&
     }
     id_ = buf;
     active_ = true;
+    PanicTail::setSession(id_.c_str());
 
     JsonDocument doc;
     // Raise watermark so deferred Capture-tUs (e.g. umount) cannot stamp below start.
