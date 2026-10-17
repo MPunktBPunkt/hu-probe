@@ -140,7 +140,7 @@ tinyusb BOT; dropped=0 in Kern-Sessions; keine Writes gesehen; SCSI-Mix; S2 642 
 | **P0a** | Offline-Skript: READ10-`blocks`, gap vs n, Bytes/s im Burst, LBA-Folgen | Claude 5.1 entscheiden — Profil hängt davon ab |
 | **P0b** | S2 LBA/Marker-Formalauswertung (Audit-Regeln), Marker-Vorbehalt | Semantik aus vorhandenem Material |
 | **P0c** | Auto-Offline reproduzieren + diagnostizieren | Schlüssel zu unbroken Timeline / S1 |
-| **P1c** | `profiles/bmw_nbt_evo.json` updaten | Älteste Schuld; nur gesicherte FACTs + `origin: hu_probe_field`; Gap/4096 als Messgröße kennzeichnen |
+| **P1c** | `profiles/bmw_nbt_evo.json` updaten | **done 2026-10-17** schema 3; Transport `hu_probe_field`; Semantik abgestuft; A7 aus PiDrive MessCapture |
 | **P1a** | t_us-Regression (2176/2199/2280 Drain) | vor langen S1-Streams |
 | **P1** | Marker ohne WiFi (Queue/BOOT) | S2-Handicap |
 | **P2** | S3 Cache/Replay → S1 ≥4 MiB → MODE_SENSE6 Feld-A/B (teils erledigt) → P2c Power → GATE-01 → Mazda |

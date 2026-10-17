@@ -25,7 +25,7 @@
 | **P0d** | QD aus BOT-Tag-Folgen (offline) | **done** | max outstanding Tags p50=1 (INFERENCE) |
 | **P1a** | `t_us`-Regression in langen Sessions (`2176`/`2199`) | **offen** | Pace weiter über `gap_us`; Fix vor S1-Längenstreams |
 | **P1b** | MODE_SENSE6 korrekt beantworten (oder A/B: Stall vs Fix) | **done (0.2.18)** | TinyUSB Case-5: builtin lieferte 4 B, BMW CBW 192 B → ep_in-STALL; `usbd_edpt_xfer`-Wrap padet auf CBW-Länge (+ Caching-Page). Feld-A/B noch offen |
-| **P1c** | Profil `bmw_nbt_evo.json`: nur S0-FACTs mit `origin: hu_probe_field`, `fw: 0.2.17` | **offen** | Gap µs, read 4096, writes=false, BOT-Hinweis; PiDrive-Semantik `unverified` belassen; Burst nur INFERENCE |
+| **P1c** | Profil `bmw_nbt_evo.json`: nur S0/S2-FACTs mit `origin: hu_probe_field` | **done (2026-10-17)** | schema 3: Gap µs, Event-n 4096, CBW [8,240]/max 240, writes=false, ms6/cap, bot_source; Semantik INFERENCE/HYPOTHESIS; A7-Sequenz aus PiDrive MessCapture als `pidrive_field` |
 | **P1d** | README auf 0.2.17; Short-SID-Mapping dokumentieren | **offen** | Hygiene |
 | **P1e** | GATE-01: Burst-Epistemik formal dokumentieren | **offen** | Kriterien: Burst-Def, min. Bursts, dropped=0, Pace=`gap_us`; Gate bleibt OPEN |
 | **P2b** | Lab WiFi-Last-Schwelle (optional, ≤2 h) | **offen** | Burst 1/3/10 s oder KB/s-Stufen → Zeit bis Gelb; **nicht** Root-Cause |
@@ -41,10 +41,10 @@
 ## Sofort-Reihenfolge (pragmatisch)
 
 1. **P0a–P0d** Offline auf vorhandenen Sessions (kein Auto nötig)  
-2. **P1c** Profil-FACTs nachziehen (nach P0, damit keine falschen Burst-FACTs einwandern)  
-3. **P1a + P1b** Instrument (t_us, MODE_SENSE6) → FW 0.2.18-Kandidat  
-4. **P2** Feld S2/S3 mit Audit-Markern (Burst-Fenster)  
-5. **P3→P5** S1 / S5 / S6·S7 · parallel **P2c** WiFi  
+2. ~~**P1c** Profil-FACTs nachziehen~~ **done 2026-10-17**  
+3. **P1a** Instrument t_us (MODE_SENSE6 / P1b schon 0.2.18)  
+4. **P2** Rest: S3 Cache-Hit mit Audit-Markern (S2 Abend schon teilweise)  
+5. **P3→P5** S1 / S5 / S6·S7 · parallel **P2c** WiFi 
 
 ## Audit-Deliverables für Feld (Pins)
 

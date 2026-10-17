@@ -177,10 +177,13 @@ def main() -> int:
             "Pre-0.2.3 sessions may stamp read t_us at drain time — prefer gap_us for pacing.",
         ],
         "vs_bmw_nbt_evo_expectations": {
-            "read_size_4096_dominant": mode_n == 4096,
-            "gap_ms_p50_near_4": (gap_stats(gaps_pace).get("p50") or 0) / 1000.0,
+            "read_event_n_mode_4096": mode_n == 4096,
+            "gap_us_p50_pace": gap_stats(gaps_pace).get("p50"),
+            "gap_us_p50_near_s0_3739": abs((gap_stats(gaps_pace).get("p50") or 0) - 3739) < 400,
+            "gap_us_p50_near_s2_3783": abs((gap_stats(gaps_pace).get("p50") or 0) - 3783) < 400,
             "eager_large_body_stream": False,
-            "epistemic": "FACT from this hu-probe session only; medium geometry limits streaming claims.",
+            "note_cbw": "Event n=4096 is stack chunk; field CBW commonly 8/240 blocks — score CBW separately when bot_cbw present.",
+            "epistemic": "FACT from this hu-probe session only; medium geometry limits streaming claims. Profile P1c 2026-10-17.",
         },
         "tool": "tools/fingerprint_session.py",
     }

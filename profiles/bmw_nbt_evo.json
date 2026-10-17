@@ -2,95 +2,247 @@
   "profile_id": "bmw_nbt_evo",
   "vehicle": "bmw",
   "label": "BMW NBT Evo (Golden Probe)",
-  "schema": 2,
+  "schema": 3,
   "source": {
-    "pidrive_profile": "tools/profiles/nbt_evo_2026-10-06.json",
-    "epistemic": "FACT from PiDrive field evidence — not HU specification",
-    "notes": "Aggregated from field measurements; used to validate hu-probe. Never transferred to Mazda as assumption."
+    "epistemic": "Split origins: hu_probe_field = S0/S2 transport MEASURED; pidrive_field = semantics / MessCapture not yet revalidated as hu-probe FACT",
+    "audit": "technology-audit/audits/hu-probe-bmw-s0s2-field-2026",
+    "audit_pin": "5dbec43",
+    "evidence": [
+      "EVID-HUPROBE-2026-10-15-001",
+      "EVID-HUPROBE-2026-10-15-003",
+      "EVID-HUPROBE-2026-10-15-004",
+      "EVID-HUPROBE-2026-10-15-005",
+      "EVID-HUPROBE-2026-10-15-006",
+      "EVID-HUPROBE-2026-10-15-008"
+    ],
+    "pidrive_profile_geometry": "tools/profiles/nbt_evo_2026-10-06.json",
+    "pidrive_profile_transport": "tools/profiles/nbt_evo_lab_2026-10-15.json",
+    "pidrive_matrix": "docs/fahrzeug/HU-PARAMETER-MATRIX-2026-10-16.md",
+    "p1c": "2026-10-17",
+    "notes": [
+      "Device-stack CBW/CSW/read events — not Wire.",
+      "Never transfer BMW expectations to Mazda as assumption.",
+      "Lab Debian fingerprints must not be mixed into this profile."
+    ]
   },
   "expectations": {
-    "enum_s_approx": {
-      "value": 1.0,
+    "gap_us_p50_file_s0": {
+      "value": 3739,
       "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.17",
+      "evidence": "EVID-HUPROBE-2026-10-15-001",
+      "caveats": ["not_hu_scheduler", "gap_us_pace", "file_kind_only"]
+    },
+    "gap_us_p50_file_s2": {
+      "value": 3783,
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.23",
+      "evidence": "EVID-HUPROBE-2026-10-15-003",
+      "caveats": ["not_hu_scheduler", "gap_us_pace", "file_kind_only"]
+    },
+    "gap_ms_p50_idle": {
+      "value": 4,
+      "class": "SUPERSEDED",
       "origin": "pidrive_field",
-      "caveats": ["firmware_rev_unknown", "medium_dependent"]
+      "caveats": ["ms_quantized", "superseded_by_gap_us_p50_file_s0"]
     },
-    "tur_hz_approx": {
-      "value": 1.0,
-      "class": "FACT",
-      "origin": "pidrive_field"
+    "gap_ms_p50_armed": {
+      "value": 5,
+      "class": "SUPERSEDED",
+      "origin": "pidrive_field",
+      "caveats": ["ms_quantized", "superseded_by_gap_us_p50_file_s2"]
     },
-    "queue_depth": {
-      "value": 1,
+    "read_event_n_mode": {
+      "value": 4096,
       "class": "FACT",
-      "origin": "pidrive_field"
+      "origin": "hu_probe_field",
+      "fw": ["0.2.17", "0.2.23"],
+      "evidence": "EVID-HUPROBE-2026-10-15-001",
+      "caveats": ["tinyusb_callback_chunk", "not_cdb_length"]
+    },
+    "read_size_bytes_mode": {
+      "value": 4096,
+      "class": "SUPERSEDED",
+      "origin": "pidrive_field",
+      "caveats": ["alias_of_read_event_n_mode", "do_not_conflate_with_cbw"]
+    },
+    "read10_blocks_mode_common": {
+      "value": [8, 240],
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.23",
+      "evidence": "EVID-HUPROBE-2026-10-15-004",
+      "caveats": ["separate_from_event_n", "also_rest_to_eof_e_g_69"]
+    },
+    "read10_max_blocks": {
+      "value": 240,
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.23",
+      "evidence": "EVID-HUPROBE-2026-10-15-004",
+      "confirmed_by": "pidrive_messcapture_2026-10-16",
+      "caveats": ["120_kib_per_cbw"]
     },
     "writes_expected": {
       "value": false,
       "class": "FACT",
-      "origin": "pidrive_field"
+      "origin": "hu_probe_field",
+      "fw": ["0.2.17", "0.2.23"],
+      "evidence": "EVID-HUPROBE-2026-10-15-001"
     },
-    "read_size_bytes_mode": {
-      "value": 4096,
+    "mode_sense6_per_capacity": {
+      "value": 2.0,
       "class": "FACT",
-      "origin": "pidrive_field"
+      "origin": "hu_probe_field",
+      "fw": ["0.2.17", "0.2.18+"],
+      "evidence": ["EVID-HUPROBE-2026-10-15-005", "EVID-HUPROBE-2026-10-15-006"],
+      "caveats": ["ms6_stall_pre_0.2.18_was_instrument_artifact"]
     },
-    "gap_ms_p50_idle": {
-      "value": 4,
+    "bot_source": {
+      "value": "tinyusb",
       "class": "FACT",
+      "origin": "hu_probe_field",
+      "caveats": ["instrument", "synthesized_false"]
+    },
+    "enum_s_approx": {
+      "value": 1.0,
+      "class": "INFERENCE",
       "origin": "pidrive_field",
-      "caveats": ["prior_instrument_ms_quantized", "revalidate_with_t_us"]
+      "caveats": [
+        "not_same_interval_as_mount_to_inquiry",
+        "mount_to_inquiry_p50_us_approx_997000_offline_p0"
+      ]
     },
-    "gap_ms_p50_armed": {
-      "value": 5,
-      "class": "FACT",
+    "tur_hz_approx": {
+      "value": 1.0,
+      "class": "INFERENCE",
       "origin": "pidrive_field",
-      "caveats": ["prior_instrument_ms_quantized", "revalidate_with_t_us"]
+      "caveats": [
+        "idle_assumption",
+        "session_wide_tur_hz_p50_approx_2.06_not_idle"
+      ]
+    },
+    "queue_depth": {
+      "value": 1,
+      "class": "INFERENCE",
+      "origin": "hu_probe_field",
+      "fw": "0.2.17",
+      "evidence": "EVID-HUPROBE-2026-10-15-012",
+      "caveats": ["bot_tag_outstanding_p50", "wire_unknown"]
     },
     "eager_eof": {
       "value": true,
-      "class": "FACT",
-      "origin": "pidrive_field"
+      "class": "INFERENCE",
+      "origin": "pidrive_field",
+      "caveats": [
+        "needs_field_s1_slots_ge_4mib",
+        "demo_burst_158208_b_supports_strong_but_not_hu_probe_fact",
+        "burst_file_reads_always_39_rejected"
+      ]
     },
     "prefetch_lead_s_approx": {
       "value": 15,
-      "class": "FACT",
+      "class": "HYPOTHESIS",
       "origin": "pidrive_field",
-      "caveats": ["state_dependent", "cache_history_unknown"]
+      "evidence": "EVID-HUPROBE-2026-10-15-010",
+      "caveats": ["needs_lba_plus_marker_formal", "state_dependent", "cache_history_unknown"]
     },
     "busy_tone_s_approx": {
       "value": 65,
-      "class": "FACT",
+      "class": "INFERENCE",
       "origin": "pidrive_field",
-      "caveats": ["operator_ear_marker", "not_HU_spec"]
+      "caveats": ["operator_ear_marker", "cumulative_to_eof_not_per_read10", "not_HU_spec"]
     },
     "stall_off_tone_s_approx": {
       "value": 6,
-      "class": "FACT",
+      "class": "INFERENCE",
       "origin": "pidrive_field",
       "caveats": ["operator_ear_marker", "not_HU_spec"]
     },
     "menu_stall_sluggish_s_approx": {
       "value": 20,
-      "class": "FACT",
-      "origin": "pidrive_field"
+      "class": "INFERENCE",
+      "origin": "pidrive_field",
+      "caveats": ["phenomenon_observed", "cause_one_240_cbw_at_48kbit_is_inference"]
+    },
+    "read10_timeout_s_hyp": {
+      "value": 20,
+      "class": "HYPOTHESIS",
+      "origin": "pidrive_derived",
+      "caveats": ["per_open_cbw_not_cumulative_65s", "lower_bound_from_120kib_at_48kbit"]
     },
     "cache_hit_no_reads_on_replay": {
       "value": true,
-      "class": "FACT",
-      "origin": "pidrive_field"
+      "class": "HYPOTHESIS",
+      "origin": "pidrive_field",
+      "caveats": ["needs_field_s3"]
     },
     "remount_full_reread": {
       "value": true,
+      "class": "HYPOTHESIS",
+      "origin": "pidrive_field",
+      "caveats": ["needs_field_s4", "hu_a9_lifecycle_method_exists"]
+    },
+    "full_file_512kib_block_seq": {
+      "value": [240, 240, 32, 240, 240, 32],
       "class": "FACT",
-      "origin": "pidrive_field"
+      "origin": "pidrive_field",
+      "confirmed_by": "messcapture_2026-10-16_feld-512kib-predict-01",
+      "caveats": [
+        "not_yet_hu_probe_remeasured",
+        "rejects_model_8_plus_4x240_plus_56",
+        "sum_blocks_1024"
+      ]
+    },
+    "fresh_select_without_p_bytes": {
+      "value": 368640,
+      "class": "INFERENCE",
+      "origin": "pidrive_field",
+      "caveats": ["3_times_120_kib_cbw", "needs_hu_probe_confirm"]
+    }
+  },
+  "rejected": {
+    "burst_file_reads_always_39": {
+      "class": "REJECTED",
+      "evidence": "EVID-HUPROBE-2026-10-15-009",
+      "note": "p50 cluster 39 exists; constant is not a HU FACT (demo file 158208 B)"
+    },
+    "hu_always_read10_4kib_cbw": {
+      "class": "REJECTED",
+      "note": "Event n=4096 is stack chunk; CBW commonly 8 and 240 blocks"
+    },
+    "gap_4096_is_scheduler": {
+      "class": "REJECTED",
+      "evidence": "EVID-HUPROBE-2026-10-15-008",
+      "note": "gap_us is measured pace/link saturation, not proven HU scheduler"
+    },
+    "mode_sense6_stall_is_hu_recovery": {
+      "class": "REJECTED",
+      "evidence": "EVID-HUPROBE-2026-10-15-006",
+      "note": "instrument artifact before hu-probe 0.2.18"
     }
   },
   "fingerprint_template": {
-    "xfer_hist": {"512": "rare", "4096": "dominant", "8192_plus": "absent"},
+    "xfer_hist": {
+      "512": "rare",
+      "4096": "dominant_event_n",
+      "8192_plus": "absent_as_event_n"
+    },
+    "cbw_blocks_common": [8, 240],
+    "cbw_bytes_common": [4096, 122880],
     "kinds": ["file", "boot", "fat", "dir"],
     "resume": "out_of_order_window_then_sequential",
-    "identity_sensitivity": "open_gate_HU-A2"
+    "identity_sensitivity": "open_gate_HU-A2",
+    "full_file_512kib_block_seq": [240, 240, 32, 240, 240, 32]
   },
-  "open_gates": ["HU-PROBE-GATE-01", "HU-A1", "HU-A2", "HU-A7", "HU-A9", "HU-A11"]
+  "open_gates": [
+    "HU-PROBE-GATE-01",
+    "HU-A1",
+    "HU-A2",
+    "HU-A7",
+    "HU-A9",
+    "HU-A11"
+  ]
 }
