@@ -1,4 +1,4 @@
-# Offline-Capture 0.2.26
+# Offline-Capture 0.2.30
 
 FW 0.2.26 zeichnet kurze Messfenster bei abgeschaltetem WLAN in einem
 RAM-Puffer auf und spielt sie nach dem Messende über den normalen
