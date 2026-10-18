@@ -163,7 +163,8 @@ void App::wifiCoexTask(void* arg) {
 }
 
 void App::emitStatus() {
-    if (OfflineCapture::instance().capturing()) return;
+    // Entire offline arm→upload owns the session/TCP path — no live status spam.
+    if (OfflineCapture::instance().active()) return;
     if (!session_.active()) return;
     int64_t t = ProbeClock::publishUs(ProbeClock::eventNowUs());
     JsonDocument doc;
@@ -182,7 +183,7 @@ void App::emitStatus() {
 }
 
 void App::emitCaptureHealth() {
-    if (OfflineCapture::instance().capturing()) return;
+    if (OfflineCapture::instance().active()) return;
     if (!session_.active()) return;
     int64_t t = ProbeClock::publishUs(ProbeClock::eventNowUs());
     EventBus& bus = EventBus::instance();

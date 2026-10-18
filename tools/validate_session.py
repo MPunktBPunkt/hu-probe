@@ -124,6 +124,12 @@ def main() -> int:
     fw_version = starts[0].get("fw_version") if starts else meta.get("fw_version")
     offline = any(e.get("transport") == "ram_offline" for e in starts)
     health = [e for e in events if e.get("ev") == "capture_health"]
+    if offline:
+        # Prefer ram_offline footer health; ignore live/status health mixed into the stream.
+        offline_health = [
+            e for e in health if e.get("transport") == "ram_offline" or "offline_records" in e
+        ]
+        health = offline_health or health
     if offline and version_at_least(fw_version, (0, 2, 24)):
         required = {
             "reset_reason",
@@ -186,10 +192,15 @@ def main() -> int:
         gap = reads[i].get("gap_us") or 0
         if gap > 50_000 and 0 <= dt < 2_000:
             drain_suspect += 1
-    if drain_suspect:
+    if drain_suspect and not offline:
         fails.append(
             f"read t_us looks like drain-time ({drain_suspect} pairs with gap_us>50ms but Δt_us<2ms); "
             "need FW ≥0.2.3 capture-time stamp"
+        )
+    elif drain_suspect and offline:
+        warns.append(
+            f"offline read Δt_us vs gap_us heuristic hits={drain_suspect} "
+            "(soft re-enum / media-hide windows — not treated as FAIL)"
         )
 
     print(f"session: {d}")

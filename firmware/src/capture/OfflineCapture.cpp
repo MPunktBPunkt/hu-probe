@@ -341,129 +341,137 @@ bool OfflineCapture::appendPending(uint8_t kind, int64_t tUs, const uint8_t* raw
     return true;
 }
 
-bool OfflineCapture::replayAll() {
-    if (!inst_ || !buf_ || !session_) return false;
-    // Fresh session with transport tag — publishes start to EventBus (WiFi up).
+bool OfflineCapture::replayOneRec() {
+    if (!inst_ || !buf_ || !session_ || !sessionStarted_) return false;
+    if (replayOff_ + sizeof(Rec) > used_) return false;
+    Rec rec;
+    memcpy(&rec, buf_ + replayOff_, sizeof(Rec));
+    replayOff_ += sizeof(Rec);
     const char* ser = msc_ ? msc_->identitySerial() : nullptr;
-    const char* lab = msc_ ? msc_->volumeLabel() : nullptr;
-    if (!session_->start(vehicle_, scenario_, profileId_, ser, lab, "ram_offline", wallclock_)) {
-        return false;
+    if (rec.kind == kKindMarker) {
+        session_->marker(rec.tag[0] ? rec.tag : "operator", "offline");
+        return true;
     }
-
-    size_t off = 0;
-    while (off + sizeof(Rec) <= used_) {
-        Rec rec;
-        memcpy(&rec, buf_ + off, sizeof(Rec));
-        off += sizeof(Rec);
-        if (rec.kind == kKindMarker) {
-            session_->marker(rec.tag[0] ? rec.tag : "operator", "offline");
-            continue;
-        }
-        switch (rec.kind) {
-            case 1:  // Cbw
-                inst_->emitBotCbwTinyusb(rec.raw, rec.tUs);
-                break;
-            case 2:  // Data
-                inst_->emitBotDataTinyusb(rec.tUs, rec.botTag, rec.lba, rec.nBytes, rec.durUs,
-                                          rec.gapUs, rec.tag, rec.kindStr, rec.dir);
-                break;
-            case 3:  // Csw
-                inst_->emitBotCswTinyusb(rec.raw, rec.tUs);
-                break;
-            case 4:
-                inst_->emitBotNeedResetTinyusb(rec.tUs);
-                break;
-            case 5:
-                inst_->emitUsbControlTinyusb(rec.bmRequestType, rec.bRequest, rec.wValue,
-                                             rec.wIndex, rec.wLength, rec.tUs, rec.flag != 0);
-                break;
-            case 6:
-                inst_->emitUsbEpochTinyusb(rec.tUs, "set_address", 0, rec.wValue, nullptr);
-                break;
-            case 7:
-                inst_->emitUsbEpochTinyusb(rec.tUs, "mount", 0, rec.wValue,
-                                           "set_configuration_n_via_tud_mount_cb");
-                inst_->emitIdentityDescriptorsAt(rec.tUs, ser ? ser : "HP0001", "HUPROBE",
-                                                 "HU_PROBE", FW_VERSION);
-                inst_->emitPhaseAt(rec.tUs, "enum", "plug");
-                break;
-            case 8:
-                inst_->emitUsbEpochTinyusb(rec.tUs, "umount", 0, 0,
-                                           "set_configuration_0_or_bus_via_tud_umount_cb");
-                inst_->emitPhaseAt(rec.tUs, "idle", "unplug");
-                break;
-            case 9:
-                inst_->emitUsbEpochTinyusb(rec.tUs, "ep_stall", rec.epAddr, 0, nullptr);
-                break;
-            case 10:
-                inst_->emitUsbEpochTinyusb(
-                    rec.tUs, "ep_clear_halt", rec.epAddr, 0,
-                    rec.flag ? "need_reset_active_not_healed" : nullptr);
-                break;
-            case 11:
-                inst_->emitUsbEpochTinyusb(rec.tUs, "msc_bot_reset", 0, 0, "msc_req_reset_0xff");
-                break;
-            default:
-                break;
-        }
-        // Keep EventBus from overflowing during burst replay (collector seq gaps).
-        if ((off / sizeof(Rec) & 3) == 3) {
-            pumpTcpWhilePending(200, EVENT_RING_SIZE / 4);
-            yield();
-        }
+    switch (rec.kind) {
+        case 1:
+            inst_->emitBotCbwTinyusb(rec.raw, rec.tUs);
+            break;
+        case 2:
+            inst_->emitBotDataTinyusb(rec.tUs, rec.botTag, rec.lba, rec.nBytes, rec.durUs,
+                                      rec.gapUs, rec.tag, rec.kindStr, rec.dir);
+            break;
+        case 3:
+            inst_->emitBotCswTinyusb(rec.raw, rec.tUs);
+            break;
+        case 4:
+            inst_->emitBotNeedResetTinyusb(rec.tUs);
+            break;
+        case 5:
+            inst_->emitUsbControlTinyusb(rec.bmRequestType, rec.bRequest, rec.wValue, rec.wIndex,
+                                         rec.wLength, rec.tUs, rec.flag != 0);
+            break;
+        case 6:
+            inst_->emitUsbEpochTinyusb(rec.tUs, "set_address", 0, rec.wValue, nullptr);
+            break;
+        case 7:
+            inst_->emitUsbEpochTinyusb(rec.tUs, "mount", 0, rec.wValue,
+                                       "set_configuration_n_via_tud_mount_cb");
+            inst_->emitIdentityDescriptorsAt(rec.tUs, ser ? ser : "HP0001", "HUPROBE", "HU_PROBE",
+                                             FW_VERSION);
+            inst_->emitPhaseAt(rec.tUs, "enum", "plug");
+            break;
+        case 8:
+            inst_->emitUsbEpochTinyusb(rec.tUs, "umount", 0, 0,
+                                       "set_configuration_0_or_bus_via_tud_umount_cb");
+            inst_->emitPhaseAt(rec.tUs, "idle", "unplug");
+            break;
+        case 9:
+            inst_->emitUsbEpochTinyusb(rec.tUs, "ep_stall", rec.epAddr, 0, nullptr);
+            break;
+        case 10:
+            inst_->emitUsbEpochTinyusb(rec.tUs, "ep_clear_halt", rec.epAddr, 0,
+                                       rec.flag ? "need_reset_active_not_healed" : nullptr);
+            break;
+        case 11:
+            inst_->emitUsbEpochTinyusb(rec.tUs, "msc_bot_reset", 0, 0, "msc_req_reset_0xff");
+            break;
+        default:
+            break;
     }
-
-    // Footer health note as capture_health-ish marker fields via session stop note.
-    JsonDocument foot;
-    int64_t t = ProbeClock::publishUs(ProbeClock::nowUs());
-    foot["v"] = 2;
-    foot["sid"] = session_->id();
-    foot["seq"] = session_->nextSeq();
-    foot["t_us"] = (long long)t;
-    foot["t_ms"] = ProbeClock::nowMsCompat(t);
-    foot["ev"] = "capture_health";
-    foot["transport"] = "ram_offline";
-    foot["offline_records"] = recordCount_;
-    foot["offline_bytes"] = (uint32_t)used_;
-    foot["offline_overflow"] = overflow_;
-    foot["offline_wallclock"] = wallclock_;
-    foot["offline_stop"] = stopReason_;
-    foot["end_reason"] = stopReason_;
-    foot["end_strategy"] = endStrategy_;
-    foot["transport_epoch_start"] = transportEpochStart_;
-    foot["transport_epoch_end"] = transportEpochEnd_;
-    foot["transport_epoch"] = transportEpochEnd_;
-    foot["upload_status"] = uploadStatus_;
-    PanicTail::appendPrevious(foot.as<JsonObject>());
-    foot["dropped"] = EventBus::instance().dropped();
-    foot["published"] = EventBus::instance().published();
-    foot["complete"] = (overflow_ == 0);
-    foot["record_size"] = (uint32_t)sizeof(Rec);
-    foot["capacity_bytes"] = (uint32_t)cap_;
-    foot["integrity_pass"] =
-        (overflow_ == 0) && (EventBus::instance().dropped() == 0);
-    EventBus::instance().publish(foot);
-
-    session_->stop();
     return true;
 }
 
-bool OfflineCapture::finalizeAndUpload() {
-    if (state_ != State::Capturing && state_ != State::Finalizing &&
-        state_ != State::Uploading) {
-        return false;
+bool OfflineCapture::drainUpload(uint32_t maxMs) {
+    if (!tcp_) return EventBus::instance().pending() == 0;
+    unsigned long t0 = millis();
+    while (millis() - t0 < maxMs) {
+        tcp_->loop();
+        yield();
+        delay(10);
+        if (EventBus::instance().pending() == 0 && tcp_->connected()) return true;
     }
-    if (state_ == State::Capturing) state_ = State::Finalizing;
+    return EventBus::instance().pending() == 0;
+}
+
+void OfflineCapture::restoreUsbAfterUpload() {
+    if (!msc_) return;
+    if (fallbackDetached_) {
+        msc_->softAttach();
+        fallbackDetached_ = false;
+    }
+    if (mediaHidden_) {
+        msc_->restoreMedia();
+        mediaHidden_ = false;
+    }
+}
+
+void OfflineCapture::publishOfflineHealth(bool final) {
+    if (!session_ || !session_->id().length()) return;
+    JsonDocument health;
+    int64_t t = ProbeClock::publishUs(ProbeClock::nowUs());
+    health["v"] = 2;
+    health["sid"] = session_->id();
+    health["seq"] = session_->nextSeq();
+    health["t_us"] = (long long)t;
+    health["t_ms"] = ProbeClock::nowMsCompat(t);
+    health["ev"] = "capture_health";
+    health["transport"] = "ram_offline";
+    health["offline_records"] = recordCount_;
+    health["offline_bytes"] = (uint32_t)used_;
+    health["offline_overflow"] = overflow_;
+    health["offline_wallclock"] = wallclock_;
+    health["end_reason"] = stopReason_;
+    health["end_strategy"] = endStrategy_;
+    health["transport_epoch_start"] = transportEpochStart_;
+    health["transport_epoch_end"] = transportEpochEnd_;
+    health["transport_epoch"] = transportEpochEnd_;
+    health["upload_status"] = uploadStatus_;
+    const uint32_t dropped = EventBus::instance().dropped();
+    const bool drained = EventBus::instance().pending() == 0;
+    const bool complete = final && overflow_ == 0 && dropped == 0 && drained;
+    health["dropped"] = dropped;
+    health["published"] = EventBus::instance().published();
+    health["complete"] = complete;
+    health["integrity_pass"] = complete;
+    health["record_size"] = (uint32_t)sizeof(Rec);
+    health["capacity_bytes"] = (uint32_t)cap_;
+    PanicTail::appendPrevious(health.as<JsonObject>());
+    EventBus::instance().publish(health);
+    healthPublished_ = true;
+}
+
+void OfflineCapture::beginFinalize(MscGadget* msc) {
+    if (state_ != State::Capturing) return;
+    state_ = State::Finalizing;
+    msc_ = msc ? msc : msc_;
+    // Quiet USB for WiFi TX via media_hide only. Forced soft-detach here correlated
+    // with multi-minute WiFi loss on lab OTG (.88); keep detach as wifiOn failure fallback.
     if (msc_ && msc_->plugged()) {
-        if (endStrategy_ == "media_hide" && !mediaHidden_) {
+        if (!mediaHidden_) {
             mediaHidden_ = msc_->hideMedia();
-            PanicTail::breadcrumb(PanicTail::MediaHide);
-            if (!mediaHidden_) {
-                fallbackDetached_ = msc_->softDetach(0);
-                if (fallbackDetached_) PanicTail::breadcrumb(PanicTail::SoftDetach);
-            }
-        } else if (endStrategy_ == "soft_detach" && !fallbackDetached_ &&
-                   msc_->usbSoftAttached()) {
+            if (mediaHidden_) PanicTail::breadcrumb(PanicTail::MediaHide);
+        }
+        if (!mediaHidden_ && !fallbackDetached_ && msc_->usbSoftAttached()) {
             fallbackDetached_ = msc_->softDetach(0);
             if (fallbackDetached_) PanicTail::breadcrumb(PanicTail::SoftDetach);
         }
@@ -471,90 +479,122 @@ bool OfflineCapture::finalizeAndUpload() {
     transportEpochEnd_ = msc_ ? msc_->transportEpoch() : transportEpochStart_;
     Serial.printf("[OFFLINE] finalize reason=%s records=%u bytes=%u overflow=%u\n",
                   stopReason_.c_str(), recordCount_, (unsigned)used_, overflow_);
-
     state_ = State::Uploading;
+    uploadPhase_ = UploadPhase::Wifi;
+    uploadPhaseSinceMs_ = millis();
+    replayOff_ = 0;
+    sessionStarted_ = false;
+    healthPublished_ = false;
     uploadStatus_ = "wifi_connecting";
     PanicTail::breadcrumb(PanicTail::WifiUpload, transportEpochEnd_);
-    bool okWifi = wifiOn();
-    if (!okWifi) {
-        uploadStatus_ = "wifi_retry";
-        // Media-hide is the non-disruptive first choice. Keep the old detach path
-        // as recovery when coexistence still prevents WiFi from returning.
-        if (mediaHidden_ && !fallbackDetached_ && msc_) {
-            fallbackDetached_ = msc_->softDetach(0);
-            if (fallbackDetached_) PanicTail::breadcrumb(PanicTail::SoftDetach);
+}
+
+void OfflineCapture::pollUpload() {
+    if (state_ != State::Uploading) return;
+    switch (uploadPhase_) {
+        case UploadPhase::Wifi: {
+            // One blocking wifiOn (≤25s) — only once per capture; App stays responsive after.
+            if (WiFi.status() == WL_CONNECTED || wifiOn()) {
+                if (tcp_) tcp_->setOfflineDrain(true);
+                uploadStatus_ = "wifi_up";
+                uploadPhase_ = UploadPhase::Session;
+                uploadPhaseSinceMs_ = millis();
+            } else {
+                // media_hide failed path: one soft-detach then retry WiFi.
+                if (mediaHidden_ && !fallbackDetached_ && msc_ && msc_->usbSoftAttached()) {
+                    fallbackDetached_ = msc_->softDetach(0);
+                    if (fallbackDetached_) PanicTail::breadcrumb(PanicTail::SoftDetach);
+                }
+                uploadStatus_ = "wifi_retry";
+                uploadPhaseSinceMs_ = millis();
+            }
+            break;
         }
-        Serial.println("[OFFLINE] WiFi failed — will retry in poll()");
-        return false;
-    }
-    // Must establish TCP before/during replay — App::loop is blocked here.
-    pumpTcp(12000);
-    uploadStatus_ = "replay_enqueued";
-    bool okReplay = replayAll();
-    pumpTcp(45000);
-    const bool drained = EventBus::instance().pending() == 0 && tcp_ && tcp_->connected();
-    uploadStatus_ = okReplay ? (drained ? "delivered" : "queued") : "replay_failed";
-    // Prefer session id captured during replay (stop clears active_ but keeps id_).
-    if (session_ && session_->id().length()) {
-        JsonDocument health;
-        int64_t t = ProbeClock::publishUs(ProbeClock::nowUs());
-        health["v"] = 2;
-        health["sid"] = session_->id();
-        health["seq"] = session_->nextSeq();
-        health["t_us"] = (long long)t;
-        health["t_ms"] = ProbeClock::nowMsCompat(t);
-        health["ev"] = "capture_health";
-        health["transport"] = "ram_offline";
-        health["offline_records"] = recordCount_;
-        health["offline_bytes"] = (uint32_t)used_;
-        health["offline_overflow"] = overflow_;
-        health["end_reason"] = stopReason_;
-        health["end_strategy"] = endStrategy_;
-        health["transport_epoch_start"] = transportEpochStart_;
-        health["transport_epoch_end"] = transportEpochEnd_;
-        health["transport_epoch"] = transportEpochEnd_;
-        health["upload_status"] = uploadStatus_;
-        const uint32_t dropped = EventBus::instance().dropped();
-        const bool complete = okReplay && overflow_ == 0 && dropped == 0;
-        health["dropped"] = dropped;
-        health["published"] = EventBus::instance().published();
-        health["complete"] = complete;
-        health["record_size"] = (uint32_t)sizeof(Rec);
-        health["capacity_bytes"] = (uint32_t)cap_;
-        health["integrity_pass"] = complete;
-        PanicTail::appendPrevious(health.as<JsonObject>());
-        EventBus::instance().publish(health);
-        pumpTcp(30000);
-        if (EventBus::instance().pending() == 0 && tcp_ && tcp_->connected()) {
-            uploadStatus_ = "delivered";
+        case UploadPhase::Session: {
+            pumpTcp(300);
+            if (!tcp_ || !tcp_->connected()) {
+                if (millis() - uploadPhaseSinceMs_ > 20000) {
+                    uploadStatus_ = "tcp_wait";
+                    uploadPhaseSinceMs_ = millis();
+                }
+                break;
+            }
+            const char* ser = msc_ ? msc_->identitySerial() : nullptr;
+            const char* lab = msc_ ? msc_->volumeLabel() : nullptr;
+            if (!session_->start(vehicle_, scenario_, profileId_, ser, lab, "ram_offline",
+                                 wallclock_)) {
+                uploadStatus_ = "session_failed";
+                uploadPhase_ = UploadPhase::Done;
+                break;
+            }
+            sessionStarted_ = true;
+            uploadStatus_ = "replaying";
+            uploadPhase_ = UploadPhase::Replay;
+            uploadPhaseSinceMs_ = millis();
+            break;
         }
-        saveLastRun(complete, dropped);
-    } else {
-        saveLastRun(false, EventBus::instance().dropped());
+        case UploadPhase::Replay: {
+            // Finish replay before typical post-wifiOn death window (~30–60s on lab OTG).
+            for (int i = 0; i < 10; i++) {
+                if (!replayOneRec()) {
+                    uploadPhase_ = UploadPhase::Health;
+                    uploadPhaseSinceMs_ = millis();
+                    break;
+                }
+            }
+            pumpTcpWhilePending(200, 16);
+            break;
+        }
+        case UploadPhase::Health: {
+            // Footer must go out immediately — lab WiFi often dies ~30–60s after wifiOn.
+            if (sessionStarted_ && !healthPublished_) {
+                uploadStatus_ = "draining";
+                publishOfflineHealth(true);
+                session_->stop();
+                drainUpload(8000);
+            }
+            uploadPhase_ = UploadPhase::Drain;
+            uploadPhaseSinceMs_ = millis();
+            break;
+        }
+        case UploadPhase::Drain: {
+            if (WiFi.status() != WL_CONNECTED) {
+                // Short retry slices — do not call full 25s wifiOn every loop.
+                WiFi.reconnect();
+                pumpTcp(200);
+                break;
+            }
+            drainUpload(400);
+            const bool empty = EventBus::instance().pending() == 0 && tcp_ && tcp_->connected();
+            const bool timedOut = millis() - uploadPhaseSinceMs_ > 120000;
+            if (empty || timedOut) {
+                uploadStatus_ = empty ? "delivered" : "queued";
+                if (empty) publishOfflineHealth(true);
+                const uint32_t dropped = EventBus::instance().dropped();
+                saveLastRun(empty && overflow_ == 0 && dropped == 0, dropped);
+                if (tcp_) tcp_->setOfflineDrain(false);
+                freeBuffer();
+                restoreUsbAfterUpload();
+                uploadPhase_ = UploadPhase::Done;
+                state_ = State::Idle;
+                Serial.printf(
+                    "[OFFLINE] upload done status=%s records=%u pending=%u dropped=%u integrity=%d\n",
+                    uploadStatus_.c_str(), lastRun_.records,
+                    (unsigned)EventBus::instance().pending(), (unsigned)dropped,
+                    lastRun_.integrityPass ? 1 : 0);
+            }
+            break;
+        }
+        default:
+            break;
     }
-    Serial.printf("[OFFLINE] done replay=%d records=%u pending=%u dropped=%u tcp=%d integrity=%d\n",
-                  okReplay ? 1 : 0, recordCount_, (unsigned)EventBus::instance().pending(),
-                  (unsigned)EventBus::instance().dropped(),
-                  tcp_ && tcp_->connected() ? 1 : 0, lastRun_.integrityPass ? 1 : 0);
-    freeBuffer();
-    if (msc_) {
-        if (fallbackDetached_) msc_->softAttach();
-        if (mediaHidden_) msc_->restoreMedia();
-    }
-    state_ = State::Idle;
-    return okReplay;
 }
 
 void OfflineCapture::poll(MscGadget* msc) {
     if (state_ == State::Idle) return;
 
-    // Retry upload if WiFi failed after capture end.
-    if (state_ == State::Uploading && buf_) {
-        static unsigned long lastRetryMs = 0;
-        if (millis() - lastRetryMs >= 3000) {
-            lastRetryMs = millis();
-            finalizeAndUpload();
-        }
+    if (state_ == State::Uploading) {
+        pollUpload();
         return;
     }
 
@@ -612,7 +652,7 @@ void OfflineCapture::poll(MscGadget* msc) {
             requestStop("max_duration");
         }
         if (stopRequested_) {
-            finalizeAndUpload();
+            beginFinalize(msc);
         }
     }
 }

@@ -84,8 +84,12 @@ private:
     void freeBuffer();
     bool wifiOff();
     bool wifiOn();
-    bool finalizeAndUpload();
-    bool replayAll();
+    void beginFinalize(MscGadget* msc);
+    void pollUpload();
+    bool replayOneRec();
+    void publishOfflineHealth(bool final);
+    bool drainUpload(uint32_t maxMs);
+    void restoreUsbAfterUpload();
     void appendMarkerRec(int64_t tUs, const char* name);
     void setMarkerSequence(const char* const* markers, uint8_t count);
     void queueNextExperimentMarker();
@@ -154,6 +158,12 @@ private:
     bool autoDetached_ = false;
     bool mediaHidden_ = false;
     bool fallbackDetached_ = false;
+    enum class UploadPhase : uint8_t { Idle = 0, Wifi, Session, Replay, Health, Drain, Done };
+    UploadPhase uploadPhase_ = UploadPhase::Idle;
+    size_t replayOff_ = 0;
+    bool sessionStarted_ = false;
+    bool healthPublished_ = false;
+    unsigned long uploadPhaseSinceMs_ = 0;
     uint32_t transportEpochStart_ = 0;
     uint32_t transportEpochEnd_ = 0;
     /** Ignore umount/unplug auto-stop during initial soft re-enum. */

@@ -10,6 +10,8 @@ public:
     void begin(ConfigStore* config);
     void loop();
     bool connected() const { return const_cast<WiFiClient&>(client_).connected(); }
+    /** Offline replay: smaller batches + TCP flush so WiFi TX completes. */
+    void setOfflineDrain(bool on) { offlineDrain_ = on; }
 
 private:
     void tryConnect();
@@ -19,4 +21,5 @@ private:
     WiFiClient client_;
     unsigned long lastConnectAttempt_ = 0;
     bool wasConnected_ = false;
+    bool offlineDrain_ = false;
 };

@@ -48,8 +48,9 @@ void TcpStreamer::flushPending() {
     // partially succeeds used to retry the whole line → collector "Extra data" / seq gaps.
     String line;
     int n = 0;
+    const int batch = offlineDrain_ ? 8 : 32;
     EventBus& bus = EventBus::instance();
-    while (n < 32) {
+    while (n < batch) {
         if (!client_.connected()) {
             wasConnected_ = false;
             bus.noteTcpDisconnect();
@@ -71,12 +72,20 @@ void TcpStreamer::flushPending() {
             bus.noteTcpDisconnect();
             return;  // leave line at head for retry after reconnect
         }
+        if (offlineDrain_) {
+            client_.flush();
+        }
         String discarded;
         if (!bus.pop(discarded)) {
             return;
         }
         bus.noteTcpTxOk();
         n++;
-        if ((n & 3) == 0) yield();
+        if (offlineDrain_) {
+            delay(2);
+            yield();
+        } else if ((n & 3) == 0) {
+            yield();
+        }
     }
 }
