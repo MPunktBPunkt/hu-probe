@@ -1,0 +1,457 @@
+{
+  "audit_id": "hu-probe-bmw-s2-abend-offline-2026-10-18",
+  "purpose": "Replicable meta-summaries for offline PASS sessions without committing full events.jsonl",
+  "generated_from": "local Collector sessions under sessions/",
+  "correction": {
+    "track_atom": "(head,240)+(head+240,69)=309 LBA=158208 B",
+    "rejected": [
+      "312 LBA",
+      "3 meta LBA",
+      "39\u00d74096 as byte formula",
+      "T3 covered 627\u2026938"
+    ],
+    "t3_covered": "627\u2026935"
+  },
+  "sessions": [
+    {
+      "session_id": "20261018-175203_bmw_s2_prefetch",
+      "short_id": "175203",
+      "source": "sessions/20261018-175203_bmw_s2_prefetch/events.jsonl (local; not tracked)",
+      "fw_version": "0.2.30",
+      "transport": "ram_offline",
+      "vehicle": "bmw",
+      "scenario": "s2_prefetch",
+      "n_events": 168,
+      "n_reads": 39,
+      "n_bot_cbw": 43,
+      "n_read10_cbw": 2,
+      "kind_counts": {
+        "file": 39
+      },
+      "read_bytes_sum": 158208,
+      "read_n_hist": {
+        "4096": 38,
+        "2560": 1
+      },
+      "read_lba_starts": [
+        627,
+        635,
+        643,
+        651,
+        659,
+        667,
+        675,
+        683,
+        691,
+        699,
+        707,
+        715,
+        723,
+        731,
+        739,
+        747,
+        755,
+        763,
+        771,
+        779,
+        787,
+        795,
+        803,
+        811,
+        819,
+        827,
+        835,
+        843,
+        851,
+        859,
+        867,
+        875,
+        883,
+        891,
+        899,
+        907,
+        915,
+        923,
+        931
+      ],
+      "read_lba_start_deltas": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ],
+      "read_starts_monotonic": true,
+      "covered_lba": {
+        "lo": 627,
+        "hi": 935,
+        "span": 309
+      },
+      "read10_cbws": [
+        {
+          "lba": 627,
+          "blocks": 240,
+          "bot_tag": 77,
+          "seq": 22
+        },
+        {
+          "lba": 867,
+          "blocks": 69,
+          "bot_tag": 78,
+          "seq": 96
+        }
+      ],
+      "track_atoms": [
+        {
+          "form": "head_then_tail",
+          "cbws": [
+            {
+              "lba": 627,
+              "blocks": 240,
+              "bot_tag": 77,
+              "seq": 22
+            },
+            {
+              "lba": 867,
+              "blocks": 69,
+              "bot_tag": 78,
+              "seq": 96
+            }
+          ],
+          "sum_lba": 309
+        }
+      ],
+      "capture_health_count": 2,
+      "session_gates": [
+        "HU-PROBE-GATE-01"
+      ]
+    },
+    {
+      "session_id": "20261018-212136_bmw_s2_prefetch",
+      "short_id": "212136",
+      "source": "sessions/20261018-212136_bmw_s2_prefetch/events.jsonl (local; not tracked)",
+      "fw_version": "0.2.30",
+      "transport": "ram_offline",
+      "vehicle": "bmw",
+      "scenario": "s2_prefetch",
+      "n_events": 169,
+      "n_reads": 39,
+      "n_bot_cbw": 43,
+      "n_read10_cbw": 2,
+      "kind_counts": {
+        "file": 34,
+        "fat": 1,
+        "dir": 4
+      },
+      "read_bytes_sum": 158208,
+      "read_n_hist": {
+        "4096": 38,
+        "2560": 1
+      },
+      "read_lba_starts": [
+        249,
+        257,
+        265,
+        273,
+        281,
+        289,
+        297,
+        305,
+        313,
+        9,
+        17,
+        25,
+        33,
+        41,
+        49,
+        57,
+        65,
+        73,
+        81,
+        89,
+        97,
+        105,
+        113,
+        121,
+        129,
+        137,
+        145,
+        153,
+        161,
+        169,
+        177,
+        185,
+        193,
+        201,
+        209,
+        217,
+        225,
+        233,
+        241
+      ],
+      "read_lba_start_deltas": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        -304,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ],
+      "read_starts_monotonic": false,
+      "covered_lba": {
+        "lo": 9,
+        "hi": 317,
+        "span": 309
+      },
+      "read10_cbws": [
+        {
+          "lba": 249,
+          "blocks": 69,
+          "bot_tag": 78,
+          "seq": 28
+        },
+        {
+          "lba": 9,
+          "blocks": 240,
+          "bot_tag": 79,
+          "seq": 48
+        }
+      ],
+      "track_atoms": [
+        {
+          "form": "tail_then_head",
+          "cbws": [
+            {
+              "lba": 249,
+              "blocks": 69,
+              "bot_tag": 78,
+              "seq": 28
+            },
+            {
+              "lba": 9,
+              "blocks": 240,
+              "bot_tag": 79,
+              "seq": 48
+            }
+          ],
+          "sum_lba": 309
+        }
+      ],
+      "capture_health_count": 2,
+      "session_gates": [
+        "HU-PROBE-GATE-01"
+      ]
+    },
+    {
+      "session_id": "20261018-212635_bmw_s2_prefetch",
+      "short_id": "212635",
+      "source": "sessions/20261018-212635_bmw_s2_prefetch/events.jsonl (local; not tracked)",
+      "fw_version": "0.2.30",
+      "transport": "ram_offline",
+      "vehicle": "bmw",
+      "scenario": "s2_prefetch",
+      "n_events": 168,
+      "n_reads": 39,
+      "n_bot_cbw": 43,
+      "n_read10_cbw": 2,
+      "kind_counts": {
+        "file": 39
+      },
+      "read_bytes_sum": 158208,
+      "read_n_hist": {
+        "4096": 38,
+        "2560": 1
+      },
+      "read_lba_starts": [
+        627,
+        635,
+        643,
+        651,
+        659,
+        667,
+        675,
+        683,
+        691,
+        699,
+        707,
+        715,
+        723,
+        731,
+        739,
+        747,
+        755,
+        763,
+        771,
+        779,
+        787,
+        795,
+        803,
+        811,
+        819,
+        827,
+        835,
+        843,
+        851,
+        859,
+        867,
+        875,
+        883,
+        891,
+        899,
+        907,
+        915,
+        923,
+        931
+      ],
+      "read_lba_start_deltas": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ],
+      "read_starts_monotonic": true,
+      "covered_lba": {
+        "lo": 627,
+        "hi": 935,
+        "span": 309
+      },
+      "read10_cbws": [
+        {
+          "lba": 627,
+          "blocks": 240,
+          "bot_tag": 93,
+          "seq": 40
+        },
+        {
+          "lba": 867,
+          "blocks": 69,
+          "bot_tag": 94,
+          "seq": 102
+        }
+      ],
+      "track_atoms": [
+        {
+          "form": "head_then_tail",
+          "cbws": [
+            {
+              "lba": 627,
+              "blocks": 240,
+              "bot_tag": 93,
+              "seq": 40
+            },
+            {
+              "lba": 867,
+              "blocks": 69,
+              "bot_tag": 94,
+              "seq": 102
+            }
+          ],
+          "sum_lba": 309
+        }
+      ],
+      "capture_health_count": 2,
+      "session_gates": [
+        "HU-PROBE-GATE-01"
+      ]
+    }
+  ]
+}
