@@ -84,13 +84,33 @@ class TcpCollector:
                     if not line:
                         continue
                     try:
-                        event = json.loads(line.decode("utf-8"))
-                    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+                        text = line.decode("utf-8")
+                    except UnicodeDecodeError as e:
                         log.warning("bad line from %s: %s", addr, e)
                         self.store.note_parse_error()
                         continue
-                    self.store.append_event(event)
-                    self.events += 1
-                    if self.on_event:
-                        self.on_event(event)
+                    # Tolerate glued JSON objects on one TCP line (partial-write retry).
+                    decoder = json.JSONDecoder()
+                    idx = 0
+                    parsed_any = False
+                    while idx < len(text):
+                        while idx < len(text) and text[idx].isspace():
+                            idx += 1
+                        if idx >= len(text):
+                            break
+                        try:
+                            event, end = decoder.raw_decode(text, idx)
+                        except json.JSONDecodeError as e:
+                            if not parsed_any:
+                                log.warning("bad line from %s: %s", addr, e)
+                                self.store.note_parse_error()
+                            break
+                        idx = end
+                        parsed_any = True
+                        if not isinstance(event, dict):
+                            continue
+                        self.store.append_event(event)
+                        self.events += 1
+                        if self.on_event:
+                            self.on_event(event)
         log.info("client closed %s", addr)

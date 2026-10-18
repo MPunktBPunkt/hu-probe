@@ -27,8 +27,16 @@ private:
     void handleUsbRemount();
     void handleOfflineStart();
     void handleOfflineStop();
+    void handleExperiments();
+    void handleExperimentStart();
     void handleOtaUpload();
     void handleOtaDone();
+
+    /** Shared arm path for /api/offline/start and /api/experiment/start. */
+    void armOfflineCapture(const String& vehicle, const String& scenario,
+                           const String& profile, bool softUsb, uint32_t measureMs,
+                           const String& endStrategy, const char* const* markers,
+                           uint8_t markerCount, const char* experimentId);
 
     WebServer server_{80};
     ConfigStore* cfg_ = nullptr;

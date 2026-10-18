@@ -211,8 +211,13 @@ Nur noch für Stub/Sim. Feld `legacy: true` setzen. Migration: durch `bot_cbw` e
 ### ev = marker
 
 ```json
-{"v":2,"sid":"...","seq":45,"t_us":14100000,"ev":"marker","name":"ear_tone_start","note":""}
+{"v":2,"sid":"...","seq":45,"t_us":14100000,"ev":"marker","name":"play_start","note":"offline"}
 ```
+
+Operator-/Audit-Marker (FW ≥0.2.25, Offline per BOOT-Zyklus): `play_start`,
+`track_next`, `audible_change`, `replay`, `stop`, plus szenariospezifisch
+`plug_ready` / `replug`. Ohne `play_start` + (`audible_change`|`track_next`)
+bleibt S2-Prefetch epistemisch **UNKNOWN**.
 
 ### ev = status
 
@@ -269,9 +274,18 @@ Periodisch und bei Session-Ende. Ohne dieses Event ist die Session forensisch nu
   "transport_epoch_end": 2,
   "end_reason": "auto_media_hide",
   "end_strategy": "media_hide",
-  "upload_status": "delivered"
+  "upload_status": "delivered",
+  "offline_overflow": 0,
+  "offline_records": 412,
+  "record_size": 99,
+  "capacity_bytes": 65536,
+  "complete": true,
+  "integrity_pass": true
 }
 ```
+
+Offline-Integrity (quantitativ): `offline_overflow=0`, `dropped=0`,
+`complete=true`, Collector ohne `recv_seq_gaps`. Sonst nur diagnostisch.
 
 Collector spiegelt zusätzlich in `session.json` → `capture`:
 

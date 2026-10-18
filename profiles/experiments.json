@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "fw_min": "0.2.25",
+  "note": "Host-side mirror of firmware ExperimentProfiles.h — defaults for offline HU runs.",
+  "integrity": {
+    "require_overflow_zero": true,
+    "require_dropped_zero": true,
+    "require_complete": true,
+    "require_recv_gaps_zero": true
+  },
+  "experiments": [
+    {
+      "id": "s0_plug_enum",
+      "label": "S0 Plug/Enum",
+      "measure_ms": 12000,
+      "soft_usb": true,
+      "end_strategy": "media_hide",
+      "markers": ["plug_ready", "stop"]
+    },
+    {
+      "id": "s1_eager_eof",
+      "label": "S1 Eager EOF",
+      "measure_ms": 45000,
+      "soft_usb": true,
+      "end_strategy": "media_hide",
+      "markers": ["play_start", "audible_change", "stop"]
+    },
+    {
+      "id": "s2_prefetch",
+      "label": "S2 Prefetch",
+      "measure_ms": 60000,
+      "soft_usb": true,
+      "end_strategy": "media_hide",
+      "markers": ["play_start", "track_next", "audible_change", "stop"],
+      "epistemic": "S2 UNKNOWN without play_start + (audible_change|track_next)"
+    },
+    {
+      "id": "s3_cache_hit",
+      "label": "S3 Cache/Replay",
+      "measure_ms": 90000,
+      "soft_usb": true,
+      "end_strategy": "media_hide",
+      "markers": ["play_start", "audible_change", "stop", "replay", "audible_change", "stop"]
+    },
+    {
+      "id": "s4_remount",
+      "label": "S4 Remount",
+      "measure_ms": 90000,
+      "soft_usb": true,
+      "end_strategy": "soft_detach",
+      "markers": ["play_start", "audible_change", "stop", "replug", "play_start", "audible_change"]
+    },
+    {
+      "id": "s5_busy_budget",
+      "label": "S5 Busy Budget",
+      "measure_ms": 120000,
+      "soft_usb": true,
+      "end_strategy": "media_hide",
+      "markers": ["play_start", "track_next", "audible_change", "replay", "stop"]
+    },
+    {
+      "id": "s6_identity",
+      "label": "S6 Identity",
+      "measure_ms": 60000,
+      "soft_usb": true,
+      "end_strategy": "media_hide",
+      "markers": ["play_start", "track_next", "audible_change", "replay", "stop"]
+    },
+    {
+      "id": "s7_lifecycle",
+      "label": "S7 Lifecycle",
+      "measure_ms": 120000,
+      "soft_usb": true,
+      "end_strategy": "media_hide",
+      "markers": ["play_start", "track_next", "audible_change", "replay", "stop"]
+    }
+  ]
+}

@@ -43,23 +43,33 @@ void TcpStreamer::tryConnect() {
 void TcpStreamer::flushPending() {
     // Peek → write → pop. Never drop a seq on failed TX (root cause of silent gaps).
     // Cap + yield: a 192-event flush under MSC load starved WiFi/HTTP (lab WiFi-death).
+    //
+    // Critical: one atomic write of (line + '\n'). A split print(line)/print('\n') that
+    // partially succeeds used to retry the whole line → collector "Extra data" / seq gaps.
     String line;
     int n = 0;
     EventBus& bus = EventBus::instance();
-    while (n < 48) {
+    while (n < 32) {
         if (!client_.connected()) {
             wasConnected_ = false;
             bus.noteTcpDisconnect();
             return;
         }
         if (!bus.peek(line)) return;
-        size_t need = line.length() + 1;  // + '\n'
-        size_t w = client_.print(line);
-        w += client_.print('\n');
-        if (w < need) {
+        const size_t need = line.length() + 1;  // + '\n'
+        // Build contiguous packet so WiFiClient cannot interleave mid-record.
+        String packet;
+        packet.reserve(need);
+        packet += line;
+        packet += '\n';
+        size_t w = client_.write(reinterpret_cast<const uint8_t*>(packet.c_str()), need);
+        if (w != need) {
             bus.noteTcpTxFail();
-            // Leave line at head; retry next loop / after reconnect.
-            return;
+            // Partial bytes may already be at the collector — resync with a clean reconnect.
+            client_.stop();
+            wasConnected_ = false;
+            bus.noteTcpDisconnect();
+            return;  // leave line at head for retry after reconnect
         }
         String discarded;
         if (!bus.pop(discarded)) {
@@ -67,6 +77,6 @@ void TcpStreamer::flushPending() {
         }
         bus.noteTcpTxOk();
         n++;
-        if ((n & 7) == 0) yield();
+        if ((n & 3) == 0) yield();
     }
 }

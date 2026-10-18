@@ -175,6 +175,8 @@ class SessionStore:
                     "offline_records",
                     "offline_bytes",
                     "offline_overflow",
+                    "record_size",
+                    "capacity_bytes",
                 ):
                     if key in event:
                         cap[key] = event.get(key)
@@ -194,6 +196,9 @@ class SessionStore:
                     dropped == 0 and disc == 0 and stream_lost == 0 and not gaps
                     and offline_overflow == 0 and probe_complete is not False
                 )
+                # Quantitative integrity: collector gaps + probe offline gate.
+                probe_integrity = event.get("integrity_pass")
+                cap["integrity_pass"] = bool(cap["complete"]) and probe_integrity is not False
                 if isinstance(event.get("panic_tail"), dict):
                     cap["panic_tail"] = event.get("panic_tail")
                 dirty_meta = True

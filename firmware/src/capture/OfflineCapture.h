@@ -7,9 +7,11 @@
 #include "net/TcpStreamer.h"
 
 /**
- * 0.2.19 Stufe-1: RAM Offline-Capture (Messkonzept Offline-Capture).
+ * RAM Offline-Capture (Messkonzept).
  * WiFi OFF during measure → compact Pending records in heap → WiFi ON → replay JSONL.
  * No flash writes in the measure window (avoids cache stalls).
+ *
+ * 0.2.25: experiment marker sequence (BOOT short), capture budget, last-run integrity.
  */
 class OfflineCapture {
 public:
@@ -38,15 +40,26 @@ public:
     const char* wallclock() const { return wallclock_; }
     const char* stateName() const;
 
+    /** Compact record size (packed). Used for capture_budget. */
+    static constexpr size_t recordSize() { return sizeof(Rec); }
+    static constexpr size_t defaultCapBytes() { return kDefaultCap; }
+    static constexpr size_t fallbackCapBytes() { return 48 * 1024; }
+    static constexpr uint32_t maxCaptureMs() { return kMaxCaptureMs; }
+    static size_t maxRecordsForCap(size_t capBytes) {
+        return capBytes / sizeof(Rec);
+    }
+
     /** UI/API: stop live session, grab wallclock, WiFi OFF, alloc buffer. */
     bool arm(Session* session, MscGadget* msc, ReadInstrument* inst, TcpStreamer* tcp);
     /**
      * After arm: enter Capturing. If softUsb, D+ re-enum after WiFi stop.
      * If autoDetachMs>0, end using endStrategy (media_hide default, soft_detach legacy).
+     * markers/markerCount: BOOT-short cycles these names offline (experiment profile).
      */
     bool beginCapture(const String& vehicle, const String& scenario, const String& profileId,
                       bool softUsb = true, uint32_t autoDetachMs = 0,
-                      const String& endStrategy = "media_hide");
+                      const String& endStrategy = "media_hide",
+                      const char* const* markers = nullptr, uint8_t markerCount = 0);
     /** End capture (button / unplug+idle / max duration / auto soft-detach). */
     void requestStop(const char* reason);
     /** App loop: auto-stop, BOOT marker/stop, upload when requested. */
@@ -62,6 +75,8 @@ public:
     void queueMarker(const char* name);
 
     void toStatusJson(JsonObject obj) const;
+    /** Fill capture_budget object (theoretical 64 KiB target + actual if armed). */
+    void toBudgetJson(JsonObject obj) const;
 
 private:
     OfflineCapture() = default;
@@ -72,12 +87,17 @@ private:
     bool finalizeAndUpload();
     bool replayAll();
     void appendMarkerRec(int64_t tUs, const char* name);
+    void setMarkerSequence(const char* const* markers, uint8_t count);
+    void queueNextExperimentMarker();
+    void saveLastRun(bool complete, uint32_t dropped);
 
     static constexpr size_t kDefaultCap = 64 * 1024;
     static constexpr uint32_t kMaxCaptureMs = 180000;   // 3 min safety
     static constexpr uint32_t kUnplugIdleMs = 1500;
     static constexpr uint8_t kKindMarker = 100;
     static constexpr uint8_t kKindUmount = 8;
+    static constexpr uint8_t kMaxMarkers = 8;
+    static constexpr size_t kMarkerNameLen = 16;
 
 #pragma pack(push, 1)
     struct Rec {
@@ -97,7 +117,7 @@ private:
         uint32_t durUs;
         uint32_t gapUs;
         uint8_t raw[31];
-        char tag[8];
+        char tag[kMarkerNameLen];  // marker names up to audible_change / play_start
         char kindStr[8];
         char dir[4];
     };
@@ -109,6 +129,7 @@ private:
     ReadInstrument* inst_ = nullptr;
     TcpStreamer* tcp_ = nullptr;
     void pumpTcp(uint32_t maxMs);
+    void pumpTcpWhilePending(uint32_t maxMs, size_t keepBelow);
 
     uint8_t* buf_ = nullptr;
     size_t cap_ = 0;
@@ -140,4 +161,27 @@ private:
 
     unsigned long bootDownMs_ = 0;
     bool bootWasDown_ = false;
+
+    char markerSeq_[kMaxMarkers][kMarkerNameLen] = {};
+    uint8_t markerCount_ = 0;
+    uint8_t markerIndex_ = 0;
+    char lastMarker_[kMarkerNameLen] = {0};
+
+    struct LastRun {
+        bool valid = false;
+        char wallclock[32] = {0};
+        char vehicle[24] = {0};
+        char scenario[32] = {0};
+        char stopReason[32] = {0};
+        char uploadStatus[24] = {0};
+        char endStrategy[16] = {0};
+        uint32_t records = 0;
+        uint32_t bytes = 0;
+        uint32_t cap = 0;
+        uint32_t overflow = 0;
+        uint32_t dropped = 0;
+        uint32_t measureMs = 0;
+        bool complete = false;
+        bool integrityPass = false;
+    } lastRun_;
 };

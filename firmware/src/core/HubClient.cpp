@@ -1,4 +1,5 @@
 #include "HubClient.h"
+#include "capture/OfflineCapture.h"
 #include <HTTPClient.h>
 #include <Update.h>
 #include <WiFi.h>
@@ -33,6 +34,14 @@ int HubClient::postJson(const char* path, const String& payload, uint16_t timeou
 
 void HubClient::loop() {
     if (!config_ || !config_->enableHub) return;
+    // Never OTA / heartbeat-drive resets while offline capture owns RAM + WiFi.
+    // Hub may still advertise PiDrive otaUrl for this MAC → would ESP.restart()
+    // and wipe the RAM capture before TCP replay finishes.
+    if (OfflineCapture::instance().blocksWifiSupervise()) {
+        otaPending_ = false;
+        otaUrl_ = "";
+        return;
+    }
     unsigned long now = millis();
     unsigned long interval = (unsigned long)config_->heartbeatIntervalS * 1000UL;
     if (interval < 5000UL) interval = 5000UL;
@@ -75,9 +84,20 @@ void HubClient::sendHeartbeat() {
             }
             if (!resp["otaUrl"].isNull()) {
                 String u = resp["otaUrl"].as<String>();
+                // Cross-flash guard: hub still lists this MAC as PiDrive — refuse
+                // non-hu-probe artifacts so a heartbeat cannot wipe a field session.
                 if (u.length() > 0) {
-                    otaPending_ = true;
-                    otaUrl_ = u;
+                    String ul = u;
+                    ul.toLowerCase();
+                    if (ul.indexOf("hu-probe") < 0 &&
+                        (ul.indexOf("pidrive") >= 0 || ul.indexOf("pi-drive") >= 0)) {
+                        Serial.printf("[OTA] ignore foreign url %s\n", u.c_str());
+                    } else if (OfflineCapture::instance().blocksWifiSupervise()) {
+                        Serial.println("[OTA] ignore during offline capture");
+                    } else {
+                        otaPending_ = true;
+                        otaUrl_ = u;
+                    }
                 }
             }
         }

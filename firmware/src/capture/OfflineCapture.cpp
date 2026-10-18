@@ -27,11 +27,16 @@ const char* OfflineCapture::stateName() const {
 
 bool OfflineCapture::allocBuffer() {
     freeBuffer();
-    cap_ = kDefaultCap;
-    buf_ = static_cast<uint8_t*>(malloc(cap_));
-    if (!buf_) {
-        cap_ = 48 * 1024;
-        buf_ = static_cast<uint8_t*>(malloc(cap_));
+    // Prefer 64 KiB; fall back under fragmentation after long tcp_live sessions.
+    static const size_t kTry[] = {64 * 1024, 48 * 1024, 32 * 1024, 24 * 1024};
+    buf_ = nullptr;
+    cap_ = 0;
+    for (size_t i = 0; i < sizeof(kTry) / sizeof(kTry[0]); i++) {
+        buf_ = static_cast<uint8_t*>(malloc(kTry[i]));
+        if (buf_) {
+            cap_ = kTry[i];
+            break;
+        }
     }
     if (!buf_) {
         cap_ = 0;
@@ -40,6 +45,8 @@ bool OfflineCapture::allocBuffer() {
     used_ = 0;
     recordCount_ = 0;
     overflow_ = 0;
+    Serial.printf("[OFFLINE] capture buffer %u bytes (free_heap=%u)\n", (unsigned)cap_,
+                  (unsigned)ESP.getFreeHeap());
     return true;
 }
 
@@ -92,8 +99,22 @@ void OfflineCapture::pumpTcp(uint32_t maxMs) {
     while (millis() - t0 < maxMs) {
         tcp_->loop();
         yield();
-        delay(20);
+        delay(10);
         if (EventBus::instance().pending() == 0 && tcp_->connected()) break;
+    }
+}
+
+/** Drain ring during replay so a 254+ Rec capture cannot drop before WiFi TX. */
+void OfflineCapture::pumpTcpWhilePending(uint32_t maxMs, size_t keepBelow) {
+    if (!tcp_) return;
+    if (EventBus::instance().pending() < keepBelow) return;
+    unsigned long t0 = millis();
+    while (millis() - t0 < maxMs) {
+        tcp_->loop();
+        yield();
+        delay(5);
+        if (EventBus::instance().pending() < keepBelow && tcp_->connected()) break;
+        if (EventBus::instance().pending() == 0) break;
     }
 }
 
@@ -115,7 +136,11 @@ bool OfflineCapture::arm(Session* session, MscGadget* msc, ReadInstrument* inst,
     if (session_ && session_->active()) session_->stop();
     // Free EventBus String heap before large capture malloc (OOM→reboot risk).
     EventBus::instance().clear();
-    delay(100);
+    delay(50);
+    EventBus::instance().clear();
+    delay(150);
+    Serial.printf("[OFFLINE] pre-alloc free_heap=%u max_alloc=%u\n",
+                  (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxAllocHeap());
 
     wallclock_[0] = 0;
     time_t now = time(nullptr);
@@ -146,9 +171,59 @@ bool OfflineCapture::arm(Session* session, MscGadget* msc, ReadInstrument* inst,
     return true;
 }
 
+void OfflineCapture::setMarkerSequence(const char* const* markers, uint8_t count) {
+    markerCount_ = 0;
+    markerIndex_ = 0;
+    lastMarker_[0] = 0;
+    if (!markers || count == 0) {
+        // Default S2-style operator markers (audit: play_start + audible/track).
+        static const char* const kDefault[] = {
+            "play_start", "track_next", "audible_change", "replay", "stop"};
+        markers = kDefault;
+        count = 5;
+    }
+    if (count > kMaxMarkers) count = kMaxMarkers;
+    for (uint8_t i = 0; i < count; i++) {
+        if (!markers[i]) continue;
+        snprintf(markerSeq_[markerCount_], kMarkerNameLen, "%s", markers[i]);
+        markerCount_++;
+    }
+}
+
+void OfflineCapture::queueNextExperimentMarker() {
+    if (!capturing() || markerCount_ == 0) return;
+    const char* name = markerSeq_[markerIndex_ % markerCount_];
+    markerIndex_++;
+    snprintf(lastMarker_, sizeof(lastMarker_), "%s", name);
+    appendMarkerRec(ProbeClock::nowUs(), name);
+    Serial.printf("[OFFLINE] marker %s (%u/%u)\n", name, markerIndex_, markerCount_);
+}
+
+void OfflineCapture::saveLastRun(bool complete, uint32_t dropped) {
+    lastRun_.valid = true;
+    snprintf(lastRun_.wallclock, sizeof(lastRun_.wallclock), "%s", wallclock_);
+    snprintf(lastRun_.vehicle, sizeof(lastRun_.vehicle), "%s", vehicle_.c_str());
+    snprintf(lastRun_.scenario, sizeof(lastRun_.scenario), "%s", scenario_.c_str());
+    snprintf(lastRun_.stopReason, sizeof(lastRun_.stopReason), "%s", stopReason_.c_str());
+    snprintf(lastRun_.uploadStatus, sizeof(lastRun_.uploadStatus), "%s",
+             uploadStatus_.c_str());
+    snprintf(lastRun_.endStrategy, sizeof(lastRun_.endStrategy), "%s",
+             endStrategy_.c_str());
+    lastRun_.records = recordCount_;
+    lastRun_.bytes = (uint32_t)used_;
+    lastRun_.cap = (uint32_t)cap_;
+    lastRun_.overflow = overflow_;
+    lastRun_.dropped = dropped;
+    lastRun_.measureMs = autoDetachMs_;
+    lastRun_.complete = complete;
+    // Probe-side gate (collector still checks recv_seq_gaps). Overflow/drops → FAIL.
+    lastRun_.integrityPass = (overflow_ == 0) && (dropped == 0) && complete;
+}
+
 bool OfflineCapture::beginCapture(const String& vehicle, const String& scenario,
                                   const String& profileId, bool softUsb,
-                                  uint32_t autoDetachMs, const String& endStrategy) {
+                                  uint32_t autoDetachMs, const String& endStrategy,
+                                  const char* const* markers, uint8_t markerCount) {
     if (state_ != State::Arming && state_ != State::Idle) return false;
     if (state_ == State::Idle) return false;
     vehicle_ = vehicle;
@@ -157,6 +232,7 @@ bool OfflineCapture::beginCapture(const String& vehicle, const String& scenario,
     softUsb_ = softUsb;
     autoDetachMs_ = autoDetachMs;
     endStrategy_ = (endStrategy == "soft_detach") ? "soft_detach" : "media_hide";
+    setMarkerSequence(markers, markerCount);
     autoDetached_ = false;
     mediaHidden_ = false;
     fallbackDetached_ = false;
@@ -204,7 +280,9 @@ void OfflineCapture::requestStop(const char* reason) {
 
 void OfflineCapture::queueMarker(const char* name) {
     if (!capturing()) return;
-    appendMarkerRec(ProbeClock::nowUs(), name ? name : "operator");
+    const char* n = name && name[0] ? name : "operator";
+    snprintf(lastMarker_, sizeof(lastMarker_), "%s", n);
+    appendMarkerRec(ProbeClock::nowUs(), n);
 }
 
 void OfflineCapture::appendMarkerRec(int64_t tUs, const char* name) {
@@ -328,7 +406,11 @@ bool OfflineCapture::replayAll() {
             default:
                 break;
         }
-        if ((off / sizeof(Rec) & 7) == 7) yield();
+        // Keep EventBus from overflowing during burst replay (collector seq gaps).
+        if ((off / sizeof(Rec) & 3) == 3) {
+            pumpTcpWhilePending(200, EVENT_RING_SIZE / 4);
+            yield();
+        }
     }
 
     // Footer health note as capture_health-ish marker fields via session stop note.
@@ -356,6 +438,10 @@ bool OfflineCapture::replayAll() {
     foot["dropped"] = EventBus::instance().dropped();
     foot["published"] = EventBus::instance().published();
     foot["complete"] = (overflow_ == 0);
+    foot["record_size"] = (uint32_t)sizeof(Rec);
+    foot["capacity_bytes"] = (uint32_t)cap_;
+    foot["integrity_pass"] =
+        (overflow_ == 0) && (EventBus::instance().dropped() == 0);
     EventBus::instance().publish(foot);
 
     session_->stop();
@@ -402,13 +488,13 @@ bool OfflineCapture::finalizeAndUpload() {
         return false;
     }
     // Must establish TCP before/during replay — App::loop is blocked here.
-    pumpTcp(8000);
+    pumpTcp(12000);
     uploadStatus_ = "replay_enqueued";
     bool okReplay = replayAll();
-    pumpTcp(20000);
-    uploadStatus_ = okReplay
-                        ? ((EventBus::instance().pending() == 0) ? "delivered" : "queued")
-                        : "replay_failed";
+    pumpTcp(45000);
+    const bool drained = EventBus::instance().pending() == 0 && tcp_ && tcp_->connected();
+    uploadStatus_ = okReplay ? (drained ? "delivered" : "queued") : "replay_failed";
+    // Prefer session id captured during replay (stop clears active_ but keeps id_).
     if (session_ && session_->id().length()) {
         JsonDocument health;
         int64_t t = ProbeClock::publishUs(ProbeClock::nowUs());
@@ -428,16 +514,28 @@ bool OfflineCapture::finalizeAndUpload() {
         health["transport_epoch_end"] = transportEpochEnd_;
         health["transport_epoch"] = transportEpochEnd_;
         health["upload_status"] = uploadStatus_;
-        health["dropped"] = EventBus::instance().dropped();
+        const uint32_t dropped = EventBus::instance().dropped();
+        const bool complete = okReplay && overflow_ == 0 && dropped == 0;
+        health["dropped"] = dropped;
         health["published"] = EventBus::instance().published();
-        health["complete"] = okReplay && overflow_ == 0;
+        health["complete"] = complete;
+        health["record_size"] = (uint32_t)sizeof(Rec);
+        health["capacity_bytes"] = (uint32_t)cap_;
+        health["integrity_pass"] = complete;
         PanicTail::appendPrevious(health.as<JsonObject>());
         EventBus::instance().publish(health);
-        pumpTcp(5000);
+        pumpTcp(30000);
+        if (EventBus::instance().pending() == 0 && tcp_ && tcp_->connected()) {
+            uploadStatus_ = "delivered";
+        }
+        saveLastRun(complete, dropped);
+    } else {
+        saveLastRun(false, EventBus::instance().dropped());
     }
-    Serial.printf("[OFFLINE] done replay=%d records=%u pending=%u tcp=%d\n",
+    Serial.printf("[OFFLINE] done replay=%d records=%u pending=%u dropped=%u tcp=%d integrity=%d\n",
                   okReplay ? 1 : 0, recordCount_, (unsigned)EventBus::instance().pending(),
-                  tcp_ && tcp_->connected() ? 1 : 0);
+                  (unsigned)EventBus::instance().dropped(),
+                  tcp_ && tcp_->connected() ? 1 : 0, lastRun_.integrityPass ? 1 : 0);
     freeBuffer();
     if (msc_) {
         if (fallbackDetached_) msc_->softAttach();
@@ -471,8 +569,8 @@ void OfflineCapture::poll(MscGadget* msc) {
         if (held >= 1500) {
             requestStop("boot_long");
         } else if (held >= 30) {
-            queueMarker("boot");
-            Serial.println("[OFFLINE] marker boot");
+            // Experiment markers while WiFi is down (audit: marker ohne WiFi).
+            queueNextExperimentMarker();
         }
     }
     bootWasDown_ = down;
@@ -519,6 +617,25 @@ void OfflineCapture::poll(MscGadget* msc) {
     }
 }
 
+void OfflineCapture::toBudgetJson(JsonObject obj) const {
+    const size_t target = kDefaultCap;
+    const size_t fallback = fallbackCapBytes();
+    const size_t actual = cap_ ? cap_ : target;
+    obj["capacity_bytes"] = (uint32_t)actual;
+    obj["capacity_target_bytes"] = (uint32_t)target;
+    obj["capacity_fallback_bytes"] = (uint32_t)fallback;
+    obj["record_size"] = (uint32_t)sizeof(Rec);
+    obj["estimated_max_records"] = (uint32_t)maxRecordsForCap(actual);
+    obj["max_duration_ms"] = kMaxCaptureMs;
+    obj["measure_ms"] = autoDetachMs_;
+    if (capturing() && autoDetachMs_ > 0) {
+        unsigned long elapsed = millis() - captureStartedMs_;
+        obj["elapsed_ms"] = (uint32_t)elapsed;
+        obj["remaining_ms"] =
+            (elapsed < autoDetachMs_) ? (uint32_t)(autoDetachMs_ - elapsed) : 0;
+    }
+}
+
 void OfflineCapture::toStatusJson(JsonObject obj) const {
     obj["state"] = stateName();
     obj["active"] = active();
@@ -537,4 +654,33 @@ void OfflineCapture::toStatusJson(JsonObject obj) const {
     obj["fallback_detached"] = fallbackDetached_;
     obj["transport_epoch_start"] = transportEpochStart_;
     obj["transport_epoch_end"] = transportEpochEnd_;
+    obj["last_marker"] = lastMarker_;
+    obj["marker_index"] = markerIndex_;
+    obj["marker_count"] = markerCount_;
+    {
+        JsonArray arr = obj["markers"].to<JsonArray>();
+        for (uint8_t i = 0; i < markerCount_; i++) arr.add(markerSeq_[i]);
+    }
+    {
+        JsonObject budget = obj["capture_budget"].to<JsonObject>();
+        toBudgetJson(budget);
+    }
+    if (lastRun_.valid) {
+        JsonObject lr = obj["last_run"].to<JsonObject>();
+        lr["wallclock"] = lastRun_.wallclock;
+        lr["vehicle"] = lastRun_.vehicle;
+        lr["scenario"] = lastRun_.scenario;
+        lr["records"] = lastRun_.records;
+        lr["bytes"] = lastRun_.bytes;
+        lr["cap"] = lastRun_.cap;
+        lr["overflow"] = lastRun_.overflow;
+        lr["dropped"] = lastRun_.dropped;
+        lr["complete"] = lastRun_.complete;
+        lr["upload_status"] = lastRun_.uploadStatus;
+        lr["stop_reason"] = lastRun_.stopReason;
+        lr["end_strategy"] = lastRun_.endStrategy;
+        lr["measure_ms"] = lastRun_.measureMs;
+        lr["integrity_pass"] = lastRun_.integrityPass;
+        lr["integrity"] = lastRun_.integrityPass ? "PASS" : "FAIL";
+    }
 }

@@ -43,7 +43,7 @@ SoftAP-Setup: `ESP-HuProbe-Setup`.
 
 - [Konzept](docs/KONZEPT.md)
 - [Schema v2](docs/SCHEMA.md) — `t_us`, USB/BOT/SCSI, `capture_health`
-- [Offline-Capture 0.2.24](docs/OFFLINE-CAPTURE.md) — RAM-Capture, Media-Hide, Upload/Recovery
+- [Offline-Capture 0.2.26](docs/OFFLINE-CAPTURE.md) — Experiment-Messlauf, Marker, Integrity-Gate, Hub-OTA-Guard
 - [GATE-01 Measurement Integrity](docs/GATES.md)
 - [Szenarien](docs/SZENARIEN.md)
 - [Medienvariation](docs/MEDIA_VARIATION.md)

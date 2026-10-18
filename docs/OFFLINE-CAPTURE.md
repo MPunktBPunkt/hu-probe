@@ -1,32 +1,50 @@
-# Offline-Capture 0.2.24
+# Offline-Capture 0.2.26
 
-FW 0.2.24 zeichnet kurze Messfenster bei abgeschaltetem WLAN in einem
+FW 0.2.26 zeichnet kurze Messfenster bei abgeschaltetem WLAN in einem
 RAM-Puffer auf und spielt sie nach dem Messende über den normalen
-TCP/JSONL-Pfad zum Collector aus. Es gibt keine persistente Capture-Datei auf
-der Probe: Reset oder Spannungsverlust vor erfolgreichem Upload verliert den
-Puffer.
+TCP/JSONL-Pfad zum Collector aus. Es gibt **keine Flash-Capture-Partition**:
+Abholen = RAM→TCP-Replay. Reset oder Spannungsverlust vor erfolgreichem Upload
+verliert den Puffer.
+
+**Reset-Frage (Lab 2026-10-18):** Das Auslesen/Replay aus dem Capture-RAM
+löst **keinen** `ESP.restart()` aus. Beobachtete Software-Resets kamen von
+**Hub-OTA** (MAC noch als PiDrive registriert → `otaUrl` nach WiFi-Reconnect).
+Ab 0.2.26: OTA während Offline blockiert; PiDrive-Artifacts werden ignoriert.
+
+Ab **0.2.25/0.2.26** liegt darüber eine Experiment-Schicht: ein WebUI-Button
+startet einen vollständigen Messlauf (Arm → WiFi aus → Capture → Finalize →
+Upload → Integritätsurteil) mit Szenario-Profil, Capture-Budget und
+Offline-Markern.
 
 ## Ablauf und Bedienung
 
-1. Solange WLAN verfügbar ist, `POST /api/offline/start` senden.
-2. Die Probe beendet eine eventuell aktive Live-Session, reserviert 64 KiB RAM
-   (48 KiB Fallback), merkt sich die Wallclock, stoppt WLAN und wartet 500 ms.
-3. Optional erfolgt mit `soft_usb=true` ein Soft-Re-Enum vollständig im
-   WLAN-freien Fenster. Danach werden TinyUSB-/BOT-Ereignisse mit ihrem
-   Capture-`t_us` im RAM aufgezeichnet.
-4. Die Messung endet durch Timer, langen BOOT-Druck (mindestens 1,5 s),
-   Unplug/Umount plus 1,5 s Idle oder spätestens nach drei Minuten. Ein kurzer
-   BOOT-Druck setzt den Marker `boot`.
-5. Die Probe beendet den MSC-Zugriff, schaltet WLAN wieder ein und spielt die
-   RAM-Records als Schema-v2-JSONL mit `transport=ram_offline` aus. Ein eigener
-   Upload-Endpunkt existiert nicht; Upload und Abschluss laufen automatisch.
+### Empfohlen: Experiment-Messlauf (WebUI)
 
-Beispiel:
+1. WebUI öffnen → Abschnitt **Messlauf**.
+2. Fahrzeug + Experiment wählen (z. B. `bmw` / `S2 Prefetch`), Dauer und Ende
+   prüfen.
+3. **▶ Offline-Messung starten** — die Probe antwortet mit `capture_budget`,
+   schaltet WLAN ab und erfasst nur noch USB.
+4. Während Capture: **BOOT kurz** = nächster Experiment-Marker
+   (`play_start` → `track_next` → …); **BOOT lang** (≥1,5 s) = Stop.
+5. Nach Timer / Unplug / BOOT: Finalize, WLAN wieder an, TCP-Replay.
+6. UI zeigt `Integrity: PASS|FAIL` aus `offline.last_run`.
+
+### API
 
 ```bash
+# Experiment (Profil-Defaults + Marker-Sequenz)
+curl -X POST http://PROBE/api/experiment/start \
+  -H 'Content-Type: application/json' \
+  -d '{"vehicle":"bmw","experiment":"s2_prefetch","soft_usb":true,"measure_ms":60000}'
+
+# Roh-Offline (wie bisher; Marker aus Szenario-Profil, falls bekannt)
 curl -X POST http://PROBE/api/offline/start \
   -H 'Content-Type: application/json' \
   -d '{"vehicle":"lab_debian","scenario":"s0_plug_enum","profile_id":"lab_debian","soft_usb":true,"measure_ms":12000}'
+
+# Verfügbare Experimente + Budget
+curl http://PROBE/api/experiments
 ```
 
 `auto_detach_ms` und `measure_ms` sind gleichbedeutend; `auto_detach_ms` hat
@@ -34,10 +52,24 @@ Vorrang. `POST /api/offline/stop` setzt `api_stop`, ist nach WLAN-OFF aber
 normalerweise nicht mehr erreichbar. Für Feldläufe BOOT, Timer oder Unplug
 verwenden.
 
+## Experiment-Profile
+
+| ID | Default-Dauer | Ende | Offline-Marker (BOOT-Zyklus) |
+|----|---------------|------|------------------------------|
+| `s0_plug_enum` | 12 s | media_hide | plug_ready → stop |
+| `s1_eager_eof` | 45 s | media_hide | play_start → audible_change → stop |
+| `s2_prefetch` | 60 s | media_hide | play_start → track_next → audible_change → stop |
+| `s3_cache_hit` | 90 s | media_hide | play_start → audible → stop → replay → … |
+| `s4_remount` | 90 s | soft_detach | inkl. replug |
+| `s5`…`s7` | 60–120 s | media_hide | generische Operator-Marker |
+
+Epistemik (Audit): ohne `play_start` + (`audible_change` | `track_next`) bleibt
+S2 = **UNKNOWN**.
+
 ## Media-Hide und Soft-Detach
 
-`end_strategy` ist ab 0.2.24 standardmäßig `media_hide` und wird in der
-Konfiguration als `offlineEndStrategy` gespeichert.
+`end_strategy` ist standardmäßig `media_hide` und wird in der Konfiguration als
+`offlineEndStrategy` gespeichert.
 
 - `media_hide`: Das LUN wird zuerst als nicht vorhanden gemeldet. USB bleibt
   attached; damit bleibt die Device-Stack-/Transport-Epoche möglichst
@@ -53,16 +85,16 @@ ein soft-detachtes USB-Gerät wieder attached.
 
 ## API-Felder
 
-`POST /api/offline/start` akzeptiert:
+`POST /api/experiment/start` akzeptiert:
 
-- `vehicle`, `scenario`, `profile_id`
-- `soft_usb` (Default `false`)
-- `auto_detach_ms` oder Alias `measure_ms` (Default `0`)
-- `end_strategy`: `media_hide` oder `soft_detach`; ungültige Werte werden
-  nicht übernommen
+- `vehicle`, `experiment` (oder `scenario`), `profile_id`
+- `soft_usb`, `measure_ms` / `auto_detach_ms`, `end_strategy`
+- fehlende Felder kommen aus dem Experiment-Profil
 
-Die Startantwort enthält `ok`, `action=offline_arm`, `soft_usb`,
-`auto_detach_ms`, `end_strategy` und `note=wifi_off_then_capture`.
+Die Startantwort enthält zusätzlich `capture_budget`
+(`capacity_bytes`, `record_size`, `estimated_max_records`, `max_duration_ms`,
+`measure_ms`) und die Marker-Liste.
+
 `GET /api/status` enthält unter `offline`:
 
 - `state`, `active`, `capturing`
@@ -70,19 +102,38 @@ Die Startantwort enthält `ok`, `action=offline_arm`, `soft_usb`,
 - `stop_reason`, `soft_usb`, `auto_detach_ms`, `end_strategy`
 - `upload_status`, `media_hidden`, `fallback_detached`
 - `transport_epoch_start`, `transport_epoch_end`
+- `markers`, `last_marker`, `marker_index`, `capture_budget`
+- `last_run` — nach Abschluss: Records, Overflow, Dropped, `integrity` PASS/FAIL
 
 Mögliche Upload-Zustände sind unter anderem `wifi_connecting`, `wifi_retry`,
 `replay_enqueued`, `delivered`, `queued` und `replay_failed`.
 
-## Capture-Health und Panic-Tail
+## Capture-Budget
+
+Compact-Record-Größe × Kapazität begrenzt die Fensterlänge. Vor dem Start meldet
+die Probe das Budget; Overflow markiert die Session als nicht quantitativ
+verwertbar. Typisch ~64 KiB (Fallback 48 KiB); `record_size` steht in Status und
+`capture_health`.
+
+## Capture-Health und Integritäts-Gate
 
 Beim Replay/Abschluss wird `ev=capture_health` mit mindestens
 `transport=ram_offline`, `offline_records`, `offline_bytes`,
 `offline_overflow`, `offline_wallclock`, `end_reason`, `end_strategy`,
-Transport-Epochen, `upload_status`, `dropped`, `published` und `complete`
-erzeugt. Eine Session ist nur dann uneingeschränkt verwertbar, wenn insbesondere
-`offline_overflow=0`, `dropped=0`, `complete=true` und auf Collector-Seite keine
-`recv_seq_gaps` vorliegen.
+Transport-Epochen, `upload_status`, `dropped`, `published`, `complete` und ab
+0.2.25 `integrity_pass` / `record_size` / `capacity_bytes` erzeugt.
+
+**Quantitative Auswertung nur wenn:**
+
+| Bedingung | Pflicht |
+|-----------|---------|
+| `offline_overflow` | `= 0` |
+| `dropped` | `= 0` |
+| `complete` | `true` |
+| Collector `recv_seq_gaps` | `0` |
+
+Sonst: Session archivieren, nur diagnostisch nutzen (`validate_session.py`
+meldet FAIL). Upload bei Overflow bleibt erwünscht — Verwertung nicht.
 
 Der `panic_tail` hält bis zu acht grobe Lifecycle-/USB-Breadcrumbs in
 RTC-Speicher. Nach einem Reset erscheinen der vorherige Tail und
@@ -91,7 +142,7 @@ aber weder die verlorenen RAM-Records noch eine vollständige Timeline.
 
 ## Recovery bei WiFi-/Uploadfehlern
 
-Schlägt der WLAN-Reconnect nach 25 s fehl, bleibt die State Machine in
+Schlägt der WLAN-Reconnect nach 25 s fehl, bleibt die State Machine in
 `uploading`, der RAM-Puffer wird nicht freigegeben und `poll()` versucht den
 Abschluss alle drei Sekunden erneut. Bei Media-Hide wird vor weiteren Versuchen
 einmalig Soft-Detach als Fallback ausgelöst. Den Probe-Strom nicht trennen:
@@ -104,15 +155,27 @@ Zeitfenster gepumpt; `upload_status=queued` bedeutet daher noch nicht
 
 Der Lab-Lauf mit FW 0.2.23
 (`20261015-181642_lab_debian_s0_plug_enum`) belegte den vollständigen
-RAM-Offline-Zyklus mit 96 Records, `overflow=0` und `complete=true`. Der einzige
-BMW-Offline-Versuch desselben Abends lieferte dagegen keine finalisierte
-`ram_offline`-Session; alle verwertbaren BMW-Daten waren `tcp_live`. Er ist ein
-Fehlversuch, kein Beleg für oder gegen die 0.2.24-Media-Hide-Semantik. Ein neuer
-BMW-Lauf muss anhand seines eigenen `capture_health` bewertet werden.
+RAM-Offline-Zyklus mit 96 Records, `overflow=0` und `complete=true`.
+
+Lab 0.2.26 (2026-10-18): Experiment-Start → Offline → Probe-`last_run`
+`integrity=PASS` (z. B. 190 Rec, overflow=0, `transport=ram_offline`).
+Event-Format brauchbar (`lba`, `gap_us`, `dur_us`, `bot_source=tinyusb`).
+Collector-Flush nach Burst-Replay kann noch Seq-Lücken zeigen (`upload_status=queued`);
+TCP-Framing (atomare Zeilen + Collector `raw_decode`) ist gehärtet, vollständiges
+`capture_health` auf Collector-Seite bleibt Lab-Nacharbeit. Hub während Lab-Offline
+`enableHub=false` empfohlen.
+
+Der einzige BMW-Offline-Versuch (0.2.23) lieferte keine finalisierte
+`ram_offline`-Session; verwertbare BMW-Daten waren `tcp_live`. Ein neuer
+BMW-Lauf mit 0.2.26 muss anhand seines eigenen `capture_health` /
+`integrity_pass` bewertet werden.
 
 Alle Events stammen aus TinyUSB bzw. dem Device-Stack. Eine kontinuierliche
 Device-Stack-Epoche ist **keine Wire-Aufzeichnung**; Bus-Timing und Vorgänge
 unterhalb der Instrumentierung bleiben `Wire=UNKNOWN`.
+
+Offline-Capture eliminiert WiFi als Messvariable — das beweist nicht, dass WiFi
+die Ursache früherer Störungen war (Hardware-Audit 2026-10-18).
 
 ## Hotpath-Regel
 

@@ -127,3 +127,47 @@ def test_offline_health_overflow_is_incomplete(tmp_path: Path) -> None:
     assert meta["capture"]["offline_overflow"] == 1
     assert meta["capture"]["upload_status"] == "delivered"
     assert meta["capture"]["complete"] is False
+    assert meta["capture"]["integrity_pass"] is False
+
+
+def test_offline_health_integrity_pass(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    sid = "20261018-120000_lab_debian_s0_plug_enum"
+    store.append_event(
+        {
+            "v": 2,
+            "sid": sid,
+            "seq": 1,
+            "t_us": 1,
+            "ev": "session",
+            "action": "start",
+            "vehicle": "lab_debian",
+            "scenario": "s0_plug_enum",
+            "profile_id": "lab_debian",
+            "transport": "ram_offline",
+        }
+    )
+    store.append_event(
+        {
+            "v": 2,
+            "sid": sid,
+            "seq": 2,
+            "t_us": 2,
+            "ev": "capture_health",
+            "dropped": 0,
+            "tcp_disconnects": 0,
+            "stream_lost": 0,
+            "offline_overflow": 0,
+            "complete": True,
+            "integrity_pass": True,
+            "record_size": 99,
+            "capacity_bytes": 65536,
+            "upload_status": "delivered",
+        }
+    )
+
+    meta = json.loads((tmp_path / sid / "session.json").read_text(encoding="utf-8"))
+    assert meta["capture"]["complete"] is True
+    assert meta["capture"]["integrity_pass"] is True
+    assert meta["capture"]["record_size"] == 99
+    assert meta["capture"]["capacity_bytes"] == 65536

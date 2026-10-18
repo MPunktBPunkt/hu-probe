@@ -136,11 +136,29 @@ def main() -> int:
         if not health:
             fails.append("offline session missing capture_health")
         else:
-            missing_health = sorted(required - set(health[-1]))
+            h = health[-1]
+            missing_health = sorted(required - set(h))
             if missing_health:
                 fails.append(f"offline capture_health missing {missing_health}")
             else:
                 oks.append("offline reset/epoch/end/upload health present")
+            # Hard integrity gate: quantitative use only when clean.
+            overflow = h.get("offline_overflow")
+            dropped = h.get("dropped")
+            complete = h.get("complete")
+            if overflow not in (0, None) and overflow != 0:
+                fails.append(f"offline integrity FAIL offline_overflow={overflow}")
+            elif dropped not in (0, None) and dropped != 0:
+                fails.append(f"offline integrity FAIL dropped={dropped}")
+            elif complete is False:
+                fails.append("offline integrity FAIL complete=false")
+            elif overflow == 0 and dropped == 0 and complete is True:
+                oks.append("offline integrity PASS (overflow=0 dropped=0 complete)")
+            if version_at_least(fw_version, (0, 2, 25)):
+                if h.get("integrity_pass") is True:
+                    oks.append("capture_health.integrity_pass=true")
+                elif h.get("integrity_pass") is False:
+                    fails.append("capture_health.integrity_pass=false")
 
     if not any(e.get("ev") == "session" and e.get("action") == "start" for e in events):
         fails.append("missing session start")
