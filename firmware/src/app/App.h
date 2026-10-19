@@ -28,6 +28,8 @@ private:
     void emitStatus();
     void emitCaptureHealth();
     void superviseWifi();
+    /** Soft-detach USB, clear EventBus, hard WiFi stop/start (lab OTG coex). */
+    void enterCoexHold(const char* reason);
     /** Runs off Arduino loop — USB load was starving coex soft-detach (0.2.16). */
     static void wifiCoexTask(void* arg);
 

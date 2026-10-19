@@ -1,6 +1,7 @@
 #include "capture/OfflineCapture.h"
 #include "BuildFlags.h"
 #include "core/EmitOrigin.h"
+#include "core/HuMem.h"
 #include "core/HwInfo.h"
 #include "core/ProbeClock.h"
 #include "core/PanicTail.h"
@@ -130,15 +131,38 @@ const char* OfflineCapture::stateName() const {
 
 bool OfflineCapture::allocBuffer() {
     freeBuffer();
-    // Prefer 64 KiB; fall back under fragmentation after long tcp_live sessions.
-    static const size_t kTry[] = {64 * 1024, 48 * 1024, 32 * 1024, 24 * 1024};
     buf_ = nullptr;
     cap_ = 0;
-    for (size_t i = 0; i < sizeof(kTry) / sizeof(kTry[0]); i++) {
-        buf_ = static_cast<uint8_t*>(malloc(kTry[i]));
-        if (buf_) {
-            cap_ = kTry[i];
+#ifdef BOARD_HAS_PSRAM
+    // Leave ~512 KiB PSRAM for EventBus slots / WiFi; use the rest for capture.
+    static const size_t kTryPsram[] = {1024 * 1024, 768 * 1024, 512 * 1024, 256 * 1024,
+                                      128 * 1024, 64 * 1024};
+    for (size_t i = 0; i < sizeof(kTryPsram) / sizeof(kTryPsram[0]); i++) {
+        buf_ = static_cast<uint8_t*>(HuMem::allocPreferPsram(kTryPsram[i]));
+        if (buf_ && HuMem::ptrInPsram(buf_)) {
+            cap_ = kTryPsram[i];
             break;
+        }
+        if (buf_) {
+            // Got internal heap unexpectedly — keep only if ≥ default target.
+            if (kTryPsram[i] >= kDefaultCap) {
+                cap_ = kTryPsram[i];
+                break;
+            }
+            HuMem::freePreferPsram(buf_);
+            buf_ = nullptr;
+        }
+    }
+#endif
+    if (!buf_) {
+        // Prefer 64 KiB; fall back under fragmentation after long tcp_live sessions.
+        static const size_t kTry[] = {64 * 1024, 48 * 1024, 32 * 1024, 24 * 1024};
+        for (size_t i = 0; i < sizeof(kTry) / sizeof(kTry[0]); i++) {
+            buf_ = static_cast<uint8_t*>(malloc(kTry[i]));
+            if (buf_) {
+                cap_ = kTry[i];
+                break;
+            }
         }
     }
     if (!buf_) {
@@ -156,14 +180,15 @@ bool OfflineCapture::allocBuffer() {
     overflow_ = 0;
     postFinalizeRecords_ = 0;
     postFinalizeDropped_ = 0;
-    Serial.printf("[OFFLINE] capture buffer %u bytes (free_heap=%u)\n", (unsigned)cap_,
-                  (unsigned)ESP.getFreeHeap());
+    Serial.printf("[OFFLINE] capture buffer %u bytes psram=%d free_heap=%u free_psram=%u\n",
+                  (unsigned)cap_, HuMem::ptrInPsram(buf_) ? 1 : 0, (unsigned)ESP.getFreeHeap(),
+                  (unsigned)ESP.getFreePsram());
     return true;
 }
 
 void OfflineCapture::freeBuffer() {
     if (buf_) {
-        free(buf_);
+        HuMem::freePreferPsram(buf_);
         buf_ = nullptr;
     }
     cap_ = used_ = 0;

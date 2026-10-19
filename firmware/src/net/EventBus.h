@@ -31,12 +31,18 @@ public:
     void noteTcpTxFail() { tcpTxFail_++; }
     /** millis() of last successful TCP event TX (0 = never). */
     unsigned long lastTcpTxOkMs() const { return lastTcpTxOkMs_; }
+    bool ringInPsram() const { return ringInPsram_; }
+    size_t ringSize() const { return ringSize_; }
     void fillCaptureHealth(JsonObject obj, uint32_t seqFirst, uint32_t seqLast,
                            bool tcpConnected) const;
 
 private:
     EventBus() = default;
-    String ring_[EVENT_RING_SIZE];
+    bool ensureRing();
+
+    String* ring_ = nullptr;
+    size_t ringSize_ = EVENT_RING_SIZE;
+    bool ringInPsram_ = false;
     size_t head_ = 0;
     size_t tail_ = 0;
     size_t count_ = 0;
