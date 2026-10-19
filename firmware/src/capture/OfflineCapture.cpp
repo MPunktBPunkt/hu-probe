@@ -1,13 +1,116 @@
 #include "capture/OfflineCapture.h"
 #include "BuildFlags.h"
+#include "core/EmitOrigin.h"
+#include "core/HwInfo.h"
 #include "core/ProbeClock.h"
 #include "core/PanicTail.h"
+#include "media/MediaLayout.h"
+#include "msc/MscBotTap.h"
 #include "net/EventBus.h"
 #include "net/TcpStreamer.h"
 #include <WiFi.h>
 #include <esp_wifi.h>
+#include <sys/time.h>
 #include <time.h>
+#include <climits>
 #include <cstring>
+
+namespace {
+
+const char* const kRecFormat = "compact/1";
+constexpr uint32_t kCbwSignature = 0x43425355;  // "USBC"
+constexpr uint32_t kCswSignature = 0x53425355;  // "USBS"
+
+void putLe16(uint8_t* p, uint16_t v) {
+    p[0] = (uint8_t)v;
+    p[1] = (uint8_t)(v >> 8);
+}
+
+void putLe32(uint8_t* p, uint32_t v) {
+    p[0] = (uint8_t)v;
+    p[1] = (uint8_t)(v >> 8);
+    p[2] = (uint8_t)(v >> 16);
+    p[3] = (uint8_t)(v >> 24);
+}
+
+uint16_t getLe16(const uint8_t* p) { return (uint16_t)(p[0] | (p[1] << 8)); }
+
+uint32_t getLe32(const uint8_t* p) {
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) |
+           ((uint32_t)p[3] << 24);
+}
+
+/** Length-prefixed string, at most maxLen chars. Returns bytes written. */
+size_t putStr(uint8_t* p, const char* s, size_t maxLen) {
+    const size_t n = s ? strnlen(s, maxLen) : 0;
+    p[0] = (uint8_t)n;
+    if (n) memcpy(p + 1, s, n);
+    return 1 + n;
+}
+
+size_t getStr(const uint8_t* p, size_t avail, char* out, size_t outLen) {
+    out[0] = 0;
+    if (avail < 1) return 0;
+    size_t n = p[0];
+    if (n > avail - 1) n = avail - 1;
+    const size_t take = n < outLen - 1 ? n : outLen - 1;
+    memcpy(out, p + 1, take);
+    out[take] = 0;
+    return 1 + n;
+}
+
+}  // namespace
+
+/**
+ * Every kind has a fixed or self-describing payload length, so a corrupt length byte
+ * (which would shift all following records) is caught instead of replayed as garbage.
+ */
+bool OfflineCapture::recShapeOk(uint8_t kind, const uint8_t* b, size_t bn) {
+    switch (kind) {
+        case 1:
+            return bn >= 12 && b[11] <= 16 && bn == 12u + b[11];
+        case kKindData: {
+            if (bn < 23) return false;
+            if (b[22] != kRegionInline) {
+                return bn == 23 && b[22] <= static_cast<uint8_t>(MediaLayout::Region::Beyond);
+            }
+            size_t o = 23;
+            for (int i = 0; i < 3; i++) {
+                if (o >= bn) return false;
+                o += 1u + b[o];
+            }
+            return o == bn;
+        }
+        case 3: return bn == 9;
+        case 4:
+        case 11: return bn == 0;
+        case 5: return bn == 8;
+        case 6:
+        case 7:
+        case kKindUmount: return bn == 2;
+        case 9:
+        case 10: return bn == 1;
+        case kKindMarker: return bn < kMarkerNameLen;
+        default: return false;
+    }
+}
+
+bool OfflineCapture::timeFits(int64_t tUs) const {
+    const int64_t d = tUs - tBaseUs_;
+    return d >= INT32_MIN && d <= INT32_MAX;
+}
+
+uint8_t OfflineCapture::regionCode(const char* tag, const char* kind) {
+    if (!tag || !kind) return kRegionInline;
+    for (uint8_t r = 0; r <= static_cast<uint8_t>(MediaLayout::Region::Beyond); r++) {
+        const MediaLayout::Region reg = static_cast<MediaLayout::Region>(r);
+        if (strcmp(tag, MediaLayout::regionTag(reg)) == 0 &&
+            strcmp(kind, MediaLayout::regionKind(reg)) == 0) {
+            return r;
+        }
+    }
+    return kRegionInline;
+}
 
 OfflineCapture& OfflineCapture::instance() {
     static OfflineCapture oc;
@@ -43,8 +146,16 @@ bool OfflineCapture::allocBuffer() {
         return false;
     }
     used_ = 0;
+    lastRecOff_ = kNoRec;
+    tBaseUs_ = ProbeClock::nowUs();
+    timeRangeDropped_ = 0;
+    replayError_ = nullptr;
+    replaySeq_ = 0;
+    replayOff_ = 0;
     recordCount_ = 0;
     overflow_ = 0;
+    postFinalizeRecords_ = 0;
+    postFinalizeDropped_ = 0;
     Serial.printf("[OFFLINE] capture buffer %u bytes (free_heap=%u)\n", (unsigned)cap_,
                   (unsigned)ESP.getFreeHeap());
     return true;
@@ -93,6 +204,16 @@ bool OfflineCapture::wifiOn() {
     return true;
 }
 
+void OfflineCapture::reconnectWifiThrottled() {
+    // Association + DHCP needs several seconds; WiFi.reconnect() on every loop pass aborts
+    // each attempt (the old Drain loop never reconnected → frozen purple until RST).
+    unsigned long now = millis();
+    if (lastWifiReconnectMs_ != 0 && now - lastWifiReconnectMs_ < kWifiReconnectEveryMs) return;
+    lastWifiReconnectMs_ = now;
+    Serial.println("[OFFLINE] WiFi lost during upload — reconnect");
+    WiFi.reconnect();
+}
+
 void OfflineCapture::pumpTcp(uint32_t maxMs) {
     if (!tcp_) return;
     unsigned long t0 = millis();
@@ -125,6 +246,8 @@ bool OfflineCapture::arm(Session* session, MscGadget* msc, ReadInstrument* inst,
     inst_ = inst;
     tcp_ = tcp;
     state_ = State::Arming;
+    sessionStarted_ = false;
+    EmitOrigin::clear();
     stopRequested_ = false;
     stopReason_ = "";
     uploadStatus_ = "arming";
@@ -139,10 +262,16 @@ bool OfflineCapture::arm(Session* session, MscGadget* msc, ReadInstrument* inst,
     delay(50);
     EventBus::instance().clear();
     delay(150);
-    Serial.printf("[OFFLINE] pre-alloc free_heap=%u max_alloc=%u\n",
-                  (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxAllocHeap());
+    armFreeHeap_ = ESP.getFreeHeap();
+    armMaxAlloc_ = ESP.getMaxAllocHeap();
+    Serial.printf("[OFFLINE] pre-alloc free_heap=%u max_alloc=%u\n", (unsigned)armFreeHeap_,
+                  (unsigned)armMaxAlloc_);
 
     wallclock_[0] = 0;
+    struct timeval tv;
+    gettimeofday(&tv, nullptr);
+    anchorCaptureUs_ = ProbeClock::nowUs();
+    anchorUnixUs_ = tv.tv_sec > 100000 ? (int64_t)tv.tv_sec * 1000000LL + tv.tv_usec : 0;
     time_t now = time(nullptr);
     struct tm tm;
     if (now > 100000 && gmtime_r(&now, &tm)) {
@@ -199,6 +328,26 @@ void OfflineCapture::queueNextExperimentMarker() {
     Serial.printf("[OFFLINE] marker %s (%u/%u)\n", name, markerIndex_, markerCount_);
 }
 
+void OfflineCapture::queueFreeMarker(int64_t tUs) {
+    freeMarkIdx_++;
+    snprintf(lastMarker_, sizeof(lastMarker_), "mark_%02u", (unsigned)freeMarkIdx_);
+    appendMarkerRec(tUs, lastMarker_);
+    Serial.printf("[OFFLINE] marker %s\n", lastMarker_);
+}
+
+void OfflineCapture::softReplug() {
+    if (!msc_) return;
+    softReplugs_++;
+    snprintf(lastMarker_, sizeof(lastMarker_), "soft_replug");
+    appendMarkerRec(ProbeClock::nowUs(), lastMarker_);
+    // D+ only: power stays, the HU sees detach -> attach. Must not end the capture even if
+    // "unmount ends capture" is on.
+    ignoreUnplugUntilMs_ = millis() + kSoftReplugHoldMs + 2500;
+    msc_->softCycle(kSoftReplugHoldMs);
+    Serial.printf("[OFFLINE] soft replug #%u hold=%ums\n", (unsigned)softReplugs_,
+                  (unsigned)kSoftReplugHoldMs);
+}
+
 void OfflineCapture::saveLastRun(bool complete, uint32_t dropped) {
     lastRun_.valid = true;
     snprintf(lastRun_.wallclock, sizeof(lastRun_.wallclock), "%s", wallclock_);
@@ -223,9 +372,15 @@ void OfflineCapture::saveLastRun(bool complete, uint32_t dropped) {
 bool OfflineCapture::beginCapture(const String& vehicle, const String& scenario,
                                   const String& profileId, bool softUsb,
                                   uint32_t autoDetachMs, const String& endStrategy,
-                                  const char* const* markers, uint8_t markerCount) {
+                                  const char* const* markers, uint8_t markerCount,
+                                  bool endOnUnmount, bool freeMarkers) {
     if (state_ != State::Arming && state_ != State::Idle) return false;
     if (state_ == State::Idle) return false;
+    endOnUnmount_ = endOnUnmount;
+    freeMarkers_ = freeMarkers;
+    freeMarkIdx_ = 0;
+    softReplugs_ = 0;
+    pendingTapMs_ = 0;
     vehicle_ = vehicle;
     scenario_ = scenario;
     profileId_ = profileId;
@@ -233,6 +388,7 @@ bool OfflineCapture::beginCapture(const String& vehicle, const String& scenario,
     autoDetachMs_ = autoDetachMs;
     endStrategy_ = (endStrategy == "soft_detach") ? "soft_detach" : "media_hide";
     setMarkerSequence(markers, markerCount);
+    if (freeMarkers_) markerCount_ = 0;
     autoDetached_ = false;
     mediaHidden_ = false;
     fallbackDetached_ = false;
@@ -285,19 +441,60 @@ void OfflineCapture::queueMarker(const char* name) {
     appendMarkerRec(ProbeClock::nowUs(), n);
 }
 
-void OfflineCapture::appendMarkerRec(int64_t tUs, const char* name) {
-    Rec rec;
-    memset(&rec, 0, sizeof(rec));
-    rec.kind = kKindMarker;
-    rec.tUs = tUs;
-    if (name) snprintf(rec.tag, sizeof(rec.tag), "%s", name);
-    if (used_ + sizeof(Rec) > cap_) {
-        overflow_++;
+void OfflineCapture::appendAutoMarker(int64_t tUs, const char* name) {
+    if (!acceptsPending()) return;
+    if (capturing()) {
+        appendMarkerRec(tUs, name);
         return;
     }
-    memcpy(buf_ + used_, &rec, sizeof(Rec));
-    used_ += sizeof(Rec);
-    recordCount_++;
+    const size_t n = name ? strnlen(name, kMarkerNameLen - 1) : 0;
+    uint8_t* p = reserveRec(kRecHdr + n, true, tUs);
+    if (!p) return;
+    writeHdr(p, kKindMarker, (uint8_t)(kRecHdr + n), true, 0, tUs);
+    if (n) memcpy(p + kRecHdr, name, n);
+}
+
+void OfflineCapture::appendMarkerRec(int64_t tUs, const char* name) {
+    const size_t n = name ? strnlen(name, kMarkerNameLen - 1) : 0;
+    uint8_t* p = reserveRec(kRecHdr + n, false, tUs);
+    if (!p) return;
+    writeHdr(p, kKindMarker, (uint8_t)(kRecHdr + n), false, 0, tUs);
+    if (n) memcpy(p + kRecHdr, name, n);
+}
+
+uint8_t* OfflineCapture::reserveRec(size_t n, bool post, int64_t tUs) {
+    if (!timeFits(tUs)) {
+        // Never store a clamped (wrong) time; the loss is counted and fails integrity.
+        timeRangeDropped_++;
+        if (post) postFinalizeDropped_++;
+        return nullptr;
+    }
+    if (post) {
+        // Diagnostic tail after media_hide: never counts against capture integrity.
+        if (postFinalizeRecords_ >= kMaxPostFinalizeRecs || used_ + n > cap_) {
+            postFinalizeDropped_++;
+            return nullptr;
+        }
+        postFinalizeRecords_++;
+    } else {
+        if (used_ + n > cap_) {
+            overflow_++;
+            return nullptr;
+        }
+        recordCount_++;
+    }
+    uint8_t* p = buf_ + used_;
+    lastRecOff_ = used_;
+    used_ += n;
+    return p;
+}
+
+void OfflineCapture::writeHdr(uint8_t* p, uint8_t kind, uint8_t len, bool post, uint8_t flag,
+                              int64_t tUs) const {
+    p[0] = kind;
+    p[1] = len;
+    p[2] = (uint8_t)((post ? 0x80 : 0) | (flag & 0x7F));
+    putLe32(p + 3, (uint32_t)(int32_t)(tUs - tBaseUs_));  // range checked by reserveRec
 }
 
 bool OfflineCapture::appendPending(uint8_t kind, int64_t tUs, const uint8_t* raw31,
@@ -306,91 +503,213 @@ bool OfflineCapture::appendPending(uint8_t kind, int64_t tUs, const uint8_t* raw
                                    uint16_t wIndex, uint16_t wLength, uint8_t bmRequestType,
                                    uint8_t bRequest, uint8_t epAddr, uint8_t flag,
                                    const char* tag, const char* kindStr, const char* dir) {
-    if (!capturing() || !buf_) return false;
-    if (used_ + sizeof(Rec) > cap_) {
-        overflow_++;
-        return false;
+    if (!acceptsPending()) return false;
+    const bool post = !capturing();
+    // Coalesce contiguous DATA chunks of one CBW (4 KiB callbacks) into one record:
+    // an 8 MiB read would otherwise need ~2048 records.
+    if (kind == kKindData && lastRecOff_ != kNoRec && buf_[lastRecOff_] == kKindData) {
+        uint8_t* last = buf_ + lastRecOff_;
+        const int64_t lastT = tBaseUs_ + (int32_t)getLe32(last + 3);
+        const uint32_t lastBytes = getLe32(last + kRecHdr + 8);
+        const uint16_t chunks = getLe16(last + kRecHdr + 20);
+        if (((last[2] & 0x80) != 0) == post && getLe32(last + kRecHdr) == botTag &&
+            getLe32(last + kRecHdr + 4) + lastBytes / 512u == lba && (lastBytes % 512u) == 0 &&
+            chunks < 0xFFFF && tUs >= lastT) {
+            putLe32(last + kRecHdr + 8, lastBytes + nBytes);
+            const int64_t span = tUs + (int64_t)durUs - lastT;
+            putLe32(last + kRecHdr + 12, (span > 0xFFFFFFFFLL) ? 0xFFFFFFFFu : (uint32_t)span);
+            putLe16(last + kRecHdr + 20, (uint16_t)(chunks + 1));
+            return true;
+        }
     }
-    Rec rec;
-    memset(&rec, 0, sizeof(rec));
-    rec.kind = kind;
-    rec.flag = flag;
-    rec.bmRequestType = bmRequestType;
-    rec.bRequest = bRequest;
-    rec.epAddr = epAddr;
-    rec.wValue = wValue;
-    rec.wIndex = wIndex;
-    rec.wLength = wLength;
-    rec.tUs = tUs;
-    rec.botTag = botTag;
-    rec.lba = lba;
-    rec.nBytes = nBytes;
-    rec.durUs = durUs;
-    rec.gapUs = gapUs;
-    if (raw31) memcpy(rec.raw, raw31, 31);
-    if (tag) snprintf(rec.tag, sizeof(rec.tag), "%s", tag);
-    if (kindStr) snprintf(rec.kindStr, sizeof(rec.kindStr), "%s", kindStr);
-    if (dir) snprintf(rec.dir, sizeof(rec.dir), "%s", dir);
-    memcpy(buf_ + used_, &rec, sizeof(Rec));
-    used_ += sizeof(Rec);
-    recordCount_++;
+
+    uint8_t body[kRecMax - kRecHdr];
+    size_t n = 0;
+    switch (kind) {
+        case 1: {  // CBW minus its constant signature; CDB up to the last non-zero byte
+            if (!raw31) return false;
+            memcpy(body, raw31 + 4, 11);  // tag, xfer_len, flags, lun, cdb_len
+            uint8_t cdb = 16;
+            while (cdb > 0 && raw31[15 + cdb - 1] == 0) cdb--;
+            body[11] = cdb;
+            memcpy(body + 12, raw31 + 15, cdb);
+            n = 12u + cdb;
+            break;
+        }
+        case kKindData: {
+            putLe32(body, botTag);
+            putLe32(body + 4, lba);
+            putLe32(body + 8, nBytes);
+            putLe32(body + 12, durUs);
+            putLe32(body + 16, gapUs);
+            putLe16(body + 20, 1);  // coalesced chunk count
+            const uint8_t region = regionCode(tag, kindStr);
+            const bool dirIn = dir && strcmp(dir, "in") == 0;
+            n = 23;
+            if (region != kRegionInline && dirIn) {
+                body[22] = region;
+            } else {
+                body[22] = kRegionInline;
+                n += putStr(body + n, tag, 7);
+                n += putStr(body + n, kindStr, 7);
+                n += putStr(body + n, dir, 3);
+            }
+            break;
+        }
+        case 3:  // CSW minus signature: tag, residue, status
+            if (!raw31) return false;
+            memcpy(body, raw31 + 4, 9);
+            n = 9;
+            break;
+        case 5:
+            body[0] = bmRequestType;
+            body[1] = bRequest;
+            putLe16(body + 2, wValue);
+            putLe16(body + 4, wIndex);
+            putLe16(body + 6, wLength);
+            n = 8;
+            break;
+        case 6:
+        case 7:
+        case 8:
+            putLe16(body, wValue);
+            n = 2;
+            break;
+        case 9:
+        case 10:
+            body[0] = epAddr;
+            n = 1;
+            break;
+        case 4:
+        case 11:
+            break;
+        default:
+            // A new MscBotTap::Kind needs an encoding here and in recShapeOk/replayOneRec.
+            return false;
+    }
+    uint8_t* p = reserveRec(kRecHdr + n, post, tUs);
+    if (!p) return false;
+    writeHdr(p, kind, (uint8_t)(kRecHdr + n), post, flag, tUs);
+    if (n) memcpy(p + kRecHdr, body, n);
+    if (post) return true;
     // Host unmount ends the window — but not during soft re-enum grace.
-    if (kind == kKindUmount && capturing() && millis() >= ignoreUnplugUntilMs_) {
+    if (kind == kKindUmount && endOnUnmount_ && capturing() && millis() >= ignoreUnplugUntilMs_) {
         requestStop("umount");
     }
     return true;
 }
 
+bool OfflineCapture::replayFail(const char* why) {
+    replayError_ = why;
+    Serial.printf("[OFFLINE] replay stopped: %s at byte %u (record %u)\n", why,
+                  (unsigned)replayOff_, (unsigned)replaySeq_);
+    return false;
+}
+
+bool OfflineCapture::replayComplete() const {
+    return !replayError_ && replayOff_ == used_ &&
+           replaySeq_ == recordCount_ + postFinalizeRecords_;
+}
+
 bool OfflineCapture::replayOneRec() {
     if (!inst_ || !buf_ || !session_ || !sessionStarted_) return false;
-    if (replayOff_ + sizeof(Rec) > used_) return false;
-    Rec rec;
-    memcpy(&rec, buf_ + replayOff_, sizeof(Rec));
-    replayOff_ += sizeof(Rec);
+    if (replayOff_ == used_) {
+        if (replaySeq_ != recordCount_ + postFinalizeRecords_) return replayFail("count_mismatch");
+        return false;
+    }
+    if (replayOff_ + kRecHdr > used_) return replayFail("truncated_header");
+    const uint8_t* p = buf_ + replayOff_;
+    const uint8_t len = p[1];
+    if (len < kRecHdr || replayOff_ + len > used_) return replayFail("bad_length");
+    if (!recShapeOk(p[0], p + kRecHdr, len - kRecHdr)) return replayFail("bad_shape");
+    replayOff_ += len;
+    const uint32_t captureSeq = replaySeq_++;
+    const uint8_t kind = p[0];
+    const bool post = (p[2] & 0x80) != 0;
+    const uint8_t flag = p[2] & 0x7F;
+    const int64_t tUs = tBaseUs_ + (int32_t)getLe32(p + 3);
+    const uint8_t* b = p + kRecHdr;
+    const size_t bn = len - kRecHdr;
     const char* ser = msc_ ? msc_->identitySerial() : nullptr;
-    if (rec.kind == kKindMarker) {
-        session_->marker(rec.tag[0] ? rec.tag : "operator", "offline");
+    // B7: unclamped capture time + buffer index; live tail keeps "post_finalize".
+    EmitOrigin::set(post ? "post_finalize_buffered" : "offline", true, true, captureSeq);
+    if (kind == kKindMarker) {
+        char name[kMarkerNameLen];
+        const size_t n = bn < sizeof(name) - 1 ? bn : sizeof(name) - 1;
+        memcpy(name, b, n);
+        name[n] = 0;
+        session_->marker(name[0] ? name : "operator", "offline", tUs);
+        EmitOrigin::set("post_finalize", true);
         return true;
     }
-    switch (rec.kind) {
-        case 1:
-            inst_->emitBotCbwTinyusb(rec.raw, rec.tUs);
+    switch (kind) {
+        case 1: {
+            if (bn < 12 || b[11] > 16 || bn < 12u + b[11]) break;
+            uint8_t raw[31] = {0};
+            putLe32(raw, kCbwSignature);
+            memcpy(raw + 4, b, 11);
+            memcpy(raw + 15, b + 12, b[11]);
+            inst_->emitBotCbwTinyusb(raw, tUs);
             break;
-        case 2:
-            inst_->emitBotDataTinyusb(rec.tUs, rec.botTag, rec.lba, rec.nBytes, rec.durUs,
-                                      rec.gapUs, rec.tag, rec.kindStr, rec.dir);
+        }
+        case 2: {
+            if (bn < 23) break;
+            char tag[8] = "";
+            char kindStr[8] = "";
+            char dir[4] = "in";
+            if (b[22] == kRegionInline) {
+                size_t o = 23;
+                o += getStr(b + o, bn - o, tag, sizeof(tag));
+                o += getStr(b + o, bn - o, kindStr, sizeof(kindStr));
+                getStr(b + o, bn - o, dir, sizeof(dir));
+            } else {
+                const MediaLayout::Region r = static_cast<MediaLayout::Region>(b[22]);
+                snprintf(tag, sizeof(tag), "%s", MediaLayout::regionTag(r));
+                snprintf(kindStr, sizeof(kindStr), "%s", MediaLayout::regionKind(r));
+            }
+            inst_->setReplayChunks(getLe16(b + 20));
+            inst_->emitBotDataTinyusb(tUs, getLe32(b), getLe32(b + 4), getLe32(b + 8),
+                                      getLe32(b + 12), getLe32(b + 16), tag, kindStr, dir);
+            inst_->setReplayChunks(1);
             break;
-        case 3:
-            inst_->emitBotCswTinyusb(rec.raw, rec.tUs);
+        }
+        case 3: {
+            if (bn < 9) break;
+            uint8_t raw[13];
+            putLe32(raw, kCswSignature);
+            memcpy(raw + 4, b, 9);
+            inst_->emitBotCswTinyusb(raw, tUs);
             break;
+        }
         case 4:
-            inst_->emitBotNeedResetTinyusb(rec.tUs);
+            inst_->emitBotNeedResetTinyusb(tUs);
             break;
         case 5:
-            inst_->emitUsbControlTinyusb(rec.bmRequestType, rec.bRequest, rec.wValue, rec.wIndex,
-                                         rec.wLength, rec.tUs, rec.flag != 0);
+            if (bn < 8) break;
+            inst_->emitUsbControlTinyusb(b[0], b[1], getLe16(b + 2), getLe16(b + 4),
+                                         getLe16(b + 6), tUs, flag != 0);
             break;
         case 6:
-            inst_->emitUsbEpochTinyusb(rec.tUs, "set_address", 0, rec.wValue, nullptr);
+            inst_->emitUsbEpochTinyusb(tUs, "set_address", 0, bn >= 2 ? getLe16(b) : 0, nullptr);
             break;
         case 7:
-            inst_->emitUsbEpochTinyusb(rec.tUs, "mount", 0, rec.wValue,
+            inst_->emitUsbEpochTinyusb(tUs, "mount", 0, bn >= 2 ? getLe16(b) : 0,
                                        "set_configuration_n_via_tud_mount_cb");
-            inst_->emitIdentityDescriptorsAt(rec.tUs, ser ? ser : "HP0001", "HUPROBE", "HU_PROBE",
+            inst_->emitIdentityDescriptorsAt(tUs, ser ? ser : "HP0001", "HUPROBE", "HU_PROBE",
                                              FW_VERSION);
-            inst_->emitPhaseAt(rec.tUs, "enum", "plug");
+            inst_->emitPhaseAt(tUs, "enum", "plug");
             break;
         case 8:
-            inst_->emitUsbEpochTinyusb(rec.tUs, "umount", 0, 0,
+            inst_->emitUsbEpochTinyusb(tUs, "umount", 0, 0,
                                        "set_configuration_0_or_bus_via_tud_umount_cb");
-            inst_->emitPhaseAt(rec.tUs, "idle", "unplug");
+            inst_->emitPhaseAt(tUs, "idle", "unplug");
             break;
         case 9:
-            inst_->emitUsbEpochTinyusb(rec.tUs, "ep_stall", rec.epAddr, 0, nullptr);
+            inst_->emitUsbEpochTinyusb(tUs, "ep_stall", bn >= 1 ? b[0] : 0, 0, nullptr);
             break;
         case 10:
-            inst_->emitUsbEpochTinyusb(rec.tUs, "ep_clear_halt", rec.epAddr, 0,
-                                       rec.flag ? "need_reset_active_not_healed" : nullptr);
+            inst_->emitUsbEpochTinyusb(tUs, "ep_clear_halt", bn >= 1 ? b[0] : 0, 0,
+                                       flag ? "need_reset_active_not_healed" : nullptr);
             break;
         case 11:
             inst_->emitUsbEpochTinyusb(rec.tUs, "msc_bot_reset", 0, 0, "msc_req_reset_0xff");
@@ -398,6 +717,7 @@ bool OfflineCapture::replayOneRec() {
         default:
             break;
     }
+    EmitOrigin::set("post_finalize", true);
     return true;
 }
 
@@ -439,22 +759,47 @@ void OfflineCapture::publishOfflineHealth(bool final) {
     health["offline_records"] = recordCount_;
     health["offline_bytes"] = (uint32_t)used_;
     health["offline_overflow"] = overflow_;
+    health["offline_post_finalize_records"] = postFinalizeRecords_;
+    health["offline_post_finalize_dropped"] = postFinalizeDropped_;
+    // B7 fixed (0.2.31): replayed events carry unclamped capture_t_us + capture_seq.
+    health["replay_clock"] = "capture_t_us";
+    if (inst_) inst_->turStatsJson(health.as<JsonObject>());
     health["offline_wallclock"] = wallclock_;
+    if (anchorUnixUs_) {
+        health["offline_anchor_unix_us"] = (long long)anchorUnixUs_;
+        health["offline_anchor_capture_t_us"] = (long long)anchorCaptureUs_;
+    }
+    health["offline_time_range_dropped"] = timeRangeDropped_;
+    health["replay_records"] = replaySeq_;
+    health["replay_complete"] = replayComplete();
+    if (replayError_) health["replay_error"] = replayError_;
     health["end_reason"] = stopReason_;
     health["end_strategy"] = endStrategy_;
+    health["end_on_unmount"] = endOnUnmount_;
+    health["free_markers"] = freeMarkers_;
+    health["soft_replugs"] = softReplugs_;
     health["transport_epoch_start"] = transportEpochStart_;
     health["transport_epoch_end"] = transportEpochEnd_;
     health["transport_epoch"] = transportEpochEnd_;
     health["upload_status"] = uploadStatus_;
     const uint32_t dropped = EventBus::instance().dropped();
     const bool drained = EventBus::instance().pending() == 0;
-    const bool complete = final && overflow_ == 0 && dropped == 0 && drained;
+    const bool complete = final && overflow_ == 0 && dropped == 0 && drained &&
+                          timeRangeDropped_ == 0 && replayComplete();
     health["dropped"] = dropped;
     health["published"] = EventBus::instance().published();
     health["complete"] = complete;
     health["integrity_pass"] = complete;
-    health["record_size"] = (uint32_t)sizeof(Rec);
+    health["record_format"] = kRecFormat;
+    const uint32_t recs = recordCount_ + postFinalizeRecords_;
+    health["record_size"] = recs ? (uint32_t)((used_ + recs / 2) / recs) : 0;
     health["capacity_bytes"] = (uint32_t)cap_;
+    health["arm_heap_free"] = armFreeHeap_;
+    health["arm_heap_max_alloc"] = armMaxAlloc_;
+    health["heap_free"] = ESP.getFreeHeap();
+    health["heap_min_free"] = ESP.getMinFreeHeap();
+    health["psram_bytes"] = ESP.getPsramSize();
+    health["hw_module"] = HwInfo::moduleGuess();
     PanicTail::appendPrevious(health.as<JsonObject>());
     EventBus::instance().publish(health);
     healthPublished_ = true;
@@ -462,6 +807,9 @@ void OfflineCapture::publishOfflineHealth(bool final) {
 
 void OfflineCapture::beginFinalize(MscGadget* msc) {
     if (state_ != State::Capturing) return;
+    // Flush capture-window events while still Capturing; after media_hide the host's
+    // reaction is tagged post_finalize.
+    MscBotTap::drain(256);
     state_ = State::Finalizing;
     msc_ = msc ? msc : msc_;
     // Quiet USB for WiFi TX via media_hide only. Forced soft-detach here correlated
@@ -479,12 +827,16 @@ void OfflineCapture::beginFinalize(MscGadget* msc) {
     transportEpochEnd_ = msc_ ? msc_->transportEpoch() : transportEpochStart_;
     Serial.printf("[OFFLINE] finalize reason=%s records=%u bytes=%u overflow=%u\n",
                   stopReason_.c_str(), recordCount_, (unsigned)used_, overflow_);
+    EmitOrigin::set("post_finalize", true);
     state_ = State::Uploading;
     uploadPhase_ = UploadPhase::Wifi;
     uploadPhaseSinceMs_ = millis();
     replayOff_ = 0;
+    replaySeq_ = 0;
+    replayError_ = nullptr;
     sessionStarted_ = false;
     healthPublished_ = false;
+    lastWifiReconnectMs_ = 0;
     uploadStatus_ = "wifi_connecting";
     PanicTail::breadcrumb(PanicTail::WifiUpload, transportEpochEnd_);
 }
@@ -534,13 +886,27 @@ void OfflineCapture::pollUpload() {
             break;
         }
         case UploadPhase::Replay: {
-            // Finish replay before typical post-wifiOn death window (~30–60s on lab OTG).
-            for (int i = 0; i < 10; i++) {
-                if (!replayOneRec()) {
+            // Backpressure: every queued event is a heap String (~300 B, no PSRAM). Replaying
+            // while TCP/WiFi is stalled filled the heap until WiFi itself dropped.
+            const bool linkUp = WiFi.status() == WL_CONNECTED && tcp_ && tcp_->connected();
+            if (!linkUp) {
+                if (WiFi.status() != WL_CONNECTED) reconnectWifiThrottled();
+                pumpTcp(200);
+                if (millis() - uploadPhaseSinceMs_ > kUploadStallMs) {
+                    uploadStatus_ = "replay_stalled";
                     uploadPhase_ = UploadPhase::Health;
                     uploadPhaseSinceMs_ = millis();
-                    break;
                 }
+                break;
+            }
+            if (EventBus::instance().pending() < kReplayMaxPending) {
+                for (int i = 0; i < 10; i++) {
+                    if (!replayOneRec()) {
+                        uploadPhase_ = UploadPhase::Health;
+                        break;
+                    }
+                }
+                uploadPhaseSinceMs_ = millis();
             }
             pumpTcpWhilePending(200, 16);
             break;
@@ -558,23 +924,30 @@ void OfflineCapture::pollUpload() {
             break;
         }
         case UploadPhase::Drain: {
+            // The timeout must also fire with WiFi down: the App WiFi supervisor is blocked
+            // while active(), so this phase is the only way back to Idle.
+            const bool timedOut = millis() - uploadPhaseSinceMs_ > kUploadStallMs;
             if (WiFi.status() != WL_CONNECTED) {
-                // Short retry slices — do not call full 25s wifiOn every loop.
-                WiFi.reconnect();
-                pumpTcp(200);
-                break;
+                reconnectWifiThrottled();
+                if (!timedOut) {
+                    pumpTcp(200);
+                    break;
+                }
+            } else {
+                drainUpload(400);
             }
-            drainUpload(400);
             const bool empty = EventBus::instance().pending() == 0 && tcp_ && tcp_->connected();
-            const bool timedOut = millis() - uploadPhaseSinceMs_ > 120000;
             if (empty || timedOut) {
                 uploadStatus_ = empty ? "delivered" : "queued";
                 if (empty) publishOfflineHealth(true);
                 const uint32_t dropped = EventBus::instance().dropped();
-                saveLastRun(empty && overflow_ == 0 && dropped == 0, dropped);
+                saveLastRun(empty && overflow_ == 0 && dropped == 0 && timeRangeDropped_ == 0 &&
+                                replayComplete(),
+                            dropped);
                 if (tcp_) tcp_->setOfflineDrain(false);
                 freeBuffer();
                 restoreUsbAfterUpload();
+                EmitOrigin::clear();
                 uploadPhase_ = UploadPhase::Done;
                 state_ = State::Idle;
                 Serial.printf(
@@ -603,17 +976,32 @@ void OfflineCapture::poll(MscGadget* msc) {
     bool down = digitalRead(RESET_BUTTON_PIN) == LOW;
     if (down && !bootWasDown_) {
         bootDownMs_ = millis();
+        bootDownUs_ = ProbeClock::nowUs();
     }
     if (!down && bootWasDown_ && capturing()) {
         unsigned long held = millis() - bootDownMs_;
         if (held >= 1500) {
+            pendingTapMs_ = 0;
             requestStop("boot_long");
         } else if (held >= 30) {
-            // Experiment markers while WiFi is down (audit: marker ohne WiFi).
-            queueNextExperimentMarker();
+            if (!freeMarkers_) {
+                // Experiment markers while WiFi is down (audit: marker ohne WiFi).
+                queueNextExperimentMarker();
+            } else if (pendingTapMs_ && millis() - pendingTapMs_ <= kDoubleTapMs) {
+                pendingTapMs_ = 0;
+                softReplug();
+            } else {
+                pendingTapMs_ = millis();
+                pendingTapUs_ = bootDownUs_;
+            }
         }
     }
     bootWasDown_ = down;
+    // Single press confirmed once no second press followed; stamped at the press itself.
+    if (pendingTapMs_ && !down && millis() - pendingTapMs_ > kDoubleTapMs) {
+        pendingTapMs_ = 0;
+        if (capturing()) queueFreeMarker(pendingTapUs_);
+    }
 
     if (capturing()) {
         // Timed end: hide LUN first so USB transport/device-stack evidence remains
@@ -621,6 +1009,7 @@ void OfflineCapture::poll(MscGadget* msc) {
         if (autoDetachMs_ > 0 && !autoDetached_ &&
             (millis() - captureStartedMs_ >= autoDetachMs_)) {
             autoDetached_ = true;
+            MscBotTap::drain(256);
             if (endStrategy_ == "soft_detach") {
                 Serial.println("[OFFLINE] auto soft-detach (legacy)");
                 fallbackDetached_ = msc && msc->softDetach(0);
@@ -642,7 +1031,7 @@ void OfflineCapture::poll(MscGadget* msc) {
         if (plugged) {
             wasPlugged_ = true;
             unplugSinceMs_ = 0;
-        } else if (wasPlugged_ && millis() >= ignoreUnplugUntilMs_) {
+        } else if (endOnUnmount_ && wasPlugged_ && millis() >= ignoreUnplugUntilMs_) {
             if (unplugSinceMs_ == 0) unplugSinceMs_ = millis();
             if (millis() - unplugSinceMs_ >= kUnplugIdleMs) {
                 requestStop("unplug_idle");
@@ -664,8 +1053,12 @@ void OfflineCapture::toBudgetJson(JsonObject obj) const {
     obj["capacity_bytes"] = (uint32_t)actual;
     obj["capacity_target_bytes"] = (uint32_t)target;
     obj["capacity_fallback_bytes"] = (uint32_t)fallback;
-    obj["record_size"] = (uint32_t)sizeof(Rec);
+    obj["record_format"] = kRecFormat;
+    obj["record_size"] = (uint32_t)kTypicalRecBytes;
+    obj["record_size_max"] = (uint32_t)kRecMax;
     obj["estimated_max_records"] = (uint32_t)maxRecordsForCap(actual);
+    obj["arm_heap_free"] = armFreeHeap_;
+    obj["arm_heap_max_alloc"] = armMaxAlloc_;
     obj["max_duration_ms"] = kMaxCaptureMs;
     obj["measure_ms"] = autoDetachMs_;
     if (capturing() && autoDetachMs_ > 0) {
@@ -681,6 +1074,7 @@ void OfflineCapture::toStatusJson(JsonObject obj) const {
     obj["active"] = active();
     obj["capturing"] = capturing();
     obj["records"] = recordCount_;
+    obj["post_finalize_records"] = postFinalizeRecords_;
     obj["bytes"] = (uint32_t)used_;
     obj["cap"] = (uint32_t)cap_;
     obj["overflow"] = overflow_;
@@ -689,6 +1083,9 @@ void OfflineCapture::toStatusJson(JsonObject obj) const {
     obj["soft_usb"] = softUsb_;
     obj["auto_detach_ms"] = autoDetachMs_;
     obj["end_strategy"] = endStrategy_;
+    obj["end_on_unmount"] = endOnUnmount_;
+    obj["free_markers"] = freeMarkers_;
+    obj["soft_replugs"] = softReplugs_;
     obj["upload_status"] = uploadStatus_;
     obj["media_hidden"] = mediaHidden_;
     obj["fallback_detached"] = fallbackDetached_;

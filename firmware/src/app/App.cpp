@@ -1,7 +1,10 @@
 #include "App.h"
 #include "BuildFlags.h"
 #include "BuildId.h"
+#include "capture/AutoMarker.h"
 #include "capture/OfflineCapture.h"
+#include "capture/SequenceRunner.h"
+#include "core/HwInfo.h"
 #include "core/ProbeClock.h"
 #include "core/PanicTail.h"
 #include "msc/MscBotTap.h"
@@ -64,6 +67,7 @@ void App::buildHeartbeat(JsonDocument& doc) {
     doc["fwBuildId"] = FW_BUILD_ID;
     doc["chipModel"] = HUPROBE_BOARD_LABEL;
     doc["hwType"] = HUPROBE_HW_TYPE;
+    doc["hwModule"] = HwInfo::moduleGuess();
 
     JsonObject ios = doc["ios"].to<JsonObject>();
     ios["probe_state"] = a.session_.active() ? a.session_.phase() : "idle";
@@ -114,11 +118,13 @@ void App::begin() {
     Serial.println("\n[hu-probe] " FW_VERSION);
 
     PanicTail::begin();
+    HwInfo::begin();
     led_.begin();
     config_.begin();
     EventBus::instance().begin();
     session_.begin();
     instrument_.begin(&session_);
+    AutoMarker::begin(&session_);
     // MSC first so the HU sees a stick even while WiFi portal runs.
     msc_.begin(&session_, &instrument_);
 
@@ -135,6 +141,7 @@ void App::begin() {
     hub_.setPayloadBuilder(buildHeartbeat);
     tcp_.begin(&config_);
     web_.begin(&config_, &session_, &instrument_, &msc_, &hub_, &tcp_);
+    SequenceRunner::instance().begin(&session_, &msc_, &instrument_, &tcp_);
     hub_.sendNow();
 
     // Auto-session for field use: plug → measure without opening the UI first.
@@ -203,9 +210,12 @@ void App::emitCaptureHealth() {
     doc["transport_epoch"] = msc_.transportEpoch();
     doc["end_reason"] = session_.active() ? "active" : "session_stop";
     doc["upload_status"] = tcp_.connected() ? "streaming" : "pending";
+    instrument_.turStatsJson(doc.as<JsonObject>());
     PanicTail::appendPrevious(doc.as<JsonObject>());
     doc["fw_sha"] = FW_GIT_SHA;
     doc["fw_build_id"] = FW_BUILD_ID;
+    doc["fw_dirty"] = FW_GIT_DIRTY != 0;
+    doc["hw_module"] = HwInfo::moduleGuess();
     bus.publish(doc);
 
     // NVS every ~60s only — flash erase during MSC+WiFi was a field WiFi-killer.
@@ -300,6 +310,7 @@ void App::loop() {
     // Drain Capture-tUs BOT/read before loop-now status/health (keeps t_us non-decreasing).
     msc_.loop();
     OfflineCapture::instance().poll(&msc_);
+    SequenceRunner::instance().poll();
     instrument_.tick();
     tcp_.loop();
     web_.loop();

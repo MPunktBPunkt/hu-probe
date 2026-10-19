@@ -49,6 +49,13 @@ public:
     void emitReadAggregate(int64_t tUs, uint32_t botTag, uint32_t lba, uint32_t nBytes,
                            uint32_t durUs, uint32_t gapUs, const char* tag, const char* kind);
 
+    /** Offline replay of a coalesced DATA record (n MSC chunks); 1 = normal. */
+    void setReplayChunks(uint16_t n) { chunks_ = n ? n : 1; }
+
+    /** TUR period statistics (Capture-tUs based; burst < 0.5 s, idle = 0.5…5 s). */
+    void turStatsJson(JsonObject o) const;
+    void resetTurStats();
+
     float readRateKbS() const { return readRateKbS_; }
     float turHz() const { return turHz_; }
     uint32_t readCount() const { return readCount_; }
@@ -60,6 +67,21 @@ private:
     void stamp(JsonDocument& doc);
     void stampAt(JsonDocument& doc, int64_t tUs);
     void bytesToHex(const uint8_t* in, size_t n, char* out, size_t outLen);
+    /** file / file_idx / file_blk from the active medium (B21). */
+    void addFileFields(JsonDocument& doc, uint32_t lba);
+    void noteTur(int64_t tUs);
+
+    static constexpr uint8_t kTurIdleRing = 64;
+    static constexpr uint32_t kTurBurstMs = 500;
+    static constexpr uint32_t kTurIdleMaxMs = 5000;
+    int64_t lastTurUs_ = 0;
+    uint32_t turTotal_ = 0;
+    uint32_t turBurst_ = 0;
+    uint32_t turIdle_[kTurIdleRing] = {0};
+    uint8_t turIdleHead_ = 0;
+    uint8_t turIdleCount_ = 0;
+    uint16_t chunks_ = 1;
+    char turSid_[40] = "";
 
     Session* session_ = nullptr;
     int64_t lastDataEndUs_ = 0;

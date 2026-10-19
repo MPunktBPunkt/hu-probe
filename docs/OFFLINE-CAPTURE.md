@@ -113,7 +113,64 @@ Mögliche Upload-Zustände sind unter anderem `wifi_connecting`, `wifi_retry`,
 Compact-Record-Größe × Kapazität begrenzt die Fensterlänge. Vor dem Start meldet
 die Probe das Budget; Overflow markiert die Session als nicht quantitativ
 verwertbar. Typisch ~64 KiB (Fallback 48 KiB); `record_size` steht in Status und
-`capture_health`.
+`capture_health`. Ab 0.2.31 gibt es weitere Fallback-Größen 32/24 KiB; im Feld lag bisher 32 KiB vor.
+
+**Format `compact/1` (ab 0.2.31):** Datensätze haben eine variable Länge. Im RAM
+steht nur, was sich nicht ableiten lässt; beim Upload baut `replayOneRec()` daraus
+dieselben Events wie vorher (`bot_cbw` inkl. `raw_hex`, `bot_data` inkl. `tag`/`kind`,
+`bot_csw`, `usb`, Marker).
+
+| Datensatz | vorher | `compact/1` | weggelassen bzw. abgeleitet |
+|---|---|---|---|
+| Kopf (alle) | – | 7 B | Zeit als int32 µs relativ zum Scharfschalten statt int64 |
+| CBW, TEST UNIT READY | 99 B | 19 B | Signatur `USBC` konstant, CDB nur bis zum letzten Byte ≠ 0 |
+| CBW, READ10 | 99 B | ≈ 28 B | wie oben |
+| DATA (READ10) | 99 B | 30 B | `tag`/`kind` als Regionscode (1 B), `dir` = `in` |
+| CSW | 99 B | 16 B | Signatur `USBS` konstant |
+| Control | 99 B | 15 B | – |
+| Marker | 99 B | 7 B + Namenslänge | – |
+
+Damit passen etwa 4- bis 5-mal so viele Datensätze in denselben Puffer
+(32 KiB: ≈ 1500 statt 331). `capture_budget.record_size` ist ein typischer Wert
+(22 B), `capture_health.record_size` der tatsächliche Mittelwert des Laufs;
+`record_format` nennt das Format. Unbekannte `tag`/`kind`-Kombinationen werden als
+kurze Strings im Datensatz mitgespeichert, damit nichts verloren geht.
+
+**Schutz gegen falsche Daten:**
+
+- Zeit außerhalb ±35 min vom Scharfschalten wird nicht gekappt gespeichert, sondern
+  verworfen und als `offline_time_range_dropped` gezählt (Integrity FAIL).
+- Jede Datensatzart hat eine feste oder selbstbeschreibende Länge (`recShapeOk`).
+  Passt ein Datensatz nicht, stoppt das Replay mit `replay_error`
+  (`bad_length`, `bad_shape`, `truncated_header`, `count_mismatch`), statt verschobene
+  Bytes als Events auszugeben.
+- `replay_complete` ist nur wahr, wenn alle Bytes und genau `offline_records` +
+  `offline_post_finalize_records` Datensätze abgespielt wurden. `complete` /
+  `integrity_pass` / `last_run.integrity` verlangen das zusätzlich (auch ein
+  abgebrochener Upload `replay_stalled` ist damit FAIL).
+- Zeitanker: `offline_anchor_unix_us` und `offline_anchor_capture_t_us` wurden im
+  selben Moment beim Scharfschalten gelesen. UTC eines Events =
+  `anchor_unix_us + (capture_t_us − anchor_capture_t_us)`; Genauigkeit wie die NTP-Zeit
+  der Sonde. Ohne NTP fehlen beide Felder.
+
+## Freie Aufnahme (Profil `free`, ab 0.2.31)
+
+WebUI → Karte „Messlauf“ → Experiment „Freie Aufnahme“, Dauer 5–600 s.
+
+- **BOOT kurz:** Marker `mark_01`, `mark_02`, … Der Zeitstempel ist der Moment des
+  Drückens; geschrieben wird der Marker erst, wenn 0,5 s kein zweiter Druck folgt.
+- **BOOT zweimal schnell (≤ 0,5 s zwischen dem Loslassen):** Soft-Steckzyklus. Marker
+  `soft_replug`, dann D+ für 2 s getrennt und wieder verbunden. Die Versorgung bleibt,
+  die HU sieht Abmelden und neues Anmelden. Die Aufnahme läuft weiter.
+- **BOOT lang (≥ 1,5 s):** Stop.
+- **Checkbox „Unmount/Remount der HU beendet Aufnahme“** (API `end_on_unmount`): bei
+  `free` standardmäßig aus, bei allen anderen Profilen an. Aus = ein Unmount der HU oder
+  ein Abziehen mit externer Versorgung beendet die Aufnahme nicht; Ende nur über Zeit
+  oder BOOT lang. Der Soft-Steckzyklus beendet die Aufnahme in keinem Fall.
+- **Echtes Abziehen** schaltet die Sonde ab (Strom nur von der HU) — die Daten im RAM
+  sind dann verloren.
+- Status/Health: `end_on_unmount`, `free_markers`, `soft_replugs`.
+- Höchstdauer aller Offline-Läufe jetzt 600 s (`max_duration_ms`), vorher 180 s.
 
 ## Capture-Health und Integritäts-Gate
 

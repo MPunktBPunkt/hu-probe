@@ -22,7 +22,8 @@ public:
     uint32_t nextSeq();
     uint32_t seq() const;
     uint32_t seqFirst() const;
-    void marker(const String& name, const String& note = "");
+    /** Optional tUs = Capture time (offline replay); 0 = now. */
+    void marker(const String& name, const String& note = "", int64_t tUs = 0);
     void toStatusJson(JsonObject obj) const;
 
 private:

@@ -37,9 +37,17 @@ T2                              |========================|  318 … 626  FACT li
 T3                                                        |========================|  627 … 935  FACT live + offline
 ```
 
+## Nachtrag unabhängige Auswertung
+
+Siehe [`docs/feld/2026-10-19-unabhaengige-auswertung.md`](../feld/2026-10-19-unabhaengige-auswertung.md):
+- „Enum-Grammatik" ist die Media-Loss-Reaktion der HU.
+- TUR-Leerlauf beträgt 2,239 s.
+- B21 ist ein Klassifikator-Artefakt.
+- Die Ursache von B7 ist gefunden.
+
 ## Offen
 
-- GATE-01 Prefetch-Lead (Marker + B7)
+- GATE-01 Prefetch-Lead (Marker + B7-Fix 0.2.31)
 - S3 Cache-Hit
 - NEED_RESET / Magenta-Häufigkeit operativ
 

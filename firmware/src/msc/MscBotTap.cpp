@@ -1,5 +1,6 @@
 #include "MscBotTap.h"
 #include "BuildFlags.h"
+#include "capture/AutoMarker.h"
 #include "capture/OfflineCapture.h"
 #include "core/PanicTail.h"
 #include "core/ProbeClock.h"
@@ -233,7 +234,7 @@ void MscBotTap::drain(int maxEvents) {
         pendingHead_ = pendingTail_ = pendingCount_ = 0;
         return;
     }
-    const bool offline = OfflineCapture::instance().capturing();
+    const bool offline = OfflineCapture::instance().acceptsPending();
     for (int i = 0; i < maxEvents && pendingCount_ > 0; i++) {
         Pending p = pending_[pendingHead_];
         pendingHead_ = (pendingHead_ + 1) % kPendingRing;
@@ -243,8 +244,10 @@ void MscBotTap::drain(int maxEvents) {
                 static_cast<uint8_t>(p.kind), p.tUs, p.raw, p.botTag, p.lba, p.nBytes, p.durUs,
                 p.gapUs, p.wValue, p.wIndex, p.wLength, p.bmRequestType, p.bRequest, p.epAddr,
                 p.flag, p.tag, p.kindStr, p.dir);
+            AutoMarker::observe(static_cast<uint8_t>(p.kind), p.tUs, p.raw);
             continue;
         }
+        AutoMarker::observe(static_cast<uint8_t>(p.kind), p.tUs, p.raw);
         switch (p.kind) {
             case Kind::Cbw:
                 instrument_->emitBotCbwTinyusb(p.raw, p.tUs);
@@ -315,6 +318,11 @@ uint32_t MscBotTap::currentHostTag() {
     return lastCbwTag_;
 }
 
+uint32_t MscBotTap::currentHostXferLen() {
+    const uint8_t* cbw = itfCbw();
+    return readLe32(cbw) == MSC_CBW_SIGNATURE ? readLe32(cbw + 8) : 0;
+}
+
 extern "C" {
 
 bool __real_tud_msc_test_unit_ready_cb(uint8_t lun);
@@ -339,7 +347,13 @@ bool __wrap_mscd_xfer_cb(uint8_t rhport, uint8_t ep_addr, xfer_result_t result,
 
 bool __wrap_tud_msc_test_unit_ready_cb(uint8_t lun) {
     MscBotTap::onNonDataScsiEnter();
-    return __real_tud_msc_test_unit_ready_cb(lun);
+    const bool ready = __real_tud_msc_test_unit_ready_cb(lun);
+    // Hidden medium already reports NOT READY 3A; UA stays pending until it is present.
+    if (ready && MscBotTap::consumeUnitAttention()) {
+        tud_msc_set_sense(lun, SCSI_SENSE_UNIT_ATTENTION, 0x28, 0x00);
+        return false;
+    }
+    return ready;
 }
 
 void __wrap_tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16],
@@ -491,6 +505,7 @@ void MscBotTap::queueEpStall(uint8_t) {}
 void MscBotTap::queueEpClearHalt(uint8_t) {}
 void MscBotTap::clearBotEpoch() {}
 uint32_t MscBotTap::currentHostTag() { return 0; }
+uint32_t MscBotTap::currentHostXferLen() { return 0; }
 
 ReadInstrument* MscBotTap::instrument_ = nullptr;
 uint32_t MscBotTap::lastCbwTag_ = 0;
@@ -506,3 +521,15 @@ volatile size_t MscBotTap::pendingCount_ = 0;
 uint32_t MscBotTap::pendingOverflow_ = 0;
 
 #endif
+
+volatile bool MscBotTap::uaPending_ = false;
+volatile uint32_t MscBotTap::uaSent_ = 0;
+volatile int64_t MscBotTap::uaSentUs_ = 0;
+
+bool MscBotTap::consumeUnitAttention() {
+    if (!uaPending_) return false;
+    uaPending_ = false;
+    uaSentUs_ = ProbeClock::nowUs();
+    uaSent_ = uaSent_ + 1;
+    return true;
+}

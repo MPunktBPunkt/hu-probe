@@ -4,6 +4,7 @@
 #include "msc/ReadInstrument.h"
 #include "msc/MscBotTap.h"
 #include "capture/OfflineCapture.h"
+#include "capture/SequenceRunner.h"
 #include "net/TcpStreamer.h"
 #include "net/EventBus.h"
 #include <WiFi.h>
@@ -53,6 +54,8 @@ void StatusLed::tick(const Session& session, const MscGadget& msc, const ReadIns
     if (OfflineCapture::instance().active()) {
         // Offline: green while host reads, purple otherwise (WiFi intentionally off).
         next = (msc.plugged() && recentRead) ? Mode::Measuring : Mode::OfflineCapture;
+    } else if (SequenceRunner::instance().waitingForDriver()) {
+        next = Mode::SeqPrompt;
     } else if (wifiPortal_ || WiFi.status() != WL_CONNECTED) {
         next = Mode::WifiPortal;
     } else if (bus.dropped() > 0 || msc.sampleOverflow() > 0) {
@@ -74,7 +77,8 @@ void StatusLed::tick(const Session& session, const MscGadget& msc, const ReadIns
 
 void StatusLed::apply(Mode mode, unsigned long now) {
     const unsigned blinkMs =
-        (mode == Mode::Unhealthy || mode == Mode::NeedReset) ? 200 : 400;
+        (mode == Mode::Unhealthy || mode == Mode::NeedReset || mode == Mode::SeqPrompt) ? 200
+                                                                                         : 400;
 
     if (mode != mode_) {
         mode_ = mode;
@@ -112,6 +116,9 @@ void StatusLed::apply(Mode mode, unsigned long now) {
             break;
         case Mode::OfflineCapture:
             write(28, 0, 40);  // purple — WiFi OFF, RAM capture
+            break;
+        case Mode::SeqPrompt:
+            write(blinkOn_ ? 45 : 0, blinkOn_ ? 45 : 0, blinkOn_ ? 45 : 0);  // white — driver
             break;
         case Mode::Off:
         default:

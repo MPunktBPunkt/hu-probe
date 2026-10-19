@@ -29,6 +29,17 @@ private:
     void handleOfflineStop();
     void handleExperiments();
     void handleExperimentStart();
+    void handleMediaGet();
+    void handleMediaPresets();
+    void handleMediaVariant();
+    void handleMediaMutate();
+    void handleMediaNotify();
+    void handleStallGet();
+    void handleStallPost();
+    void handleSequences();
+    void handleSequenceStart();
+    void handleSequenceCmd(const char* cmd);
+    void sendJson(int code, JsonDocument& doc);
     void handleOtaUpload();
     void handleOtaDone();
 
@@ -36,7 +47,8 @@ private:
     void armOfflineCapture(const String& vehicle, const String& scenario,
                            const String& profile, bool softUsb, uint32_t measureMs,
                            const String& endStrategy, const char* const* markers,
-                           uint8_t markerCount, const char* experimentId);
+                           uint8_t markerCount, const char* experimentId,
+                           bool endOnUnmount = true, bool freeMarkers = false);
 
     WebServer server_{80};
     ConfigStore* cfg_ = nullptr;

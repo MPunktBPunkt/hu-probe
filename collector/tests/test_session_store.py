@@ -171,3 +171,57 @@ def test_offline_health_integrity_pass(tmp_path: Path) -> None:
     assert meta["capture"]["integrity_pass"] is True
     assert meta["capture"]["record_size"] == 99
     assert meta["capture"]["capacity_bytes"] == 65536
+
+def test_media_metadata_and_tur_stats(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    sid = "20261019-120000_bmw_seq_dur"
+    store.append_event(
+        {
+            "v": 2,
+            "sid": sid,
+            "seq": 1,
+            "t_us": 0,
+            "ev": "session",
+            "action": "start",
+            "vehicle": "bmw",
+            "scenario": "seq_dur",
+            "fw_dirty": False,
+            "media": {"variant": "dur_mix", "hash": "0x1234abcd", "synthetic": True},
+        }
+    )
+    store.append_event(
+        {
+            "v": 2,
+            "sid": sid,
+            "seq": 2,
+            "t_us": 10,
+            "ev": "media_layout",
+            "variant": "dur_mix",
+            "node": 0,
+            "path": "/D010.MP3",
+            "size": 160000,
+            "extents": [[600, 313]],
+        }
+    )
+    store.append_event(
+        {
+            "v": 2,
+            "sid": sid,
+            "seq": 3,
+            "t_us": 20,
+            "ev": "capture_health",
+            "dropped": 0,
+            "offline_overflow": 0,
+            "offline_post_finalize_records": 7,
+            "replay_clock": "capture_t_us",
+            "tur_idle_median_ms": 2239,
+        }
+    )
+    meta = json.loads((tmp_path / sid / "session.json").read_text(encoding="utf-8"))
+    assert meta["fw_dirty"] is False
+    assert meta["media"]["variant"] == "dur_mix"
+    assert meta["media_layout"][0]["path"] == "/D010.MP3"
+    assert meta["media_layout"][0]["extents"] == [[600, 313]]
+    assert meta["capture"]["offline_post_finalize_records"] == 7
+    assert meta["capture"]["replay_clock"] == "capture_t_us"
+    assert meta["capture"]["tur_idle_median_ms"] == 2239

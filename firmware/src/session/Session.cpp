@@ -1,8 +1,10 @@
 #include "Session.h"
 #include "BuildFlags.h"
 #include "BuildId.h"
+#include "core/EmitOrigin.h"
 #include "core/ProbeClock.h"
 #include "core/PanicTail.h"
+#include "media/ProbeMedia.h"
 #include "net/EventBus.h"
 #include <WiFi.h>
 #include <time.h>
@@ -91,7 +93,11 @@ bool Session::start(const String& vehicle, const String& scenario, const String&
     id["volume_label"] = volumeLabel ? volumeLabel : "";
     id["board"] = HUPROBE_BOARD_LABEL;
     id["hw_type"] = HUPROBE_HW_TYPE;
+    doc["fw_dirty"] = FW_GIT_DIRTY != 0;
+    ProbeMedia::instance().toJson(doc["media"].to<JsonObject>(), false);
     EventBus::instance().publish(doc);
+    // Analyzer maps reads to files without knowing the variant (B21).
+    ProbeMedia::instance().publishLayout(this);
     return true;
 }
 
@@ -115,7 +121,8 @@ void Session::setPhase(const String& phase, const String& note, int64_t tUs) {
     phase_ = phase;
     if (!active_) return;
     JsonDocument doc;
-    int64_t t = ProbeClock::publishUs((tUs > 0) ? tUs : ProbeClock::eventNowUs());
+    const int64_t raw = (tUs > 0) ? tUs : ProbeClock::eventNowUs();
+    int64_t t = ProbeClock::publishUs(raw);
     doc["v"] = 2;
     doc["sid"] = id_;
     doc["seq"] = nextSeq();
@@ -124,13 +131,15 @@ void Session::setPhase(const String& phase, const String& note, int64_t tUs) {
     doc["ev"] = "phase";
     doc["phase"] = phase_;
     if (note.length()) doc["note"] = note;
+    EmitOrigin::apply(doc, raw);
     EventBus::instance().publish(doc);
 }
 
-void Session::marker(const String& name, const String& note) {
+void Session::marker(const String& name, const String& note, int64_t tUs) {
     if (!active_) return;
     JsonDocument doc;
-    int64_t t = ProbeClock::publishUs(ProbeClock::eventNowUs());
+    const int64_t raw = (tUs > 0) ? tUs : ProbeClock::eventNowUs();
+    int64_t t = ProbeClock::publishUs(raw);
     doc["v"] = 2;
     doc["sid"] = id_;
     doc["seq"] = nextSeq();
@@ -139,6 +148,7 @@ void Session::marker(const String& name, const String& note) {
     doc["ev"] = "marker";
     doc["name"] = name;
     if (note.length()) doc["note"] = note;
+    EmitOrigin::apply(doc, raw);
     EventBus::instance().publish(doc);
 }
 

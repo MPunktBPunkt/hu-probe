@@ -21,6 +21,7 @@ class EventBus;
  *   yellow blink  — WiFi portal / connecting
  *   white flash   — boot
  *   purple solid  — Offline-Capture active (WiFi intentionally OFF)
+ *   white blink   — sequence waits for the driver (BOOT short = start step, long = skip)
  */
 class StatusLed {
 public:
@@ -40,7 +41,8 @@ private:
         TcpDown,
         NeedReset,
         Unhealthy,
-        OfflineCapture
+        OfflineCapture,
+        SeqPrompt
     };
 
     void write(uint8_t r, uint8_t g, uint8_t b);

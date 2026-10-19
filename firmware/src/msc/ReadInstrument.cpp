@@ -1,5 +1,7 @@
 #include "ReadInstrument.h"
+#include "core/EmitOrigin.h"
 #include "core/ProbeClock.h"
+#include "media/ProbeMedia.h"
 #include "net/EventBus.h"
 #include "tusb.h"
 #include "class/msc/msc.h"
@@ -35,6 +37,7 @@ void ReadInstrument::stamp(JsonDocument& doc) {
 void ReadInstrument::stampAt(JsonDocument& doc, int64_t tUs) {
     // Late Capture-tUs (deferred BOT / phase with older mount stamp) must not walk
     // the timeline backwards. Pace remains in gap_us/dur_us.
+    const int64_t rawUs = tUs;
     tUs = ProbeClock::publishUs(tUs);
     doc["v"] = 2;
     if (session_) {
@@ -43,6 +46,69 @@ void ReadInstrument::stampAt(JsonDocument& doc, int64_t tUs) {
     }
     doc["t_us"] = (long long)tUs;
     doc["t_ms"] = ProbeClock::nowMsCompat(tUs);
+    EmitOrigin::apply(doc, rawUs);
+}
+
+void ReadInstrument::addFileFields(JsonDocument& doc, uint32_t lba) {
+    int16_t node = -1;
+    uint32_t blk = 0;
+    const ProbeMedia& media = ProbeMedia::instance();
+    const MediaLayout::Region r = media.classify(lba, &node, &blk);
+    if (node < 0) return;
+    doc["file"] = media.layout().nodes[node].name;
+    doc["file_idx"] = node;
+    if (r == MediaLayout::Region::File) doc["file_blk"] = blk;
+}
+
+void ReadInstrument::noteTur(int64_t tUs) {
+    // Per-session stats; offline replay runs after the upload session start, so the
+    // sid switch also discards TURs counted outside a session.
+    const char* sid = session_ ? session_->id().c_str() : "";
+    if (strncmp(sid, turSid_, sizeof(turSid_) - 1) != 0) {
+        resetTurStats();
+        strlcpy(turSid_, sid, sizeof(turSid_));
+    }
+    turTotal_++;
+    if (lastTurUs_ > 0 && tUs > lastTurUs_) {
+        const int64_t d = tUs - lastTurUs_;
+        const uint32_t ms = (d > 0xFFFFFFFFLL * 1000) ? 0xFFFFFFFFu : (uint32_t)(d / 1000);
+        if (ms < kTurBurstMs) {
+            turBurst_++;
+        } else if (ms <= kTurIdleMaxMs) {
+            turIdle_[turIdleHead_] = ms;
+            turIdleHead_ = (uint8_t)((turIdleHead_ + 1) % kTurIdleRing);
+            if (turIdleCount_ < kTurIdleRing) turIdleCount_++;
+        }
+    }
+    lastTurUs_ = tUs;
+}
+
+void ReadInstrument::resetTurStats() {
+    lastTurUs_ = 0;
+    turTotal_ = turBurst_ = 0;
+    turIdleHead_ = turIdleCount_ = 0;
+}
+
+void ReadInstrument::turStatsJson(JsonObject o) const {
+    o["tur_count"] = turTotal_;
+    o["tur_burst_n"] = turBurst_;
+    o["tur_idle_n"] = turIdleCount_;
+    if (turIdleCount_ == 0) return;
+    uint32_t v[kTurIdleRing];
+    for (uint8_t i = 0; i < turIdleCount_; i++) v[i] = turIdle_[i];
+    // Insertion sort (≤ 64 values).
+    for (uint8_t i = 1; i < turIdleCount_; i++) {
+        uint32_t k = v[i];
+        int j = (int)i - 1;
+        while (j >= 0 && v[j] > k) {
+            v[j + 1] = v[j];
+            j--;
+        }
+        v[j + 1] = k;
+    }
+    o["tur_idle_p10_ms"] = v[(turIdleCount_ - 1) / 10];
+    o["tur_idle_median_ms"] = v[(turIdleCount_ - 1) / 2];
+    o["tur_idle_p90_ms"] = v[((uint32_t)turIdleCount_ - 1) * 9 / 10];
 }
 
 void ReadInstrument::bytesToHex(const uint8_t* in, size_t n, char* out, size_t outLen) {
@@ -343,7 +409,10 @@ void ReadInstrument::emitBotCbwTinyusb(const uint8_t cbwRaw[31], int64_t tUs) {
     if (cbw.signature != MSC_CBW_SIGNATURE) return;
 
     uint8_t op = cbw.command[0];
-    if (op == 0x00) turCountWindow_++;
+    if (op == 0x00) {
+        turCountWindow_++;
+        noteTur(tUs);
+    }
     if (op == 0x2A) writeCount_++;
 
     char cdbHex[33];
@@ -401,6 +470,11 @@ void ReadInstrument::emitBotDataTinyusb(int64_t tUs, uint32_t botTag, uint32_t l
     doc["lba"] = lba;
     if (tag) doc["tag"] = tag;
     if (kind) doc["kind"] = kind;
+    addFileFields(doc, lba);
+    if (chunks_ > 1) {
+        doc["chunks"] = chunks_;
+        doc["coalesced"] = true;
+    }
     EventBus::instance().publish(doc);
 
     // Comfort read immediately after bot_data with the same Capture-tUs (0.2.12).
@@ -520,6 +594,11 @@ void ReadInstrument::emitReadAggregate(int64_t tUs, uint32_t botTag, uint32_t lb
     doc["gap_us"] = gapUs;
     if (tag) doc["tag"] = tag;
     if (kind) doc["kind"] = kind;
+    addFileFields(doc, lba);
+    if (chunks_ > 1) {
+        doc["chunks"] = chunks_;
+        doc["coalesced"] = true;
+    }
     EventBus::instance().publish(doc);
 }
 

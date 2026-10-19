@@ -2,8 +2,16 @@
 #include "BuildFlags.h"
 #include "capture/OfflineCapture.h"
 #include "capture/ExperimentProfiles.h"
+#include "capture/SequenceRunner.h"
+#include "core/HwInfo.h"
+#include "media/ProbeMedia.h"
+#include "msc/MscBotTap.h"
+#include "msc/MscGadget.h"
+#include "msc/ReadStall.h"
 #include <Update.h>
 #include <WiFi.h>
+
+static String profileForVehicle(const String& vehicle, const String& fallback);
 
 static const char* PAGE =
     "<!DOCTYPE html><html><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
@@ -24,6 +32,7 @@ static const char* PAGE =
     "</style></head><body>"
     "<h1>hu-probe</h1>"
     "<p class=muted>Head-Unit MSC Messsonde · " FW_VERSION " · Offline-First Experiment</p>"
+    "<p class=muted id=hwNow>Hardware: …</p>"
 
     "<div class=card>"
     "<h2>Messlauf</h2>"
@@ -34,7 +43,7 @@ static const char* PAGE =
     "<option value=mazda_cx30>mazda_cx30</option>"
     "</select></label>"
     "<label>Experiment <select id=exp></select></label>"
-    "<label>Dauer (s) <input id=dur type=number min=5 max=180 value=60 style='width:5rem'></label>"
+    "<label>Dauer (s) <input id=dur type=number min=5 max=600 value=60 style='width:5rem'></label>"
     "</div>"
     "<div class=row>"
     "<label><span>Ende</span>"
@@ -42,6 +51,8 @@ static const char* PAGE =
     "<option value=soft_detach>Soft-Detach</option></select></label>"
     "<label style='flex-direction:row;align-items:center;gap:.4rem;margin-top:1.1rem'>"
     "<input id=soft type=checkbox checked> Soft-USB Re-Enum</label>"
+    "<label style='flex-direction:row;align-items:center;gap:.4rem;margin-top:1.1rem'>"
+    "<input id=endUm type=checkbox checked> Unmount/Remount der HU beendet Aufnahme</label>"
     "</div>"
     "<p class=muted id=markHint>BOOT kurz = nächster Marker · BOOT lang (≥1,5 s) = Stop</p>"
     "<div class=row>"
@@ -53,6 +64,85 @@ static const char* PAGE =
     "<p class=muted id=budget></p>"
     "<p id=integrity></p>"
     "<pre id=lastRun class=muted>noch kein Lauf</pre>"
+    "</div>"
+
+    "<div class=card>"
+    "<h2>Medium (SynthFat)</h2>"
+    "<p class=muted id=mediaNow>aktiv: …</p>"
+    "<div class=row>"
+    "<label>Variante <select id=mpre></select></label>"
+    "<label><span>Wechsel</span><select id=mmeth><option value=cycle>USB Re-Enum</option>"
+    "<option value=remount>Remount (NOT READY)</option></select></label>"
+    "<button class=sec onclick=setMedia()>Aktivieren</button>"
+    "</div>"
+    "<details><summary class=muted>Eigene Spezifikation (JSON)</summary>"
+    "<textarea id=mspec rows=6 style='width:100%;font:inherit;font-size:.8rem'>"
+    "{\"id\":\"custom\",\"spc\":8,\"files\":[{\"path\":\"A/T1.MP3\",\"dur_s\":30,\"seed\":1}]}"
+    "</textarea>"
+    "<button class=sec onclick=setSpec()>Spezifikation laden</button></details>"
+    "<details><summary class=muted>Live-Änderung ohne Remount (ID3 / Cover / Seed)</summary>"
+    "<div class=row>"
+    "<label>Datei <select id=mfile onchange=fillMut()></select></label>"
+    "<label>Seed <input id=mseed type=number min=0 max=255 style='width:4.5rem'></label>"
+    "<label>Cover <select id=mcover><option value=''>–</option><option value=0>0 Platzhalter</option>"
+    "<option value=1>1 rot</option><option value=2>2 grün</option><option value=3>3 blau</option>"
+    "<option value=4>4 gelb</option></select></label>"
+    "</div>"
+    "<div class=row>"
+    "<label>Titel <input id=mtitle maxlength=30></label>"
+    "<label>Interpret <input id=martist maxlength=30></label>"
+    "<label>Album <input id=malbum maxlength=30></label>"
+    "</div>"
+    "<div class=row>"
+    "<label><span>Host informieren</span><select id=mnotify>"
+    "<option value=none>nein (still)</option><option value=unit_attention>UNIT ATTENTION 06/28</option>"
+    "<option value=remount>Remount (NOT READY)</option><option value=cycle>USB Re-Enum</option></select></label>"
+    "<label>Verzögerung (s) <input id=mdelay type=number min=0 max=600 value=0 style='width:5rem'></label>"
+    "<button class=sec onclick=mutate()>Ändern</button>"
+    "<button class=sec onclick=notifyUa()>Nur UNIT ATTENTION</button>"
+    "</div>"
+    "<p class=muted>Größe/Cluster bleiben gleich. Leeres Textfeld = Standardtext. "
+    "Verzögerung &gt; 0 = Änderung landet während der Offline-Messung (WLAN aus). "
+    "Nicht persistent: Variantenwechsel stellt die Spezifikation wieder her.</p>"
+    "</details>"
+    "<pre id=mfiles class=muted></pre>"
+    "</div>"
+
+    "<div class=card>"
+    "<h2>Sequenz</h2>"
+    "<div class=row>"
+    "<label>Sequenz <select id=seq></select></label>"
+    "<label style='flex-direction:row;align-items:center;gap:.4rem;margin-top:1.1rem'>"
+    "<input id=autoArm type=checkbox> ohne BOOT starten</label>"
+    "<button onclick=seqStart()>▶ Sequenz starten</button>"
+    "<button class=sec onclick=seqCmd('next')>Schritt starten</button>"
+    "<button class=sec onclick=seqCmd('skip')>Überspringen</button>"
+    "<button class=sec onclick=seqCmd('abort')>Abbrechen</button>"
+    "</div>"
+    "<p id=seqPrompt class=warn></p>"
+    "<p class=muted>LED weiß blinkend = Fahrer ist dran: BOOT kurz = Schritt starten, "
+    "BOOT lang = überspringen.</p>"
+    "</div>"
+
+    "<div class=card>"
+    "<h2>Bremse (READ10 BUSY)</h2>"
+    "<div class=row>"
+    "<label style='flex-direction:row;align-items:center;gap:.3rem'><input id=srMeta type=checkbox> FAT/DIR</label>"
+    "<label style='flex-direction:row;align-items:center;gap:.3rem'><input id=srHead type=checkbox> Dateikopf</label>"
+    "<label style='flex-direction:row;align-items:center;gap:.3rem'><input id=srBody type=checkbox checked> Audio</label>"
+    "<label><span>Tempo</span><select id=sPace><option value=fixed>fest</option>"
+    "<option value=realtime>Live-Bitrate</option></select></label>"
+    "<label>Verzögerung (ms) <input id=sDelay type=number min=1 max=120000 value=2000 style='width:6rem'></label>"
+    "</div>"
+    "<div class=row>"
+    "<label>Anzahl (0 = alle) <input id=sCount type=number min=0 value=1 style='width:5rem'></label>"
+    "<label>Start nach (s) <input id=sArm type=number min=0 max=600 value=0 style='width:5rem'></label>"
+    "<label>Fenster (s, 0 = offen) <input id=sWin type=number min=0 max=3600 value=0 style='width:5rem'></label>"
+    "<button class=sec onclick=stallOn()>Aktivieren</button>"
+    "<button class=sec onclick=stallOff()>Aus</button>"
+    "</div>"
+    "<p class=muted id=stallNow></p>"
+    "<p class=warn>Über ~20 s pro Read nur im Stand: Die HU kann das Medium abmelden.</p>"
     "</div>"
 
     "<div class=card>"
@@ -92,8 +182,10 @@ static const char* PAGE =
     "  dur.value=Math.round((e.measure_ms||60000)/1000);"
     "  end.value=e.end_strategy||'media_hide';"
     "  soft.checked=!!e.soft_usb;"
-    "  markHint.textContent='Marker (BOOT kurz): '+(e.markers||[]).join(' → ')+"
-    "    ' · BOOT lang (≥1,5 s) = Stop';"
+    "  endUm.checked=e.end_on_unmount!==false;"
+    "  markHint.textContent=e.free_markers?"
+    "    'BOOT kurz = Marker mark_01, mark_02 … · BOOT 2× schnell = Soft-Steckzyklus (2 s, Strom bleibt) · BOOT lang (≥1,5 s) = Stop':"
+    "    'Marker (BOOT kurz): '+(e.markers||[]).join(' → ')+' · BOOT lang (≥1,5 s) = Stop';"
     "}"
     "exp.onchange=applyExp;"
     "function setPhase(t,cls){phase.textContent=t;phase.className=cls||'';}"
@@ -114,8 +206,8 @@ static const char* PAGE =
     "    pbar.style.width=pct+'%';"
     "  } else if(!o||!o.active){pbar.style.width='0%'}"
     "  if(b.record_size){"
-    "    budget.textContent='Budget: '+b.estimated_max_records+' Rec × '+b.record_size+"
-    "      ' B ≤ '+(b.capacity_bytes/1024).toFixed(0)+' KiB · max '+(b.max_duration_ms/1000)+'s';"
+    "    budget.textContent='Budget: ≈'+b.estimated_max_records+' Rec (≈'+b.record_size+"
+    "      ' B/Rec, kompakt) ≤ '+(b.capacity_bytes/1024).toFixed(0)+' KiB · max '+(b.max_duration_ms/1000)+'s'"
     "      +(o.records!=null?(' · now '+o.records+' Rec / '+((o.bytes||0)/1024).toFixed(1)+' KiB'):'');"
     "  }"
     "}"
@@ -133,6 +225,20 @@ static const char* PAGE =
     "    updateProgress(o);"
     "    if(o.last_run){showIntegrity(o.last_run);if(!o.active)localArm=null}"
     "    go.disabled=!!o.active;"
+    "    const h=j.hw||{},hf=h.flash||{},hp=h.psram||{},MB=b=>Math.round((b||0)/1048576);"
+    "    hwNow.textContent='Hardware: '+(h.chip||'?')+' rev '+(h.chip_rev??'?')+' · Modul '+(h.module||'?')+"
+    "      ' · Flash '+MB(hf.bytes_real)+' MiB ('+(hf.vendor||hf.jedec_id||'?')+', genutzt '+MB(hf.bytes_configured)+')'+"
+    "      ' · PSRAM '+(hp.bytes_efuse?(MB(hp.bytes_efuse)+' MiB '+hp.bus+' '+(hp.vendor||'')+"
+    "      (hp.build_enabled?' (aktiv)':' (im Build aus)')):'keins')+"
+    "      ' · Heap frei '+Math.round((h.heap_free||0)/1024)+' KiB, größter Block '+Math.round((h.heap_max_alloc||0)/1024)+' KiB';"
+    "    const m=j.media||{};mediaNow.textContent='aktiv: '+m.variant+' · '+m.fs+' · '+"
+    "      m.sector_count+' Sektoren · spc '+m.spc+' · hash '+m.hash;"
+    "    const s=j.stall||{};stallNow.textContent=(s.enabled?(s.active?'AKTIV':'wartet auf Start'):'aus')+"
+    "      ' · gehalten '+(s.held||0)+' · abgebrochen '+(s.abandoned||0)+' · max '+(s.max_wait_ms||0)+' ms'+"
+    "      (s.last_off?(' · zuletzt aus: '+s.last_off):'');"
+    "    const q=j.sequence||{};"
+    "    seqPrompt.textContent=q.active?('['+q.state+'] Schritt '+q.step+'/'+q.steps+' · '+q.media+"
+    "      ' · '+(q.prompt||'')):(q.state&&q.state!=='idle'?('Sequenz '+q.state+(q.error?(' · '+q.error):'')):'');"
     "  }catch(e){"
     "    if(localArm){setPhase('CAPTURING · WiFi OFF (UI getrennt)','warn');updateProgress({capturing:true,capture_budget:{measure_ms:localArm.ms,elapsed_ms:Date.now()-localArm.t0}})}"
     "    else setPhase('STATUS unreachable','fail');"
@@ -140,7 +246,7 @@ static const char* PAGE =
     "}"
     "async function runExperiment(){"
     "  const body={vehicle:v.value,experiment:exp.value,profile_id:PROFILE[v.value]||v.value,"
-    "    measure_ms:Math.round(+dur.value*1000),end_strategy:end.value,soft_usb:!!soft.checked};"
+    "    measure_ms:Math.round(+dur.value*1000),end_strategy:end.value,soft_usb:!!soft.checked,end_on_unmount:!!endUm.checked};"
     "  setPhase('ARMING…','warn');go.disabled=true;"
     "  try{"
     "    const r=await fetch('/api/experiment/start',{method:'POST',headers:{'Content-Type':'application/json'},"
@@ -165,7 +271,61 @@ static const char* PAGE =
     "body:JSON.stringify({holdMs:600})});refresh()}"
     "async function remount(){await fetch('/api/usb/remount',{method:'POST',headers:{'Content-Type':'application/json'},"
     "body:JSON.stringify({bumpSerial:true})});refresh()}"
-    "loadExperiments().then(refresh);setInterval(refresh,1000);"
+    "async function loadMedia(){"
+    "  const j=await (await fetch('/api/media')).json();mpre.innerHTML='';"
+    "  (j.presets||[]).forEach(p=>{const o=document.createElement('option');o.value=p.id;"
+    "    o.textContent=p.id+' – '+p.label;if(j.active&&p.id===j.active.variant)o.selected=true;"
+    "    mpre.appendChild(o)});"
+    "  mediaFiles=((j.active||{}).files||[]).filter(f=>!f.dir);"
+    "  const keep=mfile.value;mfile.innerHTML='';"
+    "  mediaFiles.forEach(f=>{const o=document.createElement('option');o.value=f.path;o.textContent=f.path;"
+    "    if(f.path===keep)o.selected=true;mfile.appendChild(o)});fillMut();"
+    "  mfiles.textContent=((j.active||{}).files||[]).map(f=>f.path+(f.dir?'/':'  '+f.size+' B'+"
+    "    (f.dur_ms?(' '+(f.dur_ms/1000).toFixed(1)+' s'):'')+(f.first_lba!=null?(' @LBA '+f.first_lba):'')+"
+    "    (f.title?(' · '+f.title+' / '+f.artist+' / '+f.album):'')+(f.apic_bytes?(' · cover '+f.cover):''))).join('\\n')+"
+    "    '\\nmutation_gen '+((j.active||{}).mutation_gen||0)+' · UA gesendet '+((j.active||{}).ua_sent||0);"
+    "}"
+    "let mediaFiles=[];"
+    "function fillMut(){const f=mediaFiles.find(x=>x.path===mfile.value);if(!f)return;"
+    "  mseed.value=f.seed||0;mtitle.value=f.title||'';martist.value=f.artist||'';malbum.value=f.album||'';"
+    "  mcover.value=f.apic_bytes?String(f.cover||0):'';mcover.disabled=!f.apic_bytes}"
+    "async function mutate(){const f=mediaFiles.find(x=>x.path===mfile.value)||{};"
+    "  const b={file:mfile.value,notify:mnotify.value,delay_s:+mdelay.value||0};"
+    "  if(+mseed.value!==(f.seed||0))b.seed=+mseed.value;"
+    "  if(mtitle.value!==(f.title||''))b.title=mtitle.value;"
+    "  if(martist.value!==(f.artist||''))b.artist=martist.value;"
+    "  if(malbum.value!==(f.album||''))b.album=malbum.value;"
+    "  if(mcover.value!==''&&!mcover.disabled&&+mcover.value!==(f.cover||0))b.cover=+mcover.value;"
+    "  const r=await fetch('/api/media/mutate',{method:'POST',headers:{'Content-Type':'application/json'},"
+    "    body:JSON.stringify(b)});st.textContent=await r.text();loadMedia()}"
+    "async function notifyUa(){const r=await fetch('/api/media/notify',{method:'POST',"
+    "  headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'unit_attention'})});"
+    "  st.textContent=await r.text();loadMedia()}"
+    "async function postMedia(body){"
+    "  const r=await fetch('/api/media/variant',{method:'POST',headers:{'Content-Type':'application/json'},"
+    "    body:JSON.stringify(body)});st.textContent=await r.text();loadMedia();refresh()}"
+    "function setMedia(){postMedia({preset:mpre.value,method:mmeth.value})}"
+    "function setSpec(){let s;try{s=JSON.parse(mspec.value)}catch(e){alert('JSON: '+e);return}"
+    "  postMedia({spec:s,method:mmeth.value})}"
+    "async function postStall(b){const r=await fetch('/api/stall',{method:'POST',"
+    "  headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});st.textContent=await r.text();refresh()}"
+    "function stallOn(){const reg=[];if(srMeta.checked)reg.push('meta');if(srHead.checked)reg.push('head');"
+    "  if(srBody.checked)reg.push('body');"
+    "  postStall({regions:reg,pace:sPace.value,delay_ms:+sDelay.value,count:+sCount.value,"
+    "    arm_delay_s:+sArm.value,window_s:+sWin.value})}"
+    "function stallOff(){postStall({enable:false})}"
+    "async function loadSeq(){"
+    "  const j=await (await fetch('/api/sequences')).json();seq.innerHTML='';"
+    "  (j.sequences||[]).forEach(s=>{const o=document.createElement('option');o.value=s.id;"
+    "    o.textContent=s.label+' ('+s.steps.length+' Schritte)';seq.appendChild(o)});"
+    "}"
+    "async function seqStart(){"
+    "  const r=await fetch('/api/sequence/start',{method:'POST',headers:{'Content-Type':'application/json'},"
+    "    body:JSON.stringify({id:seq.value,vehicle:v.value,profile_id:PROFILE[v.value]||v.value,"
+    "    auto_arm:!!autoArm.checked})});st.textContent=await r.text();refresh()}"
+    "async function seqCmd(c){const r=await fetch('/api/sequence/'+c,{method:'POST'});"
+    "  st.textContent=await r.text();refresh()}"
+    "loadExperiments().then(loadMedia).then(loadSeq).then(refresh);setInterval(refresh,1000);"
     "</script></body></html>";
 
 void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
@@ -191,6 +351,18 @@ void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
     server_.on("/api/offline/stop", HTTP_POST, [this]() { handleOfflineStop(); });
     server_.on("/api/experiments", HTTP_GET, [this]() { handleExperiments(); });
     server_.on("/api/experiment/start", HTTP_POST, [this]() { handleExperimentStart(); });
+    server_.on("/api/media", HTTP_GET, [this]() { handleMediaGet(); });
+    server_.on("/api/media/presets", HTTP_GET, [this]() { handleMediaPresets(); });
+    server_.on("/api/media/variant", HTTP_POST, [this]() { handleMediaVariant(); });
+    server_.on("/api/media/mutate", HTTP_POST, [this]() { handleMediaMutate(); });
+    server_.on("/api/media/notify", HTTP_POST, [this]() { handleMediaNotify(); });
+    server_.on("/api/stall", HTTP_GET, [this]() { handleStallGet(); });
+    server_.on("/api/stall", HTTP_POST, [this]() { handleStallPost(); });
+    server_.on("/api/sequences", HTTP_GET, [this]() { handleSequences(); });
+    server_.on("/api/sequence/start", HTTP_POST, [this]() { handleSequenceStart(); });
+    server_.on("/api/sequence/next", HTTP_POST, [this]() { handleSequenceCmd("next"); });
+    server_.on("/api/sequence/skip", HTTP_POST, [this]() { handleSequenceCmd("skip"); });
+    server_.on("/api/sequence/abort", HTTP_POST, [this]() { handleSequenceCmd("abort"); });
     server_.on(
         "/ota-upload", HTTP_POST,
         [this]() { handleOtaDone(); },
@@ -212,6 +384,21 @@ void WebUi::handleStatus() {
     doc["fw"] = FW_VERSION;
     doc["fwType"] = FW_TYPE;
     doc["board"] = HUPROBE_BOARD_LABEL;
+    {
+        JsonObject hw = doc["hw"].to<JsonObject>();
+        hw["chip"] = ESP.getChipModel();
+        hw["chip_rev"] = ESP.getChipRevision();
+        hw["cpu_mhz"] = ESP.getCpuFreqMHz();
+        hw["flash_bytes"] = ESP.getFlashChipSize();
+        hw["psram_bytes"] = ESP.getPsramSize();
+        hw["heap_total"] = ESP.getHeapSize();
+        hw["heap_free"] = ESP.getFreeHeap();
+        hw["heap_min_free"] = ESP.getMinFreeHeap();
+        hw["heap_max_alloc"] = ESP.getMaxAllocHeap();
+        hw["sketch_bytes"] = ESP.getSketchSize();
+        hw["sketch_free"] = ESP.getFreeSketchSpace();
+        HwInfo::toJson(hw);
+    }
     doc["ip"] = WiFi.localIP().toString();
     doc["hub_ok"] = hub_ ? hub_->lastOk() : false;
     doc["tcp_ok"] = tcp_ ? tcp_->connected() : false;
@@ -242,9 +429,207 @@ void WebUi::handleStatus() {
         JsonObject oc = doc["offline"].to<JsonObject>();
         OfflineCapture::instance().toStatusJson(oc);
     }
+    ProbeMedia::instance().toJson(doc["media"].to<JsonObject>(), false);
+    SequenceRunner::instance().toJson(doc["sequence"].to<JsonObject>());
+    ReadStall::instance().toJson(doc["stall"].to<JsonObject>());
+    if (inst_) inst_->turStatsJson(doc["tur"].to<JsonObject>());
     String out;
     serializeJson(doc, out);
     server_.send(200, "application/json", out);
+}
+
+void WebUi::sendJson(int code, JsonDocument& doc) {
+    String body;
+    serializeJson(doc, body);
+    server_.send(code, "application/json", body);
+}
+
+void WebUi::handleMediaGet() {
+    JsonDocument doc;
+    ProbeMedia::instance().toJson(doc["active"].to<JsonObject>(), true);
+    ProbeMedia::presetsJson(doc["presets"].to<JsonArray>());
+    sendJson(200, doc);
+}
+
+void WebUi::handleMediaPresets() {
+    JsonDocument doc;
+    ProbeMedia::presetsJson(doc["presets"].to<JsonArray>());
+    sendJson(200, doc);
+}
+
+void WebUi::handleMediaVariant() {
+    JsonDocument out;
+    if (OfflineCapture::instance().active() || SequenceRunner::instance().active()) {
+        out["ok"] = false;
+        out["err"] = "capture_or_sequence_active";
+        sendJson(409, out);
+        return;
+    }
+    JsonDocument in;
+    if (!server_.hasArg("plain") || deserializeJson(in, server_.arg("plain"))) {
+        out["ok"] = false;
+        out["err"] = "json";
+        sendJson(400, out);
+        return;
+    }
+    // method: cycle (default, host re-enumerates) | remount (NOT READY window only)
+    const char* method = in["method"] | "cycle";
+    const bool cycle = strcmp(method, "remount") != 0;
+    String err;
+    bool ok = false;
+    if (in["spec"].is<JsonObjectConst>()) {
+        String spec;
+        serializeJson(in["spec"], spec);
+        ok = msc_ && msc_->switchMedia(nullptr, &spec, cycle, &err);
+    } else if (in["preset"].is<const char*>()) {
+        ok = msc_ && msc_->switchMedia(in["preset"].as<const char*>(), nullptr, cycle, &err);
+    } else {
+        err = "preset_or_spec_required";
+    }
+    out["ok"] = ok;
+    out["method"] = cycle ? "cycle" : "remount";
+    if (!ok) out["err"] = err.length() ? err : String("msc_not_ready");
+    ProbeMedia::instance().toJson(out["active"].to<JsonObject>(), true);
+    if (msc_) out["usb_serial"] = msc_->identitySerial();
+    sendJson(ok ? 200 : 400, out);
+}
+
+void WebUi::handleMediaMutate() {
+    JsonDocument out;
+    JsonDocument in;
+    if (!server_.hasArg("plain") || deserializeJson(in, server_.arg("plain"))) {
+        out["ok"] = false;
+        out["err"] = "json";
+        sendJson(400, out);
+        return;
+    }
+    MscGadget::MediaNotify notify;
+    if (!MscGadget::parseNotify(in["notify"] | "none", notify)) {
+        out["ok"] = false;
+        out["err"] = "notify_none_unit_attention_remount_cycle";
+        sendJson(400, out);
+        return;
+    }
+    // Offline capture turns WiFi off: arm with delay_s so the change lands mid-capture.
+    const float delayS = in["delay_s"] | 0.0f;
+    ProbeMedia& media = ProbeMedia::instance();
+    ProbeMedia::Mutation m;
+    String err;
+    bool ok = media.parseMutation(in.as<JsonVariantConst>(), m, &err) && msc_ &&
+              msc_->mutateMedia(m, notify, delayS > 0 ? (uint32_t)(delayS * 1000.0f) : 0u, &err);
+    if (!ok && !err.length()) err = "msc_not_ready";
+    out["ok"] = ok;
+    if (!ok) out["err"] = err;
+    out["notify"] = MscGadget::notifyName(notify);
+    out["scheduled"] = msc_ ? msc_->mutationPending() : false;
+    out["due_in_ms"] = msc_ ? msc_->mutationDueInMs() : 0;
+    media.toJson(out["active"].to<JsonObject>(), true);
+    sendJson(ok ? 200 : 400, out);
+}
+
+void WebUi::handleMediaNotify() {
+    JsonDocument out;
+    JsonDocument in;
+    const char* kind = "unit_attention";
+    if (server_.hasArg("plain") && !deserializeJson(in, server_.arg("plain"))) {
+        kind = in["kind"] | "unit_attention";
+    }
+    MscGadget::MediaNotify notify;
+    if (!MscGadget::parseNotify(kind, notify) || notify == MscGadget::MediaNotify::None) {
+        out["ok"] = false;
+        out["err"] = "kind_unit_attention_remount_cycle";
+        sendJson(400, out);
+        return;
+    }
+    const bool ok = msc_ && msc_->notifyMedia(notify);
+    out["ok"] = ok;
+    out["kind"] = MscGadget::notifyName(notify);
+    out["ua_pending"] = MscBotTap::unitAttentionPending();
+    out["ua_sent"] = MscBotTap::unitAttentionSent();
+    sendJson(ok ? 200 : 500, out);
+}
+
+void WebUi::handleStallGet() {
+    JsonDocument doc;
+    ReadStall::instance().toJson(doc["stall"].to<JsonObject>());
+    sendJson(200, doc);
+}
+
+void WebUi::handleStallPost() {
+    JsonDocument out;
+    JsonDocument in;
+    if (!server_.hasArg("plain") || deserializeJson(in, server_.arg("plain"))) {
+        out["ok"] = false;
+        out["err"] = "json";
+        sendJson(400, out);
+        return;
+    }
+    ReadStall& rs = ReadStall::instance();
+    bool ok = true;
+    String err;
+    if (!(in["enable"] | true)) {
+        rs.disable("api");
+    } else if (SequenceRunner::instance().active()) {
+        ok = false;
+        err = "sequence_active";
+    } else {
+        ok = rs.configure(in.as<JsonVariantConst>(), &err);
+    }
+    out["ok"] = ok;
+    if (!ok) out["err"] = err;
+    rs.toJson(out["stall"].to<JsonObject>());
+    sendJson(ok ? 200 : 400, out);
+}
+
+void WebUi::handleSequences() {
+    JsonDocument doc;
+    SequenceRunner::sequencesJson(doc["sequences"].to<JsonArray>());
+    SequenceRunner::instance().toJson(doc["runner"].to<JsonObject>());
+    sendJson(200, doc);
+}
+
+void WebUi::handleSequenceStart() {
+    String vehicle = cfg_ ? cfg_->vehicleId : "lab_debian";
+    String profile = cfg_ ? cfg_->profileId : "lab_debian";
+    String id;
+    bool autoArm = false;
+    bool profileExplicit = false;
+    if (server_.hasArg("plain")) {
+        JsonDocument doc;
+        if (!deserializeJson(doc, server_.arg("plain"))) {
+            if (doc["id"].is<const char*>()) id = doc["id"].as<String>();
+            if (doc["vehicle"].is<const char*>()) vehicle = doc["vehicle"].as<String>();
+            if (doc["profile_id"].is<const char*>()) {
+                profile = doc["profile_id"].as<String>();
+                profileExplicit = true;
+            }
+            if (!doc["auto_arm"].isNull()) autoArm = doc["auto_arm"].as<bool>();
+        }
+    }
+    if (!profileExplicit) profile = profileForVehicle(vehicle, profile);
+    JsonDocument out;
+    String err;
+    const bool ok = SequenceRunner::instance().start(id.c_str(), vehicle, profile, autoArm, &err);
+    out["ok"] = ok;
+    if (!ok) out["err"] = err;
+    SequenceRunner::instance().toJson(out["runner"].to<JsonObject>());
+    sendJson(ok ? 200 : 409, out);
+}
+
+void WebUi::handleSequenceCmd(const char* cmd) {
+    SequenceRunner& r = SequenceRunner::instance();
+    if (strcmp(cmd, "next") == 0) {
+        r.requestNext();
+    } else if (strcmp(cmd, "skip") == 0) {
+        r.skip();
+    } else {
+        r.abort("api_abort");
+    }
+    JsonDocument out;
+    out["ok"] = true;
+    out["cmd"] = cmd;
+    r.toJson(out["runner"].to<JsonObject>());
+    sendJson(200, out);
 }
 
 void WebUi::handleConfigGet() {
@@ -399,6 +784,8 @@ void WebUi::handleExperiments() {
         o["measure_ms"] = p.measureMs;
         o["soft_usb"] = p.softUsb;
         o["end_strategy"] = p.endStrategy;
+        o["end_on_unmount"] = !p.keepOnUnmount;
+        o["free_markers"] = p.freeMarkers;
         JsonArray m = o["markers"].to<JsonArray>();
         for (uint8_t j = 0; j < p.markerCount; j++) m.add(p.markers[j]);
     }
@@ -414,10 +801,15 @@ void WebUi::handleExperiments() {
 void WebUi::armOfflineCapture(const String& vehicle, const String& scenario,
                               const String& profile, bool softUsb, uint32_t measureMs,
                               const String& endStrategy, const char* const* markers,
-                              uint8_t markerCount, const char* experimentId) {
+                              uint8_t markerCount, const char* experimentId,
+                              bool endOnUnmount, bool freeMarkers) {
     OfflineCapture& oc = OfflineCapture::instance();
     if (oc.active()) {
         server_.send(409, "application/json", "{\"ok\":false,\"err\":\"already_active\"}");
+        return;
+    }
+    if (SequenceRunner::instance().active()) {
+        server_.send(409, "application/json", "{\"ok\":false,\"err\":\"sequence_active\"}");
         return;
     }
     if (cfg_) {
@@ -439,6 +831,8 @@ void WebUi::armOfflineCapture(const String& vehicle, const String& scenario,
     out["auto_detach_ms"] = measureMs;
     out["measure_ms"] = measureMs;
     out["end_strategy"] = endStrategy;
+    out["end_on_unmount"] = endOnUnmount;
+    out["free_markers"] = freeMarkers;
     out["note"] = "wifi_off_then_capture";
     {
         JsonArray m = out["markers"].to<JsonArray>();
@@ -470,7 +864,7 @@ void WebUi::armOfflineCapture(const String& vehicle, const String& scenario,
         return;
     }
     if (!oc.beginCapture(vehicle, scenario, profile, softUsb, measureMs, endStrategy, markers,
-                         markerCount)) {
+                         markerCount, endOnUnmount, freeMarkers)) {
         Serial.println("[OFFLINE] beginCapture failed");
         oc.requestStop("begin_failed");
     }
@@ -528,7 +922,8 @@ void WebUi::handleOfflineStart() {
         if (!measureExplicit) autoDetachMs = exp->measureMs;
     }
     armOfflineCapture(vehicle, scenario, profile, softUsb, autoDetachMs, endStrategy, markers,
-                      markerCount, exp ? exp->id : nullptr);
+                      markerCount, exp ? exp->id : nullptr, exp ? !exp->keepOnUnmount : true,
+                      exp ? exp->freeMarkers : false);
 }
 
 void WebUi::handleExperimentStart() {
@@ -546,6 +941,8 @@ void WebUi::handleExperimentStart() {
     bool softExplicit = false;
     bool endExplicit = false;
     bool measureExplicit = false;
+    bool endOnUnmount = true;
+    bool unmountExplicit = false;
 
     if (server_.hasArg("plain")) {
         JsonDocument doc;
@@ -573,6 +970,10 @@ void WebUi::handleExperimentStart() {
                     endExplicit = true;
                 }
             }
+            if (!doc["end_on_unmount"].isNull()) {
+                endOnUnmount = doc["end_on_unmount"].as<bool>();
+                unmountExplicit = true;
+            }
         }
     } else {
         profile = profileForVehicle(vehicle, profile);
@@ -586,12 +987,13 @@ void WebUi::handleExperimentStart() {
     if (!measureExplicit) measureMs = exp->measureMs;
     if (!softExplicit) softUsb = exp->softUsb;
     if (!endExplicit) endStrategy = exp->endStrategy;
+    if (!unmountExplicit) endOnUnmount = !exp->keepOnUnmount;
     if (measureMs > OfflineCapture::maxCaptureMs()) {
         measureMs = OfflineCapture::maxCaptureMs();
     }
 
     armOfflineCapture(vehicle, exp->scenario, profile, softUsb, measureMs, endStrategy,
-                      exp->markers, exp->markerCount, exp->id);
+                      exp->markers, exp->markerCount, exp->id, endOnUnmount, exp->freeMarkers);
 }
 
 void WebUi::handleOfflineStop() {

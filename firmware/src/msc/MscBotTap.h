@@ -55,12 +55,27 @@ public:
 
     static bool realBotEnabled() { return true; }
     static uint32_t currentHostTag();
+    /** dCBWDataTransferLength of the current CBW (0 if none). */
+    static uint32_t currentHostXferLen();
     /** True after NEED_RESET until BOT_RESET / Mount / begin — for StatusLed. */
     static bool needResetLatched() { return needResetArmed_; }
     static uint32_t pendingOverflow() { return pendingOverflow_; }
     /** Capture-tUs of last queueMount / queueUmount — align phase/identity stamps. */
     static int64_t lastMountCaptureUs() { return lastMountTUs_; }
     static int64_t lastUmountCaptureUs() { return lastUmountTUs_; }
+
+    /**
+     * Soft media change: the next TEST UNIT READY while the medium is present fails with
+     * UNIT ATTENTION 06/28/00 ("not ready to ready change, medium may have changed").
+     * The host learns it on its next TUR poll (NBT EVO idle: every ~2.24 s).
+     */
+    static void requestUnitAttention() { uaPending_ = true; }
+    static void cancelUnitAttention() { uaPending_ = false; }
+    static bool unitAttentionPending() { return uaPending_; }
+    static uint32_t unitAttentionSent() { return uaSent_; }
+    static int64_t lastUnitAttentionUs() { return uaSentUs_; }
+    /** TUR wrap (USB task): true once per request. */
+    static bool consumeUnitAttention();
 
 private:
     enum class Kind : uint8_t {
@@ -116,4 +131,8 @@ private:
     static volatile size_t pendingTail_;
     static volatile size_t pendingCount_;
     static uint32_t pendingOverflow_;
+
+    static volatile bool uaPending_;
+    static volatile uint32_t uaSent_;
+    static volatile int64_t uaSentUs_;
 };

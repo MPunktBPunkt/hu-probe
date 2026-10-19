@@ -108,6 +108,7 @@ class SessionStore:
                 "fw_version",
                 "fw_sha",
                 "fw_build_id",
+                "fw_dirty",
                 "mac",
                 "usb_host_kind",
                 "usb_host_role",
@@ -118,8 +119,27 @@ class SessionStore:
                 data["fw_type"] = event.get("fw_type")
             if isinstance(event.get("probe_identity"), dict):
                 data["probe_identity"] = event.get("probe_identity")
+            if isinstance(event.get("media"), dict):
+                data["media"] = event.get("media")
+                data.pop("media_layout", None)
             dirty_meta = True
             self._last_seq.pop(sid_s, None)
+
+        if event.get("ev") == "media_layout":
+            data = load()
+            layout = list(data.get("media_layout") or [])
+            layout.append(
+                {
+                    k: event.get(k)
+                    for k in (
+                        "node", "path", "dir", "size", "kbps", "dur_ms", "seed",
+                        "flags", "apic_bytes", "extents", "extents_truncated",
+                    )
+                    if event.get(k) is not None
+                }
+            )
+            data["media_layout"] = layout
+            dirty_meta = True
 
         seq = event.get("seq")
         if isinstance(seq, int):
@@ -175,8 +195,31 @@ class SessionStore:
                     "offline_records",
                     "offline_bytes",
                     "offline_overflow",
+                    "offline_post_finalize_records",
+                    "offline_post_finalize_dropped",
+                    "replay_clock",
                     "record_size",
+                    "record_format",
+                    "replay_records",
+                    "replay_complete",
+                    "replay_error",
+                    "offline_time_range_dropped",
+                    "offline_anchor_unix_us",
+                    "offline_anchor_capture_t_us",
                     "capacity_bytes",
+                    "arm_heap_free",
+                    "arm_heap_max_alloc",
+                    "heap_free",
+                    "heap_min_free",
+                    "psram_bytes",
+                    "hw_module",
+                    "tur_count",
+                    "tur_burst_n",
+                    "tur_idle_n",
+                    "tur_idle_p10_ms",
+                    "tur_idle_median_ms",
+                    "tur_idle_p90_ms",
+                    "fw_dirty",
                 ):
                     if key in event:
                         cap[key] = event.get(key)

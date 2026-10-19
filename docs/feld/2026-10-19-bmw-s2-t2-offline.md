@@ -34,8 +34,22 @@
 | Prefetch-Lead / GATE-01 quantitativ | **OPEN** (keine Marker in `075344`; B7 fehlt) |
 | Magenta ⇒ immer FAIL | **REJECTED** (dieser Lauf) |
 
-## Nächste Schritte (nicht Feld heute)
+## Korrekturen nach unabhängiger Auswertung (2026-10-19)
 
-1. P0b B7: `capture_t_us` ≠ `replay_t_us`
-2. S3 Cache/Replay
-3. Prefetch-Lead mit Markern + Timing
+Details: [`2026-10-19-unabhaengige-auswertung.md`](2026-10-19-unabhaengige-auswertung.md)
+
+| Claim (Multi-KI) | Neu | Klasse |
+|------------------|-----|--------|
+| „Enum-Grammatik" TUR(1) → REQUEST_SENSE → PREVENT(1) | Media-Loss-Reaktion nach `hideMedia()`. Live-Tags 131–146 nach dem Finalize; Offline-Puffer = Tags 81–122; 123–130 verloren | `FACT` / Enum-Deutung `REJECTED` |
+| TUR-Poll ~1/s | **2,239 s** Leerlauf, phasenstarr (n=382, 19 Sessions) | `FACT` |
+| 57,33 s = Enum→Read | `gap_us` ist global; der Read lag ≈ 15,7 s nach dem Arm (7 TUR davor) | `REJECTED` |
+| M3 „Prefetch geschwächt" | Cache-Hit gleich plausibel (identische Tracks) | `HYPOTHESIS` |
+| B21 Klassifikator | Hardcode-Bänder passen nicht zum Demo-Image → Artefakt; Fix 0.2.31 | `FACT` / gelöst |
+| B7 | Ursache: `ProbeClock::publishUs()`-Klemmung beim Replay; Fix 0.2.31 `capture_t_us` | `FACT` |
+
+## Nächste Schritte
+
+1. ~~P0b B7~~ → FW 0.2.31 (`capture_t_us`, `origin`, Post-Finalize-Puffer); GATE-01 mit Markern
+2. S3 Cache mit unterschiedlichem Inhalt pro Track (`SEQ-CACHE`)
+3. Prefetch-Regel über Trackdauer (`SEQ-DUR`)
+4. Ablauf: [`2026-10-19-feldsequenz-gate01-s6.md`](2026-10-19-feldsequenz-gate01-s6.md)

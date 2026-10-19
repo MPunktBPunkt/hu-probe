@@ -1,11 +1,47 @@
 #include "MscGadget.h"
 #include "MscBotTap.h"
-#include "DemoFatImage.h"
+#include "ReadStall.h"
 #include "BuildFlags.h"
+#include "capture/AutoMarker.h"
+#include "capture/OfflineCapture.h"
+#include "media/ProbeMedia.h"
 #include "core/ProbeClock.h"
 #include "USB.h"
 #include "USBMSC.h"
 #include <cstring>
+
+bool MscGadget::parseNotify(const char* s, MediaNotify& out) {
+    if (!s || !s[0] || strcmp(s, "none") == 0) out = MediaNotify::None;
+    else if (strcmp(s, "unit_attention") == 0 || strcmp(s, "ua") == 0) out = MediaNotify::UnitAttention;
+    else if (strcmp(s, "remount") == 0) out = MediaNotify::Remount;
+    else if (strcmp(s, "cycle") == 0) out = MediaNotify::Cycle;
+    else return false;
+    return true;
+}
+
+const char* MscGadget::notifyName(MediaNotify n) {
+    switch (n) {
+        case MediaNotify::UnitAttention: return "unit_attention";
+        case MediaNotify::Remount: return "remount";
+        case MediaNotify::Cycle: return "cycle";
+        default: return "none";
+    }
+}
+
+uint32_t MscGadget::mutationDueInMs() const {
+    if (!mutPending_) return 0;
+    const int32_t d = (int32_t)(mutDueMs_ - millis());
+    return d > 0 ? (uint32_t)d : 0;
+}
+
+void MscGadget::mark(const char* name, const char* note, int64_t tUs) {
+    OfflineCapture& oc = OfflineCapture::instance();
+    if (oc.capturing()) {
+        oc.appendAutoMarker(tUs ? tUs : ProbeClock::nowUs(), name);
+        return;
+    }
+    if (session_ && session_->active()) session_->marker(name, note ? note : "", tUs);
+}
 
 #if !ARDUINO_USB_MODE
 
@@ -48,6 +84,9 @@ void MscGadget::begin(Session* session, ReadInstrument* instrument) {
     g_msc = this;
     remountGen_ = 1;
     snprintf(serial_, sizeof(serial_), "HP%04u", (unsigned)remountGen_);
+    ProbeMedia& media = ProbeMedia::instance();
+    media.begin();
+    applyMediaIdentity();
     MscBotTap::begin(instrument);
     MscBotTap::setProbeSerial(serial_);
 
@@ -59,9 +98,9 @@ void MscGadget::begin(Session* session, ReadInstrument* instrument) {
     MSC.onRead(huprobe_msc_read);
     MSC.onWrite(huprobe_msc_write);
 
-    // First field stick: serve the known demo FAT image as the whole LUN.
+    // Active medium (demo image or SynthFat variant) is the whole LUN.
     MSC.mediaPresent(false);
-    if (!MSC.begin(DEMO_FAT_SECTOR_COUNT, DEMO_FAT_SECTOR_SIZE)) {
+    if (!MSC.begin(media.sectorCount(), 512)) {
         Serial.println("[MSC] begin failed");
         return;
     }
@@ -69,8 +108,64 @@ void MscGadget::begin(Session* session, ReadInstrument* instrument) {
     ready_ = true;
     softAttached_ = true;
     presentMedia("boot");
-    Serial.printf("[MSC] ready sectors=%u serial=%s (soft USB cycle OK)\n",
-                  DEMO_FAT_SECTOR_COUNT, serial_);
+    Serial.printf("[MSC] ready media=%s sectors=%u serial=%s (soft USB cycle OK)\n",
+                  media.variantId(), (unsigned)media.sectorCount(), serial_);
+}
+
+void MscGadget::applyMediaIdentity() {
+    ProbeMedia& media = ProbeMedia::instance();
+    const char* ser = media.usbSerial();
+    fixedSerial_ = ser && ser[0];
+    const char* lab = media.layout().label;
+    setIdentity(fixedSerial_ ? ser : nullptr, (lab && lab[0]) ? lab : nullptr);
+    MscBotTap::setProbeSerial(serial_);
+}
+
+bool MscGadget::switchMedia(const char* presetId, const String* specJson, bool usbCycle,
+                            String* err, bool persist) {
+    if (!ready_) {
+        if (err) *err = "msc_not_ready";
+        return false;
+    }
+    // Node indices of a pending mutation / UA belong to the old layout.
+    mutPending_ = false;
+    MscBotTap::cancelUnitAttention();
+    ReadStall::instance().disable("media_switch");
+    // LUN off first so no read is served from a half-built layout.
+    const bool wasPresented = mediaPresented_;
+    MSC.mediaPresent(false);
+    mediaPresented_ = false;
+    remountHoldUntilMs_ = 0;
+    delay(50);
+    ProbeMedia& media = ProbeMedia::instance();
+    const bool ok = specJson ? media.selectSpecJson(*specJson, err, persist)
+                             : media.selectPreset(presetId, err, persist);
+    if (!ok) {
+        if (wasPresented) presentMedia("media_switch_failed");
+        return false;
+    }
+    MSC.begin(media.sectorCount(), 512);
+    applyMediaIdentity();
+    lastReadEndUs_ = 0;
+    if (session_ && session_->active()) {
+        // One live session = one medium, so session.media / media_layout stay valid.
+        session_->setPhase("media_switch", media.variantId());
+        const String vehicle = session_->vehicle();
+        const String scenario = session_->scenario();
+        const String profile = session_->profileId();
+        const String transport = session_->transport();
+        session_->start(vehicle, scenario, profile, serial_, label_, transport.c_str());
+    }
+    Serial.printf("[MSC] media switch -> %s sectors=%u cycle=%d\n", media.variantId(),
+                  (unsigned)media.sectorCount(), usbCycle ? 1 : 0);
+    if (usbCycle) {
+        // Re-enumeration forces the host to re-read capacity + FS (no stale cache).
+        presentMedia("media_switch");
+        softCycle(1500);
+    } else {
+        remountHoldUntilMs_ = millis() + 1500;
+    }
+    return true;
 }
 
 void MscGadget::loop() {
@@ -84,14 +179,86 @@ void MscGadget::loop() {
         remountHoldUntilMs_ = 0;
         presentMedia("remount");
     }
+    if (mutPending_ && (int32_t)(millis() - mutDueMs_) >= 0) {
+        mutPending_ = false;
+        String err;
+        if (!applyMutationNow(pendingMut_, pendingNotify_, &err)) {
+            Serial.printf("[MSC] scheduled media mutate failed: %s\n", err.c_str());
+        }
+    }
     MscBotTap::poll();
+    pollUnitAttention();
+    ReadStall::instance().poll(session_);
     drainSamples();
+}
+
+bool MscGadget::mutateMedia(const ProbeMedia::Mutation& m, MediaNotify notify, uint32_t delayMs,
+                            String* err) {
+    if (!ready_) {
+        if (err) *err = "msc_not_ready";
+        return false;
+    }
+    if (delayMs == 0) {
+        mutPending_ = false;
+        return applyMutationNow(m, notify, err);
+    }
+    if (delayMs > 600000u) delayMs = 600000u;
+    pendingMut_ = m;
+    pendingNotify_ = notify;
+    mutDueMs_ = millis() + delayMs;
+    mutPending_ = true;
+    char d[48];
+    ProbeMedia::describeMutation(m, d, sizeof(d));
+    Serial.printf("[MSC] media mutate in %ums (%s notify=%s)\n", (unsigned)delayMs, d,
+                  notifyName(notify));
+    return true;
+}
+
+bool MscGadget::applyMutationNow(const ProbeMedia::Mutation& m, MediaNotify notify, String* err) {
+    ProbeMedia& media = ProbeMedia::instance();
+    if (!media.applyMutation(m, err)) return false;
+    char d[48];
+    ProbeMedia::describeMutation(m, d, sizeof(d));
+    char note[96];
+    snprintf(note, sizeof(note), "%s notify=%s gen=%u", d, notifyName(notify),
+             (unsigned)media.mutationGen());
+    mark("media_mutate", note);
+    Serial.printf("[MSC] media mutate %s\n", note);
+    return notifyMedia(notify);
+}
+
+bool MscGadget::notifyMedia(MediaNotify n) {
+    if (!ready_) return false;
+    switch (n) {
+        case MediaNotify::UnitAttention:
+            MscBotTap::requestUnitAttention();
+            mark("ua_request", mediaPresented_ ? "" : "media_hidden");
+            return true;
+        case MediaNotify::Remount:
+            remountMedia(false);
+            return true;
+        case MediaNotify::Cycle:
+            return softCycle(600);
+        default:
+            return true;
+    }
+}
+
+void MscGadget::pollUnitAttention() {
+    const uint32_t sent = MscBotTap::unitAttentionSent();
+    if (sent == uaSeen_) return;
+    uaSeen_ = sent;
+    char note[24];
+    snprintf(note, sizeof(note), "n=%u", (unsigned)sent);
+    mark("ua_sent", note, MscBotTap::lastUnitAttentionUs());
+    Serial.printf("[MSC] UNIT ATTENTION 06/28/00 sent (%s)\n", note);
 }
 
 void MscGadget::presentMedia(const char* reason) {
     if (mediaPresented_) return;
     MSC.mediaPresent(true);
     mediaPresented_ = true;
+    AutoMarker::onMediaPresent(ProbeClock::nowUs());
     Serial.printf("[MSC] mediaPresent=true (%s)\n", reason ? reason : "");
 }
 
@@ -120,6 +287,7 @@ bool MscGadget::softDetach(uint16_t holdMs) {
     bool ok = tud_disconnect();
     if (ok) {
         softAttached_ = false;
+        ReadStall::instance().onUsbReset();
         if (holdMs) {
             if (holdMs > 5000) holdMs = 5000;
             softReattachAtMs_ = millis() + holdMs;
@@ -157,6 +325,7 @@ bool MscGadget::hideMedia() {
     MSC.mediaPresent(false);
     mediaPresented_ = false;
     remountHoldUntilMs_ = 0;
+    AutoMarker::onMediaHide(ProbeClock::nowUs());
     Serial.println("[MSC] media hidden");
     return true;
 }
@@ -185,6 +354,7 @@ void MscGadget::onUsbPlugged(bool on) {
     if (plugged_ == on) return;
     plugged_ = on;
     suspended_ = false;
+    ReadStall::instance().onUsbReset();
     if (on) {
         plugCount_++;
         transportEpoch_++;
@@ -192,7 +362,12 @@ void MscGadget::onUsbPlugged(bool on) {
         Serial.println("[MSC] USB plugged (host started / mount)");
     } else {
         unplugCount_++;
-        bumpSerial();  // next attach looks like a new stick
+        // Next attach looks like a new stick — unless the media variant pins the serial.
+        if (fixedSerial_) {
+            applyMediaIdentity();
+        } else if (!pinnedSerial_) {
+            bumpSerial();
+        }
         // umount/phase from MscBotTap::drain(Kind::Umount).
         Serial.printf("[MSC] USB unplugged — next serial %s\n", serial_);
     }
@@ -207,37 +382,24 @@ void MscGadget::onUsbSuspend(bool on) {
 }
 
 void MscGadget::tagForLba(uint32_t lba, char* tag, size_t n, char* kind, size_t kn) const {
-    if (lba == 0) {
-        snprintf(tag, n, "BOOT");
-        snprintf(kind, kn, "boot");
-    } else if (lba >= 1 && lba <= 16) {
-        snprintf(tag, n, "FAT");
-        snprintf(kind, kn, "fat");
-    } else if (lba >= 17 && lba <= 48) {
-        snprintf(tag, n, "ROOT");
-        snprintf(kind, kn, "dir");
-    } else {
-        snprintf(tag, n, "DATA");
-        snprintf(kind, kn, "file");
-    }
+    // B21 (0.2.31): bands come from the active medium's FAT layout, not hardcoded LBAs.
+    const MediaLayout::Region r = ProbeMedia::instance().classify(lba, nullptr, nullptr);
+    snprintf(tag, n, "%s", MediaLayout::regionTag(r));
+    snprintf(kind, kn, "%s", MediaLayout::regionKind(r));
 }
 
 int32_t MscGadget::onRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize) {
-    if (lba >= DEMO_FAT_SECTOR_COUNT) return -1;
+    ProbeMedia& media = ProbeMedia::instance();
+    if (lba >= media.sectorCount()) return -1;
     if (bufsize > 4096) bufsize = 4096;
     uint8_t* out = (uint8_t*)buffer;
 
+    // CBW at its arrival time, so CBW -> first bot_data spans a held (BUSY) command.
+    if (offset == 0) MscBotTap::emitCbwIfNew(ProbeClock::nowUs());
+    if (ReadStall::instance().hold(lba)) return 0;
+
     int64_t t0 = ProbeClock::nowUs();
-    uint32_t pos = lba * DEMO_FAT_SECTOR_SIZE + offset;
-    if (pos >= DEMO_FAT_SIZE) {
-        memset(out, 0, bufsize);
-    } else {
-        uint32_t avail = DEMO_FAT_SIZE - pos;
-        uint32_t n = bufsize;
-        if (n > avail) n = avail;
-        memcpy(out, DEMO_FAT_IMAGE + pos, n);
-        if (n < bufsize) memset(out + n, 0, bufsize - n);
-    }
+    media.read(lba, offset, out, bufsize);
     int64_t t1 = ProbeClock::nowUs();
     uint32_t dur = 0;
     if (t1 >= t0) {
@@ -256,10 +418,6 @@ int32_t MscGadget::onRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t 
     char kind[8];
     tagForLba(lba, tag, sizeof(tag), kind, sizeof(kind));
 
-    // GATE-01B: CBW + DATA share Capture-tUs so drain stays non-decreasing (0.2.12).
-    if (offset == 0) {
-        MscBotTap::emitCbwIfNew(t0);
-    }
     // Comfort read is emitted with bot_data in MscBotTap::drain.
     MscBotTap::emitDataChunk(t0, lba, bufsize, dur, gap, tag, kind, "in");
     return (int32_t)bufsize;
@@ -322,6 +480,18 @@ void MscGadget::setIdentity(const char* serial, const char* label) {
         strncpy(label_, label, sizeof(label_) - 1);
     }
 }
+void MscGadget::applyMediaIdentity() {}
+bool MscGadget::switchMedia(const char*, const String*, bool, String* err, bool) {
+    if (err) *err = "msc_disabled";
+    return false;
+}
+bool MscGadget::mutateMedia(const ProbeMedia::Mutation&, MediaNotify, uint32_t, String* err) {
+    if (err) *err = "msc_disabled";
+    return false;
+}
+bool MscGadget::applyMutationNow(const ProbeMedia::Mutation&, MediaNotify, String*) { return false; }
+bool MscGadget::notifyMedia(MediaNotify) { return false; }
+void MscGadget::pollUnitAttention() {}
 bool MscGadget::softDetach(uint16_t) { return false; }
 bool MscGadget::softAttach() { return false; }
 bool MscGadget::softCycle(uint16_t) { return false; }
