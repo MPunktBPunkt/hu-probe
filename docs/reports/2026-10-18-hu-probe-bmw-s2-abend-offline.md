@@ -200,7 +200,7 @@ Siehe Feld-Checkliste: [`docs/feld/2026-10-18-t2-hold-checklist.md`](../feld/202
 
 | Ziel | Signal |
 |------|--------|
-| 1 | T2-CBW `(318,240)+(558,69)` → T2 offline **FACT** |
+| 1 | ~~T2-CBW `(318,240)+(558,69)` → T2 offline **FACT**~~ — **done** 2026-10-19 [`t2-offline`](2026-10-19-hu-probe-bmw-s2-t2-offline.md) |
 | 2 | Stattdessen `(627,240)+(867,69)` nach `hold_2` → Prefetch-Kandidat massiv gestärkt |
 | 3 | FW: `capture_t_us` ≠ `replay_t_us` → GATE-01 quantitativ |
 

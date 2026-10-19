@@ -89,6 +89,8 @@ sessions/*
 !sessions/20261015-200319_bmw_s2_prefetch/**
 !sessions/20261015-200722_bmw_s2_prefetch/
 !sessions/20261015-200722_bmw_s2_prefetch/**
+!sessions/20261019-075344_bmw_s2_prefetch/
+!sessions/20261019-075344_bmw_s2_prefetch/**
 sessions/**/collector.*
 
 # Firmware artifacts (release bins under firmware/dist/ are tracked)

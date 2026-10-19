@@ -1,8 +1,8 @@
 # Feld-Checkliste — Direkt T2 Hold (P0 nach CBW-Korrektur)
 
-**Datum:** 2026-10-18 (nächster Feldlauf)  
+**Datum:** 2026-10-18 (nächster Feldlauf) · **erledigt 2026-10-19** (`20261019-075344` Fall A)  
 **FW:** ≥ 0.2.30 · Probe Auto `.89` · Collector `.187`  
-**Übergabe:** [`docs/reports/2026-10-18-hu-probe-bmw-s2-abend-offline.md`](../reports/2026-10-18-hu-probe-bmw-s2-abend-offline.md)
+**Übergabe:** [`docs/reports/2026-10-18-hu-probe-bmw-s2-abend-offline.md`](../reports/2026-10-18-hu-probe-bmw-s2-abend-offline.md) · Ergebnis: [`2026-10-19-bmw-s2-t2-offline.md`](2026-10-19-bmw-s2-t2-offline.md)
 
 **Primärmetrik:** Track-Atom `(head,240)+(head+240,69)` = **309 LBA / 158208 B** — nicht „39 × 4 KiB“.
 
