@@ -1,0 +1,59 @@
+{
+  "schema": 2,
+  "session_id": "20261019-075344_bmw_s2_prefetch",
+  "started_at": "2026-10-19T07:53:44.713263+02:00",
+  "ended_at": "2026-10-19T07:53:45.487724+02:00",
+  "vehicle": "bmw",
+  "profile_id": "bmw_nbt_evo",
+  "scenario": "s2_prefetch",
+  "fw_version": "0.2.30",
+  "transport": "ram_offline",
+  "fw_type": "hu-probe",
+  "fw_sha": "5a3351872248",
+  "mac": "68:b6:b3:2b:c5:68",
+  "clock": {
+    "domain": "probe_monotonic_us",
+    "source": "esp_timer"
+  },
+  "capture": {
+    "dropped": 0,
+    "queue_highwater": 0,
+    "tcp_disconnects": 0,
+    "published": 473,
+    "stream_lost": 0,
+    "tcp_tx_fail": 0,
+    "msc_sample_overflow": 0,
+    "recv_seq_gaps": [],
+    "recv_events": 198,
+    "parse_errors": 0,
+    "complete": true,
+    "reset_reason": "power_on",
+    "transport": "ram_offline",
+    "transport_epoch": 1,
+    "transport_epoch_start": 1,
+    "transport_epoch_end": 1,
+    "end_reason": "auto_media_hide",
+    "end_strategy": "media_hide",
+    "upload_status": "delivered",
+    "offline_records": 123,
+    "offline_bytes": 12177,
+    "offline_overflow": 0,
+    "record_size": 99,
+    "capacity_bytes": 32768,
+    "integrity_pass": true
+  },
+  "gates": [
+    "HU-PROBE-GATE-01"
+  ],
+  "notes": "",
+  "fw_build_id": "5a3351872248-20261018T131809Z",
+  "usb_host_kind": "bmw_nbt_evo",
+  "usb_host_role": "vehicle_hu",
+  "probe_identity": {
+    "mac": "68:b6:b3:2b:c5:68",
+    "usb_serial": "HP0001",
+    "volume_label": "HUPROBE",
+    "board": "ESP32-S3",
+    "hw_type": "esp32s3"
+  }
+}

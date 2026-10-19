@@ -13,7 +13,7 @@
 
 1. **Drei Offline Integrity-PASS** am Auto: `175203` (T3), `212136` (T1), `212635` (T3).
 2. **Ein Wechsel pro Lauf** funktioniert operativ besser als Multi-Track (weniger Magenta/NEED_RESET).
-3. **T2 offline noch nicht belegt** — geplanter T2-Lauf `212635` lieferte wieder **T3-Atom** (Operator: Start 1 → AP 2 → Hold 2; Buffer `(627,240)+(867,69)`).
+3. **T2 offline war hier noch offen** — Versuch `212635` lieferte T3; **geschlossen 2026-10-19** (`075344` Fall A).
 4. **Zwei Burst-Morphologien offline:**
    - **T3-rein:** CBW `(627,240)+(867,69)` · 39 file-Reads (30+9) · covered **627…935**
    - **T1-Hold:** dieselben T1-CBWs vermutlich `tail_then_head`; Starts ~249…241, Mix `file`+`dir`+`fat`, Span 9…317
@@ -74,13 +74,13 @@ Wiederkehrend: NEED_RESET (magenta) → HU hängt → HTTP tot → Upload ohne `
 | T1-Hold-Burst offline (`212136`) | **FACT** (Morphologie ≠ reines T3) |
 | `212136` kinds file34/dir4/fat1; CBW `tail_then_head` | **FACT** (Audit) |
 | Ursache Hold-Reihenfolge / Meta am Kopf | **INFERENCE** |
-| T2 offline = `(318,240)+(558,69)` | **offen** (Versuch `212635` verfehlt) |
+| T2 offline = `(318,240)+(558,69)` | **FACT** (2026-10-19 `075344`) — siehe [`2026-10-19-bmw-s2-t2-offline.md`](2026-10-19-bmw-s2-t2-offline.md) |
 | Ein-Track-Halten reduziert Multi-Burst-Last | **INFERENCE** (operativ erfolgreich) |
 | Prefetch-Lead / GATE-01 | **OPEN** |
 
 ## Nächste Schritte
 
-1. **P0:** gezielter Offline-Lauf **nur T2** — bei 2 starten und halten (nicht über 1→2). Checkliste: [`2026-10-18-t2-hold-checklist.md`](2026-10-18-t2-hold-checklist.md).
+1. ~~**P0:** gezielter Offline-Lauf **nur T2**~~ — **done** 2026-10-19 (`075344` Fall A).
 2. FW: B7 Timestamps (`capture_t_us` ≠ `replay_t_us`); NEED_RESET / Heap.
 3. GATE-01 erst mit Markern + Timing-Fix; Primärmetrik = Track-Atom, nicht „39er“.
 
