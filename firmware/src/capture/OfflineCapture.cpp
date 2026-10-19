@@ -214,7 +214,8 @@ bool OfflineCapture::wifiOn() {
     WiFi.setSleep(false);
     esp_wifi_set_ps(WIFI_PS_NONE);
     WiFi.setTxPower(WIFI_POWER_19_5dBm);
-    WiFi.setAutoReconnect(true);
+    // App::superviseWifi owns reconnect — do not re-enable stack AutoReconnect (B28).
+    WiFi.setAutoReconnect(false);
     WiFi.begin();  // NVS creds from WiFiManager
     unsigned long t0 = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - t0 < 25000) {
@@ -225,7 +226,7 @@ bool OfflineCapture::wifiOn() {
         Serial.println("[OFFLINE] WiFi reconnect FAILED");
         return false;
     }
-    Serial.printf("[OFFLINE] WiFi %s\n", WiFi.localIP().toString().c_str());
+    Serial.printf("[OFFLINE] WiFi %s autoReconnect=0\n", WiFi.localIP().toString().c_str());
     return true;
 }
 
@@ -236,6 +237,7 @@ void OfflineCapture::reconnectWifiThrottled() {
     if (lastWifiReconnectMs_ != 0 && now - lastWifiReconnectMs_ < kWifiReconnectEveryMs) return;
     lastWifiReconnectMs_ = now;
     Serial.println("[OFFLINE] WiFi lost during upload — reconnect");
+    WiFi.setAutoReconnect(false);
     WiFi.reconnect();
 }
 
@@ -767,6 +769,14 @@ void OfflineCapture::restoreUsbAfterUpload() {
     if (mediaHidden_) {
         msc_->restoreMedia();
         mediaHidden_ = false;
+    }
+    // B27: soft_usb / media_hide leave MSC attached → Lab OTG+WiFi coex again.
+    // Lab policy is boot-detach only unless we re-detach here (field vehicles untouched).
+    if (vehicle_ == "lab_debian" || profileId_ == "lab_debian") {
+        if (msc_->usbSoftAttached()) {
+            msc_->softDetach(0);
+            Serial.println("[MSC] lab re-detach after offline (WiFi first)");
+        }
     }
 }
 

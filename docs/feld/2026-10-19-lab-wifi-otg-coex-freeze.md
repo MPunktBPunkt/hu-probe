@@ -2,8 +2,8 @@
 
 **Gerät:** Lab-ESP `.88` (YD ESP32-S3 N8R2, 8 MiB Flash + 2 MiB Quad-PSRAM)  
 **Host:** Proxmox CT `DebianCursor` (100) @ `192.168.178.187`, USB via Hub `2-3`  
-**FW-Stand:** Branch `lab/2026-10-19-wifi-otg-coex-freeze` — **0.2.37** (P0 Latch + Lab-Detach + Liveness)  
-**Status:** **0.2.36 = FAIL** (Review bestätigt). **0.2.37** adressiert die Code-Fehler; Lab-Verifikation offen.
+**FW-Stand:** Branch `lab/2026-10-19-wifi-otg-coex-freeze` — **0.2.38** (Post-Offline Lab-Re-Detach)  
+**Status:** **0.2.36 = FAIL**. **0.2.37** False-Stall/Zombie/Lab-Boot-Detach ✓. **0.2.38** schließt Post-Offline-Leak (B27/B28).
 
 ---
 
@@ -87,7 +87,8 @@ Nicht die Hauptursache: Host-Userland-USB-Stress (kein `dd`-Loop, udisks inaktiv
 | 0.2.34 | `enterCoexHold`: Soft-Detach + EventBus `clear` + `esp_wifi_stop/start` + `WiFi.begin`; kein Status-Spam im Hold | Hold greift; Zombie-Assoc blockiert echte Recovery |
 | 0.2.35 | PSRAM: EventBus-Slots + Offline-Capture bis ~1 MiB; früherer Stall bei `plugged` | Boot-Heap besser (`[BUS] in_psram=1`); Coex-Tod **bleibt** |
 | 0.2.36 | Zombie-Assoc zählt nicht als Recovery; STA-Restart im Hold ohne TCP | **FAIL** — False-Stall + toter Zombie-Zweig + Watchdog-Flacker |
-| **0.2.37** | P0: `tcpEverWorked`-Stall-Gate + Grace; eigene `coexZombieSinceMs_`; kein `EventBus::clear()` bei aktiver Session; Lab MSC default soft-detached; Liveness = `lastTcpTxOk`; `setAutoReconnect(false)`; LED nicht IdleWifi bei Zombie | **Verifikation ausstehend** |
+| **0.2.37** | P0: `tcpEverWorked`-Stall-Gate + Grace; eigene `coexZombieSinceMs_`; kein `EventBus::clear()` bei aktiver Session; Lab MSC default soft-detached; Liveness = `lastTcpTxOk`; `setAutoReconnect(false)`; LED nicht IdleWifi bei Zombie | **PASS** Baseline + OTG-Detach; Offline PASS, aber danach Gelb (B27) |
+| **0.2.38** | B27: nach Offline-Upload `lab_debian` → `softDetach`; B28: `wifiOn()` `setAutoReconnect(false)` | **Verifikation:** Offline ohne RST → Cyan + API 200 |
 
 ### Code-Fehler (Review Grok/GPT/Mistral, 0.2.36 verifiziert)
 
