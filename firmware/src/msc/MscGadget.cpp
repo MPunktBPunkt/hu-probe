@@ -305,6 +305,9 @@ bool MscGadget::softDetach(uint16_t holdMs) {
         if (holdMs) {
             if (holdMs > 5000) holdMs = 5000;
             softReattachAtMs_ = millis() + holdMs;
+        } else {
+            // hold=0 must cancel a pending softCycle reattach (lab policy).
+            softReattachAtMs_ = 0;
         }
         if (instrument_ && session_ && session_->active()) {
             instrument_->onUsb("detach", 0, "out", 0, "soft");

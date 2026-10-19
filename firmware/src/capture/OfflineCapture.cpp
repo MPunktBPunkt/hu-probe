@@ -760,8 +760,30 @@ bool OfflineCapture::drainUpload(uint32_t maxMs) {
     return EventBus::instance().pending() == 0;
 }
 
+bool OfflineCapture::isLabDebian() const {
+    return vehicle_ == "lab_debian" || profileId_ == "lab_debian";
+}
+
+void OfflineCapture::ensureLabDetached(const char* why) {
+    if (!msc_ || !isLabDebian()) return;
+    // Cancel softCycle auto-reattach so Lab stays detached.
+    if (msc_->usbSoftAttached()) {
+        msc_->softDetach(0);
+    }
+    Serial.printf("[MSC] lab detach (%s) soft=%d\n", why ? why : "?",
+                  msc_->usbSoftAttached() ? 1 : 0);
+}
+
 void OfflineCapture::restoreUsbAfterUpload() {
     if (!msc_) return;
+    // Lab: never restore media / soft-attach after offline — that reopens OTG+WiFi coex
+    // (restoreMedia-before-detach was the T3b killer). Stay soft-detached.
+    if (isLabDebian()) {
+        fallbackDetached_ = false;
+        mediaHidden_ = false;
+        ensureLabDetached("after-offline");
+        return;
+    }
     if (fallbackDetached_) {
         msc_->softAttach();
         fallbackDetached_ = false;
@@ -769,14 +791,6 @@ void OfflineCapture::restoreUsbAfterUpload() {
     if (mediaHidden_) {
         msc_->restoreMedia();
         mediaHidden_ = false;
-    }
-    // B27: soft_usb / media_hide leave MSC attached → Lab OTG+WiFi coex again.
-    // Lab policy is boot-detach only unless we re-detach here (field vehicles untouched).
-    if (vehicle_ == "lab_debian" || profileId_ == "lab_debian") {
-        if (msc_->usbSoftAttached()) {
-            msc_->softDetach(0);
-            Serial.println("[MSC] lab re-detach after offline (WiFi first)");
-        }
     }
 }
 
@@ -880,6 +894,8 @@ void OfflineCapture::pollUpload() {
     if (state_ != State::Uploading) return;
     switch (uploadPhase_) {
         case UploadPhase::Wifi: {
+            // Lab: detach USB before WiFi comes back — upload must not share the chip with OTG.
+            ensureLabDetached("before-wifiOn");
             // One blocking wifiOn (≤25s) — only once per capture; App stays responsive after.
             if (WiFi.status() == WL_CONNECTED || wifiOn()) {
                 if (tcp_) tcp_->setOfflineDrain(true);
