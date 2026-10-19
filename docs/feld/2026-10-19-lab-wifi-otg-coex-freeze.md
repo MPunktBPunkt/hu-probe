@@ -1,9 +1,9 @@
-# Lab: WiFi/OTG-Coex-Freeze (0.2.32–0.2.36) — 2026-10-19
+# Lab: WiFi/OTG-Coex-Freeze (0.2.32–0.2.37) — 2026-10-19
 
 **Gerät:** Lab-ESP `.88` (YD ESP32-S3 N8R2, 8 MiB Flash + 2 MiB Quad-PSRAM)  
 **Host:** Proxmox CT `DebianCursor` (100) @ `192.168.178.187`, USB via Hub `2-3`  
-**FW-Stand Review:** Branch mit 0.2.36 (Coex-Hold, PSRAM EventBus/Offline, Zombie-Assoc-Fix)  
-**Status:** **offen / nicht gelöst** — Web friert nach kurzer Zeit ein; oft nur manueller RST hilft.
+**FW-Stand:** Branch `lab/2026-10-19-wifi-otg-coex-freeze` — **0.2.37** (P0 Latch + Lab-Detach + Liveness)  
+**Status:** **0.2.36 = FAIL** (Review bestätigt). **0.2.37** adressiert die Code-Fehler; Lab-Verifikation offen.
 
 ---
 
@@ -86,7 +86,20 @@ Nicht die Hauptursache: Host-Userland-USB-Stress (kein `dd`-Loop, udisks inaktiv
 | 0.2.33 | + STA-Bounce nach Soft-Detach | Bounce feuert; Recovery unzuverlässig |
 | 0.2.34 | `enterCoexHold`: Soft-Detach + EventBus `clear` + `esp_wifi_stop/start` + `WiFi.begin`; kein Status-Spam im Hold | Hold greift; Zombie-Assoc blockiert echte Recovery |
 | 0.2.35 | PSRAM: EventBus-Slots + Offline-Capture bis ~1 MiB; früherer Stall bei `plugged` | Boot-Heap besser (`[BUS] in_psram=1`); Coex-Tod **bleibt** |
-| 0.2.36 | Zombie-Assoc zählt nicht als Recovery; STA-Restart im Hold ohne TCP | Noch nicht als PASS verifiziert; Symptom „Web tot / LED blau“ weiterhin beobachtet |
+| 0.2.36 | Zombie-Assoc zählt nicht als Recovery; STA-Restart im Hold ohne TCP | **FAIL** — False-Stall + toter Zombie-Zweig + Watchdog-Flacker |
+| **0.2.37** | P0: `tcpEverWorked`-Stall-Gate + Grace; eigene `coexZombieSinceMs_`; kein `EventBus::clear()` bei aktiver Session; Lab MSC default soft-detached; Liveness = `lastTcpTxOk`; `setAutoReconnect(false)`; LED nicht IdleWifi bei Zombie | **Verifikation ausstehend** |
+
+### Code-Fehler (Review Grok/GPT/Mistral, 0.2.36 verifiziert)
+
+| ID | Fehler | Fix in 0.2.37 |
+|---|---|---|
+| A | `lastOk==0` → `idle=now` → False-Stall ~10–20 s nach RST | Stall nur wenn `tcpEverWorked` + Grace 30 s |
+| B | Zombie-Restart hing an `coexRecoveredAtMs_` (nur bei `tcpOk`) → **toter Code** | eigene `coexZombieSinceMs_` |
+| C | Watchdog-Reset bei `tcp_.connected()`-Flacker → selten `ESP.restart()` | Reset nur bei `tcpDataAlive()` / `noteTcpTxOk` |
+| B23 | `enterCoexHold` → `EventBus::clear()` löscht Live-Session | `clear()` nur wenn `!session_.active()` |
+| Lab | MSC default attached → Enum killt WiFi | `lab_debian`: soft-detach nach Boot, kein Auto-Reattach |
+
+**TL1 vs TL2:** ~20 s nach RST mit OTG-in-Boot = TL1 (False-Stall). Plug nach Boot mit vorherigem TX-ok = TL2 (echter Coex-Tod, Recovery kaputt). Diskriminator: Serial — erste `tcp-stall` vor/nach API-Tod; `[WIFI] coex zombie` fehlt in 0.2.36 immer.
 
 **PSRAM-Nutzung (0.2.35+):**
 
@@ -105,9 +118,9 @@ Nicht die Hauptursache: Host-Userland-USB-Stress (kein `dd`-Loop, udisks inaktiv
 | cyan | `UsbQuiet` | Host gesteckt, ruhig |
 | grün | `Measuring` | Host liest |
 | gelb blink | `WifiPortal` | nicht connected / reconnect |
-| orange blink | `TcpDown` | plugged, TCP Collector down |
+| orange blink | `TcpDown` | Collector/IP-Pfad tot (auch Zombie-Assoc, ab 0.2.37) |
 
-**Falle:** dimmblau/cyan ⇒ nicht „Web ok“.
+**Falle (bis 0.2.36):** dimmblau ⇒ nicht „Web ok“. Ab 0.2.37: IdleWifi nur bei recent `tcp_tx_ok` (Boot-Grace 30 s).
 
 ---
 
@@ -119,23 +132,27 @@ Nicht die Hauptursache: Host-Userland-USB-Stress (kein `dd`-Loop, udisks inaktiv
 
 ---
 
-## 7. Offene Fragen / nächste FW-Schritte
+## 7. Verifikation 0.2.37 (Lab)
 
-1. **Lab-Policy:** Bei `lab_debian` MSC dauerhaft soft-detached halten, solange Collector/HTTP gebraucht wird (nur explizit „MSC arm“ reattach).  
-2. **Link-Liveness:** nicht nur `WL_CONNECTED` / TCP-Connect-Versuch — z. B. Gateway-Ping oder erfolgreicher Collector-`tcp_tx_ok` als Gesund.  
-3. **EventBus-Payloads** in PSRAM (nicht nur Slots) oder kleiner Ring / weniger Auto-Session-Spam.  
-4. Espressif-Coex / USB-PHY: prüfen ob `tud_disconnect` den PHY wirklich ruft; ggf. längerer Hold bevor `WiFi.begin`.  
-5. Feld-Trennung beibehalten: COM=Versorgung/Log, USB=HU — Lab parallel beides am PC ist der Stressfall.
+1. RST, OTG **raus** → 60 s API stabil (Baseline).  
+2. RST, OTG **drin**, Lab-Policy detached → Host sieht kein/`zeitweise kein` HU_PROBE; API 60 s stabil.  
+3. Explizit „MSC arm“ → kurze Enum, API darf kurz leiden, muss ohne RST zurück.  
+4. Serial: **kein** `tcp-stall` nur weil `lastTcpTxOkMs==0`.  
+5. Zombie: LED nicht dauerhaft IdleWifi-blau solange `curl` timeout; `[WIFI] coex zombie` erscheint bei Bedarf.
+
+## 8. Noch offen (nach PASS von §7)
+
+1. EventBus-Payloads in PSRAM (nicht nur Slots).  
+2. USB-PHY: ob `tud_disconnect` den PHY wirklich quiet macht.  
+3. Feld: COM ≠ OTG trennen bleibt richtig.
 
 ---
 
-## 8. Review-Checkliste
+## 9. Review-Checkliste
 
-- [ ] `firmware/src/app/App.cpp` — `enterCoexHold`, Stall-Schwellen, Zombie-Pfad  
-- [ ] `firmware/src/net/EventBus.*` — PSRAM-Ring  
-- [ ] `firmware/src/core/HuMem.h` — Allokator  
-- [ ] `firmware/src/capture/OfflineCapture.cpp` — PSRAM-Capture  
-- [ ] `firmware/platformio.ini` — `BOARD_HAS_PSRAM`, `qio_qspi`, `FW_VERSION`  
-- [ ] Repro A/B/C gegen geflashte `.88` nach OTA/COM-Flash wiederholen  
+- [x] `App.cpp` — Stall-Gate, Zombie-Uhr, B23 clear, Lab-Detach (0.2.37)  
+- [x] `StatusLed` — IdleWifi nur bei data-alive  
+- [x] `platformio.ini` — `FW_VERSION=0.2.37`  
+- [ ] Flash `.88` + Repro A/B/C + §7  
 
-**Aktueller Lab-Ist (Berichtzeit):** OTG raus, ARP/`api` oft tot bis RST — Fehler reproduzierbar im Alltag der Session.
+**Aktueller Lab-Ist:** 0.2.37 gebaut; Flash/Feldtest ausstehend.
