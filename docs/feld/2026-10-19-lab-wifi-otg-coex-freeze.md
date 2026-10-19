@@ -1,9 +1,9 @@
-# Lab: WiFi/OTG-Coex-Freeze (0.2.32–0.2.37) — 2026-10-19
+# Lab: WiFi/OTG-Coex-Freeze (0.2.32–0.2.39) — 2026-10-19
 
 **Gerät:** Lab-ESP `.88` (YD ESP32-S3 N8R2, 8 MiB Flash + 2 MiB Quad-PSRAM)  
 **Host:** Proxmox CT `DebianCursor` (100) @ `192.168.178.187`, USB via Hub `2-3`  
-**FW-Stand:** Branch `lab/2026-10-19-wifi-otg-coex-freeze` — **0.2.38** (Post-Offline Lab-Re-Detach)  
-**Status:** **0.2.36 = FAIL**. **0.2.37** False-Stall/Zombie/Lab-Boot-Detach ✓. **0.2.38** schließt Post-Offline-Leak (B27/B28).
+**FW-Stand:** Branch `lab/2026-10-19-wifi-otg-coex-freeze` — **0.2.39** @ `e88bf0d`  
+**Status:** Lab-Coex-Fixes **PASS** (Soak + Offline + MSC-arm + Offline-nach-arm). Feld morgen: NBT mit Vorsicht — Lab-Detach gilt nur `lab_debian`.
 
 ---
 
@@ -88,7 +88,8 @@ Nicht die Hauptursache: Host-Userland-USB-Stress (kein `dd`-Loop, udisks inaktiv
 | 0.2.35 | PSRAM: EventBus-Slots + Offline-Capture bis ~1 MiB; früherer Stall bei `plugged` | Boot-Heap besser (`[BUS] in_psram=1`); Coex-Tod **bleibt** |
 | 0.2.36 | Zombie-Assoc zählt nicht als Recovery; STA-Restart im Hold ohne TCP | **FAIL** — False-Stall + toter Zombie-Zweig + Watchdog-Flacker |
 | **0.2.37** | P0: `tcpEverWorked`-Stall-Gate + Grace; eigene `coexZombieSinceMs_`; kein `EventBus::clear()` bei aktiver Session; Lab MSC default soft-detached; Liveness = `lastTcpTxOk`; `setAutoReconnect(false)`; LED nicht IdleWifi bei Zombie | **PASS** Baseline + OTG-Detach; Offline PASS, aber danach Gelb (B27) |
-| **0.2.38** | B27: nach Offline-Upload `lab_debian` → `softDetach`; B28: `wifiOn()` `setAutoReconnect(false)` | **Verifikation:** Offline ohne RST → Cyan + API 200 |
+| **0.2.38** | B27: nach Offline-Upload `lab_debian` → `softDetach`; B28: `wifiOn()` `setAutoReconnect(false)` | Offline ok; nach MSC-arm Upload konnte WiFi sterben |
+| **0.2.39** | Lab-Detach **vor** `wifiOn`; kein `restoreMedia` im Lab nach Offline; `softDetach(0)` cancelt softCycle-Reattach | **PASS** Regression Offline→arm→Offline, 30 s `soft=False` / API 200 |
 
 ### Code-Fehler (Review Grok/GPT/Mistral, 0.2.36 verifiziert)
 
@@ -133,27 +134,27 @@ Nicht die Hauptursache: Host-Userland-USB-Stress (kein `dd`-Loop, udisks inaktiv
 
 ---
 
-## 7. Verifikation 0.2.37 (Lab)
+## 7. Verifikation Lab (0.2.37–0.2.39)
 
-1. RST, OTG **raus** → 60 s API stabil (Baseline).  
-2. RST, OTG **drin**, Lab-Policy detached → Host sieht kein/`zeitweise kein` HU_PROBE; API 60 s stabil.  
-3. Explizit „MSC arm“ → kurze Enum, API darf kurz leiden, muss ohne RST zurück.  
-4. Serial: **kein** `tcp-stall` nur weil `lastTcpTxOkMs==0`.  
-5. Zombie: LED nicht dauerhaft IdleWifi-blau solange `curl` timeout; `[WIFI] coex zombie` erscheint bei Bedarf.
+| Check | Ergebnis |
+|---|---|
+| RST, OTG raus → 60 s API | ✓ |
+| RST, OTG rein, soft-detached → 90 s API, kein HU_PROBE | ✓ |
+| Offline 6–8 s → PASS, danach `soft=False` ohne RST | ✓ (0.2.38+) |
+| MSC arm (`/api/usb/cycle`) → API bleibt | ✓ kurz |
+| Offline **nach** MSC arm → Upload + `soft=False` | ✓ **0.2.39** |
+| Serial: kein False-Stall `lastOk==0` | ✓ (0.2.37) |
 
-## 8. Noch offen (nach PASS von §7)
+## 8. Feld morgen (NBT)
 
-1. EventBus-Payloads in PSRAM (nicht nur Slots).  
-2. USB-PHY: ob `tud_disconnect` den PHY wirklich quiet macht.  
-3. Feld: COM ≠ OTG trennen bleibt richtig.
+- FW **0.2.39** — Lab-Detach-Policy greift **nicht** bei `bmw`/Mazda (nur `lab_debian`).
+- Coex-Risiko unter HU-OTG bleibt Silizium; Supervision/Liveness/B23 sind verbessert.
+- COM ≠ OTG trennen beibehalten.
 
----
+## 9. Noch offen (nicht blocker)
 
-## 9. Review-Checkliste
+1. EventBus-Payloads in PSRAM.  
+2. Explizites WebUI „MSC disarm“ (ohne Offline).  
+3. WiFi-On als Request an App-Supervisor (Ownership).
 
-- [x] `App.cpp` — Stall-Gate, Zombie-Uhr, B23 clear, Lab-Detach (0.2.37)  
-- [x] `StatusLed` — IdleWifi nur bei data-alive  
-- [x] `platformio.ini` — `FW_VERSION=0.2.37`  
-- [ ] Flash `.88` + Repro A/B/C + §7  
-
-**Aktueller Lab-Ist:** 0.2.37 gebaut; Flash/Feldtest ausstehend.
+**Aktueller Lab-Ist:** 0.2.39 geflasht + PR #8 gepusht (`e88bf0d`).
