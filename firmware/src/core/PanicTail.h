@@ -23,6 +23,7 @@ public:
         BotReset = 9,
         NeedReset = 10,
         EpStall = 11,
+        MediaSwitch = 12,  // arg: 1=enter 2=select_ok 3=msc_begin 4=done; 0x10|step on fail
     };
 
     static void begin();

@@ -5,6 +5,7 @@
 #include "capture/AutoMarker.h"
 #include "capture/OfflineCapture.h"
 #include "media/ProbeMedia.h"
+#include "core/PanicTail.h"
 #include "core/ProbeClock.h"
 #include "USB.h"
 #include "USBMSC.h"
@@ -131,19 +132,32 @@ bool MscGadget::switchMedia(const char* presetId, const String* specJson, bool u
     mutPending_ = false;
     MscBotTap::cancelUnitAttention();
     ReadStall::instance().disable("media_switch");
-    // LUN off first so no read is served from a half-built layout.
+    // LUN off while rebuilding. Full USB disconnect only for cycle=true (re-enum);
+    // remount keeps the link so WiFi/OTG coexistence stays up on the lab host.
     const bool wasPresented = mediaPresented_;
     MSC.mediaPresent(false);
     mediaPresented_ = false;
     remountHoldUntilMs_ = 0;
-    delay(50);
+    softReattachAtMs_ = 0;
+    if (usbCycle && softAttached_) {
+        tud_disconnect();
+        softAttached_ = false;
+        delay(80);
+    } else {
+        delay(50);
+    }
+    yield();
+    PanicTail::breadcrumb(PanicTail::MediaSwitch, 1);
     ProbeMedia& media = ProbeMedia::instance();
     const bool ok = specJson ? media.selectSpecJson(*specJson, err, persist)
                              : media.selectPreset(presetId, err, persist);
     if (!ok) {
+        PanicTail::breadcrumb(PanicTail::MediaSwitch, 0x10);
+        if (usbCycle && !softAttached_) softAttach();
         if (wasPresented) presentMedia("media_switch_failed");
         return false;
     }
+    PanicTail::breadcrumb(PanicTail::MediaSwitch, 2);
     MSC.begin(media.sectorCount(), 512);
     applyMediaIdentity();
     lastReadEndUs_ = 0;
@@ -159,12 +173,12 @@ bool MscGadget::switchMedia(const char* presetId, const String* specJson, bool u
     Serial.printf("[MSC] media switch -> %s sectors=%u cycle=%d\n", media.variantId(),
                   (unsigned)media.sectorCount(), usbCycle ? 1 : 0);
     if (usbCycle) {
-        // Re-enumeration forces the host to re-read capacity + FS (no stale cache).
         presentMedia("media_switch");
-        softCycle(1500);
+        softReattachAtMs_ = millis() + 1500;
     } else {
         remountHoldUntilMs_ = millis() + 1500;
     }
+    PanicTail::breadcrumb(PanicTail::MediaSwitch, 4);
     return true;
 }
 
