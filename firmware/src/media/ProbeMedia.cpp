@@ -95,14 +95,21 @@ bool ProbeMedia::selectPreset(const char* id, String* err, bool doPersist) {
         if (doPersist) persist(p->id, nullptr);
         return true;
     }
-    JsonDocument doc;
-    if (deserializeJson(doc, p->json)) {
+    JsonDocument* doc = new (std::nothrow) JsonDocument();
+    if (!doc) {
+        if (err) *err = "oom_json";
+        return false;
+    }
+    if (deserializeJson(*doc, p->json)) {
+        delete doc;
         if (err) *err = "preset_json";
         return false;
     }
     String canon;
-    serializeJson(doc, canon);
-    if (!loadSpec(doc.as<JsonVariantConst>(), p->id, p->label, canon, err)) return false;
+    serializeJson(*doc, canon);
+    const bool okLoad = loadSpec(doc->as<JsonVariantConst>(), p->id, p->label, canon, err);
+    delete doc;
+    if (!okLoad) return false;
     if (doPersist) persist(p->id, nullptr);
     return true;
 }

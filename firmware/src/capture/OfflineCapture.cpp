@@ -712,7 +712,7 @@ bool OfflineCapture::replayOneRec() {
                                        flag ? "need_reset_active_not_healed" : nullptr);
             break;
         case 11:
-            inst_->emitUsbEpochTinyusb(rec.tUs, "msc_bot_reset", 0, 0, "msc_req_reset_0xff");
+            inst_->emitUsbEpochTinyusb(tUs, "msc_bot_reset", 0, 0, "msc_req_reset_0xff");
             break;
         default:
             break;

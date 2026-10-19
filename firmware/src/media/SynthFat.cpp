@@ -110,7 +110,12 @@ bool SynthFat::setTag(char* dst, JsonVariantConst v, String* err) {
 }
 
 bool SynthFat::parseSpec(JsonVariantConst j, Spec& out, String* err) {
-    out = Spec();
+    // Spec is ~7.6 KiB — never `out = Spec()` (temporary on the ~8 KiB Arduino loop stack → panic).
+    memset(&out, 0, sizeof(out));
+    snprintf(out.id, sizeof(out.id), "custom");
+    snprintf(out.fsLabel, sizeof(out.fsLabel), "HUPROBE");
+    out.volumeId = 0x48500131;
+    out.reserved = 1;
     if (!j.is<JsonObjectConst>()) {
         if (err) *err = "spec_not_object";
         return false;
@@ -418,15 +423,21 @@ bool SynthFat::build(const Spec& spec, MediaLayout& L, String* err) {
         }
         for (uint8_t f = 0; f < spec.fileCount; f++) need += spec.files[f].gapClusters;
         const bool fixedVol = spec.volumeMib != 0;
-        uint32_t sectors = fixedVol ? (uint32_t)spec.volumeMib * 2048u : 32768u;  // ≥16 MiB
+        // Auto volume starts at 16 MiB so FAT16 stays above the 4085-cluster floor.
+        // Fixed volumes that are too small for that floor are grown (still FAT16).
+        uint32_t sectors = fixedVol ? (uint32_t)spec.volumeMib * 2048u : 32768u;
         const uint32_t want = need > kMinFat16Clusters ? need : kMinFat16Clusters;
         bool ok = false;
-        for (int it = 0; it < 6; it++) {
+        for (int it = 0; it < 8; it++) {
             ok = tryGeometry(spec, L, sectors, spc);
-            if (L.clusterCount >= want && L.clusterCount <= kMaxFat16Clusters) break;
-            if (fixedVol || L.clusterCount > kMaxFat16Clusters) break;
-            sectors += (want - L.clusterCount) * spc + 64u;
+            if (ok && L.clusterCount >= want && L.clusterCount <= kMaxFat16Clusters) break;
+            if (L.clusterCount > kMaxFat16Clusters) break;
+            const uint32_t grow = (want > L.clusterCount)
+                                      ? (want - L.clusterCount) * spc + 64u
+                                      : (kMinFat16Clusters * spc + 2048u);
+            sectors += grow;
             sectors = (sectors + 2047u) / 2048u * 2048u;
+            ok = false;
         }
         if (!ok || L.clusterCount < need) continue;
         if (allocate(spec, L, err)) return true;
