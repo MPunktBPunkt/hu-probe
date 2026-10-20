@@ -1,0 +1,2136 @@
+Es gab nach dem großen Update heute morgen einen Feldtest. Hol dir alle Daten von GitHub, bewerte ihn, suche nach Mustern und neuen hu Parametern und Verhalten. Erstelle einen Bericht für die nächste KI.
+
+Cursor:
+Daten reichen. Bericht liegt, alles
+gepusht.
+
+Sessions (3× PASS): 075616 · 075935 · 080508
+
+Bericht: docs/feld/2026-10-20-bmw-free-offlin
+e-0.2.40.md
+Commit: 96b55f7 → Branch + PR #8 (https://git
+hub.com/MPunktBPunkt/hu-probe/pull/8)
+
+Muster:
+• Prefetch-LBAs: T1 9…249, T2 318…558, T3
+627…867 (große Chunks, nicht Stream)
+• next_track_read ↔ next_track_read ≈
+26,47 s (≈ Tracklänge) in allen drei
+Läufen
+• Plug-nach-Start / Replug bringt Enum +
+erneutes Prefetch; 60 s schneidet T3
+
+Branch = origin bei 96b55f7, keine
+offenen lokalen Commits/Änderungen. PR #8 ist
+aktuell.
+
+Mistral:
+
+Der Bericht liegt auf dem PR-Branch (nicht main) — und die drei Rohsessions sind im Repo. Ich hole alles vom Branch-Head 96b55f7.
+
+075616 ist komplett ausgewertet — der Report verschweigt fast die wichtigste Entdeckung (das Atom ist vollständig gelesen, nicht nur Head). Prüfe noch die beiden anderen Sessions auf read10-CBWs und TUR-Statistik.
+
+Beide Dateien liegen lokal — jetzt die Read10-Atome, Marker und Timing-Deltas aus allen drei Sessions extrahieren:
+
+Alle drei Sessions komplett am Wire nachgerechnet — mit mehreren echten Neufunden und zwei Korrekturen (eine davon meine eigene). Bericht als Canvas:
+
+Der Review-Canvas review-huprobe-bmw-free-0240-96b55f7 ist fertig — hier die Kurzfassung:
+
+1. Volles Atom bei jedem Wechsel — Berichtsdeutung korrigiert (B34): Der Feldbericht deutete die Prefetch-LBAs als „Head-only". Wire-Daten sagen das Gegenteil: Alle 14 Atome in den drei Läufen sind vollständig — (head,240) + 4 ms später (head+240,69) = 158.208 B. Die Grammatik ist byte-identisch zu S2/Live. „Head-only 9…249/318…558/627…867" ist nur die Head-Hälfte; der Tail kommt 4 ms danach.
+
+2. Autoplay-Rhythmus 26,475 s ± 3 ms (n=3): Atom-zu-Atom in allen drei Sessions identisch — das ist die Tracklänge. Ein so stabiler Takt ist ein neuer harter HU-Parameter.
+
+3. GATE-01-Wende: In allen Idle-Fenstern (26–44 s) null File-Reads, nur TUR-Polls. Damit ist ein Früh-Prefetch am NBT widerlegt — die PiDrive-R21-Hypothese („~15 s vor Trackende") gilt für dieses Medium nicht. GATE-01 schrumpft auf die Restlatenz Read→hörbarer Wechsel (≤ ~150 ms). Ein einziger 90–120-s-Lauf mit audible-Taps schließt GATE-01 endgültig (B35).
+
+4. Eigene Korrektur: Mein früherer T2-Review-Befund „~1 TUR/s" war ein Rechenfehler (Restfenster 61,8 s statt 32,5 s). Richtig: TUR-Idle-Poll = exakt 2238 ms (p10=p50=p90 über alle Sessions) — noch ein neuer HU-Parameter.
+
+5. Neue Muster: tail_then_head nach Replug = Re-Entry-Signatur (dritte Stichprobe wie 212136, M3-geschärft); Remount startet Playlist bei T1 mit kurzer Resume-Sonde (M4, n=1); Mount→first_read 70–86 ms.
+
+6. B7 gelöst: capture_t_us überall unclamped, CBW-Coalescing (39 Chunks → 2 Records), Auto-Marker bei µs-genauem CBW-Zeitpunkt — Offline-Timing hat jetzt Live-Qualität.
+
+Ampel: 🟢 Atom-Grammatik, Timing-Fakten, GATE-01-Wende · 🟡 B34 (Bericht Muster A korrigieren), M3-Stichprobe, M4 n=1, B37 parse_errors:47 bei PASS · dahinter die neue Liste B34–B39 im Canvas.
+
+Nächster Schritt aus meiner Sicht: der eine audible-Tap-Lauf (90–120 s) — der schließt GATE-01. Danach warte ich auf den nächsten Push.
+
+Review: hu-probe BMW NBT free Offline 0.2.40 — Muster und Parameter für die nächste KI
+
+Prüfer: Mistral (GLM) · Datum: 2026-10-20 · Repo: MPunktBPunkt/hu-probe · Branch: lab/2026-10-19-wifi-otg-coex-freeze @ 96b55f7 (PR #8, offen) · FW 0.2.40 (b1b768fa-dirty)
+
+Datenbasis: Feldbericht docs/feld/2026-10-20-bmw-free-offline-0.2.40.md + alle drei Rohsessions komplett im Repo (075616, 075935, 080508; events.jsonl je 128/288/308 Zeilen, vollständig ausgewertet). Die 0.2.39er-Lab-Kette (B27/B28-Fixes, Re-Detach, AutoReconnect) ist in PR #8 enthalten und als Lab PASS markiert — hier nicht erneut geprüft.
+
+Kurzfazit
+
+Drei Offline-PASS im neuen free-Szenario (Autoplay/Tippen frei, free_markers, 60/90 s). Die Rohdaten liefern die präziseste NBT-Lesegrammatik der Serie — dank zweier FW-Verbesserungen, die still eintrafen: B7 ist gelöst (alle Replay-Events tragen unclamped capture_t_us + capture_seq) und CBW-Coalescing (39 Chunks → 2 Records à Atom, record_size 19 B, 1 MiB PSRAM-Capacity). Kernbefunde: (1) Jeder Track-Wechsel liest das VOLLSTÄNIGE Atom (head,240)+(head+240,69) — der Bericht deutet Muster A als „Kopf + Block, nicht ganzer Track", das ist falsch (B34): In allen 3 Sessions, bei jedem der 14 Atome, folgen head und tail CBW mit ~4 ms Abstand. (2) Autoplay-Rhythmus 26,475 s ± 3 ms über alle Läufe — Atom-zu-Atom = Tracklänge. (3) Kein Früh-Prefetch: In den Idle-Fenstern (26–44 s) zwischen den Atomen kommen nur TUR-Polls — der nächste Track wird erst beim Wechsel gelesen. Die PiDrive-R21-Hypothese „~15 s vor Ende Prefetch" ist damit für das hu-probe-Medium widerlegt; GATE-01 ist auf „Rest-µs" geschrumpft (hörbarer Wechsel vs. Atom-Read). (4) TUR-Idle-Poll = exakt 2238 ms (p10=p50=p90, 3 Sessions) — und ich korrigiere meine eigene frühere Schätzung „~1 TUR/s" (Rechenfehler, s. unten). Ampel: 🟢 Datenqualität + Grammatik · 🟢 GATE-01 fast geschlossen · 🟡 Berichts-Muster A korrigieren · 🟠 audible-Marker fehlt als letztes Puzzleteil.
+
+Verifikation (eigene Nachrechnung aus allen drei events.jsonl)
+
+Session	Setup	Atome (capture_t_us, s)	Marker-Kette
+
+075616	schon gesteckt, 60 s	T2 (47,48) · T3 (73,96)	next_track ×2 → Δ 26.4746 s
+075935	Plug nach Start, 60 s	T1 (28,68) · T2 (29,76) · T3 (56,24)	mount_done 28,59 · first_read 28,68 · next_track 29,76 · next_track 56,24
+080508	90 s, Replug in T3	T3 (140,81) · T1 tail_then_head (142,39/142,42) · T2 (168,86)	mount_done 140,74 · first_read 140,81 · next_track 142,39 · next_track 168,86 → Δ 26.472 s
+
+
+Arithmetik-Checks: Alle Atome = 122.880 + 35.328 B = 158.208 B ✓, LBA head/head+240, covered head…head+308 ✓. Marker-Deltas: 26.4746 / 26.4747 / 26.4717 s (Bericht: 26.475/26.475/26.472 ✓). mount_done→first_read: 70,1 ms (080508) / 85,7 ms (075935) ✓ Bericht „70–85 ms".
+
+Neue HU-Parameter (FACT, aus capture_t_us)
+
+Parameter	Wert	Quelle
+
+Autoplay Track-Intervall (Atom→Atom)	26,475 s ± 3 ms (n=3)	alle Sessions; ≈ SynthFat dur_ms 26.514 (Δ −39 ms)
+Head-CBW	122.880 B in 113,6–114,0 ms (30 Chunks, ~3,79 ms/Chunk)	6 Atome gemessen
+Tail-CBW	35.328 B in 31,3–31,7 ms (9 Chunks)	dito
+Head→Tail-CBW-Gap	3,99–4,12 ms	dito
+Atom total	~149 ms, effektiv ~1,04 MiB/s	deckungsgleich mit Live ~150 ms
+TUR-Idle-Poll	exakt 2238 ms (p10=p50=p90=2238, n=26/24/35)	alle 3 Sessions — hochpräzise, vermutlich Host-Driver-Timer
+TUR-Burst n	8 (075616) / 37 (075935) / 36 (080508) — um Enum	tur_burst_n
+mount_done→first_read	70–86 ms	2 Sessions
+Operator-Skip first_read→next_track	~1,1–1,6 s	075935 (1,086 s), 080508 (1,47/1,58 s)
+Idle zwischen Atomen	nur TUR-Polls, kein File-Read	3 Sessions, Fenster 26–44 s
+
+
+Muster (das Gesuchte)
+
+M1 — Volles Atom bei jedem Wechsel (Korrektur des Berichts, B34)
+
+Der Bericht (Muster A) sagt: „HU holt Dateikopf + weiteren Block, nicht den ganzen Track kontinuierlich" und listet Fenster „9…249" mit n „122880 und/oder 35328". Rohdaten-Befund: Es ist immer UND. Alle 14 Atome aller 3 Sessions sind vollständig (head+tail), tail folgt ~4 ms nach head-CSW. Die „9…249"-Fenster sind nur der head-CBW; der tail (249,69)/(558,69)/(867,69) deckt bis 317/626/935. Die free-Grammatik ist identisch mit S2 (Same atom, live+offline, jetzt drittes Szenario). Wichtig, weil „Kopf-Prefetch vs. Voll-Read" ein Modellunterschied ist: NBT Evo liest den Track beim Wechsel vollständig — drittfach bestätigt.
+
+M2 — Kein Früh-Prefetch: GATE-01-Wende
+
+- In jedem Idle-Fenster (075616: 44,6 s vor T2; alle: 26,3–26,5 s zwischen Atomen) kommen null File-Reads — nur TUR alle 2238 ms.
+- Atom N+1 erscheint bei Atom N + 26,475 s (= Tracklänge), nicht X Sekunden früher.
+- Konsequenz: Die PiDrive-R21-Hypothese „~15 s vor Trackende wird der nächste vorgelesen" ist für den NBT Evo mit diesem Medium widerlegt — konsistent mit dem T2-Hold-Befund (Null-Reads bei Halten). Die HU liest erst beim Wechsel.
+- GATE-01 neu formuliert: Nicht mehr „Wie groß ist der Früh-Prefetch?" (Antwort: ~0 für dieses Medium), sondern „Wie groß ist die Restlatenz Atom-Read → hörbarer Wechsel?" (gebunden nach oben durch ~150 ms Atom-Dauer; exact fehlt der audible-Marker). Die Auto-Marker (next_track_read bei µs-genauem erstem CBW des neuen Tracks) liefern die Read-Seite bereits maschinell — es fehlt nur noch ein audible_change-Kanal (Operator-Tap reicht).
+
+M3 — tail_then_head = Re-Entry-Signatur (B14 geschärft)
+
+080508 zeigt nach Replug ein T1-Atom in tail_then_head ((249,69) vor (9,240), Gap 2,71 ms) — exakt die Morphologie von 212136 (Hold-Re-Entry). Zwei unabhängige Kontexte, gleiches Muster: Remount/Re-Entry in eine bekannte Datei → tail zuerst. Hypothese (jetzt stark): Die HU liest beim Wiedereinstieg die zuletzt bekannte Position (Tail) vor dem Dateianfang (Head-Refresh) — tail_then_head ist kein Hold-Artefakt, sondern Re-Entry-Grammatik. Dritte Stichprobe (bewusstes Re-Entry ohne Remount) würde FACT draus machen.
+
+M4 — Remount-Verhalten (neu)
+
+Nach Replug (080508): kurzer T3-Read (Resume-Position, 70 ms nach mount_done), 1,5 s später Sprung zu T1 (tail_then_head) → danach normaler Rhythmus T1→T2 (26,47 s). Der NBT startet die Wiedergabe nach Device-Remount bei Track 1 neu (kein Resume der alten Position, obwohl er kurz T3 las). Neuer Verhaltens-Parameter fürs Profil: remount → playlist restart at T1 (n=1, INFERENCE stark).
+
+M5 — Enum-Signatur verfeinert
+
+Plug-Enum (075935/080508): BOT-reads LBA 0 (8 Blöcke ×2), FAT (1/2/3), Root (7), plus 2× 4-KiB-Read bei LBA 24 (T1-Band, file_blk 15) — vermutlich ID3/Frame-Sync-Sonde ~7,7 KiB in TRACK1. Danach mount_done → first Read. Kleines, stabiles Extra zur Enum-Grammatik.
+
+FW-Fortschritt (bestätigt, still mitgeliefert)
+
+1. B7 GELÖST: replay_clock: capture_t_us, alle Events mit unclamped capture_t_us + capture_seq + origin (offline / post_finalize / post_finalize_buffered). UI-t_us kollabiert weiter (erwartet) — Zeitachse ist capture_t_us. Offline-Timing ist jetzt ebenso belastbar wie Live (Messwerte oben stammen alle aus Offline!).
+2. CBW-Coalescing: 39 Chunks → 1 Record/CBW (chunks:30/9), record_size 19–20 B, 69–231 Records bei 1 MiB PSRAM. Effizienz ~10× vs. 0.2.30. Kein Informationsverlust (chunks erhalten).
+3. Auto-Marker: mount_done, first_read, next_track_read maschinell bei exaktem CBW-Zeitpunkt — feuern auch bei tail_then_head (erster CBW des Tracks, egal welche Hälfte). Das ist die GATE-01-Infrastruktur.
+4. Lab-Kette 0.2.38/0.2.39 (B27/B28-Fixes) im PR enthalten, Lab PASS markiert.
+
+Eigene Korrektur (Serientradition)
+
+TUR-Rate: Im T2-Review (075344) schätzte ich „33 TURs ≈ 32,5 s → ~1 TUR/s". Falsch gerechnet: Das Atom endete bei t≈74,1 s (nicht 57,5 — das war die Gap vor dem Atom), Restfenster also ≈ 61,8 s → 61,8/33 ≈ 1,87 s — konsistent mit dem jetzt exakt gemessenen 2238 ms. Die ~1/s-Zahl aus dem T2-Canvas ist zu streichen; kanonisch: TUR-Idle-Poll = 2238 ms (FACT, p10=p50=p90).
+
+Beanstandungen
+
+Nr.	Punkt
+
+B34	Bericht Muster A korrigieren: „und/oder 35328" → immer beide CBWs (volles Atom); „nicht den ganzen Track" ist falsch — die HU liest beim Wechsel den ganzen Track. Betrifft die Modell-Pflege (Prefetch vs. Voll-Read) und sollte vor Profil-Updates korrigiert werden.
+B35	audible-Kanal fehlt: Für GATE-01-Rest braucht es nur noch einen audible_change-Marker (Operator-Tap beim hörbaren Wechsel). Ein einziger 90-s-Lauf mit Autoplay + 2 Taps schließt GATE-01.
+B36	Fenster-Regel: 60 s schneidet T3 (075616: T3-Ende ~100 s > media_hide 93,5 s). Default für free auf 90–120 s setzen, wenn ganze Ketten gewünscht. Bericht sagt dasselbe — als Default-Änderung umsetzen.
+B37	parse_errors: 47 in 075616 (session.json), bei integrity PASS und leeren seq_gaps. Quelle unklar (Collector-seitig?). Prüfen, ob Status-Spam oder Framing-Artefakt — sollte 0 sein, sonst erschwert es künftige Integrity-Audits.
+B38 (minor)	Serial-Drift: HP0001 (075616) → HP0002 (075935/080508) bei gleicher MAC — Soft-Serial ändert sich pro Boot (wie PiDrive PD03xx-Drift). Session-Verknüpfung über MAC, nicht Serial; im Bericht/dem Profil vermerken.
+B39 (minor)	LED nach Offline (Bericht E): Magenta (NEED_RESET-Latch) + Orange trotz tcp_ok — bekanntes Latch-Thema, RST räumt; niedrige Priorität, aber Runbook-Zeile wert.
+
+
+Auftrag an die nächste KI
+
+1. GATE-01-Schlusslauf (P0): free, 90–120 s, Autoplay T1→T2→T3 durchlaufen lassen, Operator tappt bei jedem hörbaren Wechsel (audible_change-Marker). Auswertung: next_track_read (maschinell) vs. audible_change (Operator) → Restlatenz-Verteilung. Damit ist GATE-01 geschlossen mit Ergebnis „Lead ≈ 0 ms + Restlatenz X ms" für dieses Medium.
+2. B34: Bericht Muster A korrigieren (volles Atom); ggf. kurzer Nachtrag-Commit.
+3. Querverweis PiDrive/technology-audit: R21-Hypothese (~15 s Früh-Prefetch) am NBT/158-KiB-Medium widerlegt (3 Sessions Null-Reads in Idle + Atom bei Trackende). R21 ggf. als medienspezifisch markieren (PiDrive-Slots ≠ kleine Tracks — B2-alt-Größenfrage bleibt fürs PiDrive-Medium offen).
+4. M3-Dritte Stichprobe (P1): Bewusstes Re-Entry ohne Remount (z. B. Pause→gleicher Track→Play) — wenn wieder tail_then_head: FACT „Re-Entry-Grammatik".
+5. M4 vertiefen (P2): Noch ein Replug-Lauf; prüfen, ob T1-Restart nach Remount reproduziert und ob der kurze T3-Read wirklich Resume-Position ist.
+6. Profil-Update bmw_nbt_evo: Neue FACT-Zeilen (26,475-s-Intervall, Atom-Timings 113,7/31,5/4,1 ms, TUR 2238 ms, mount→first_read 70–86 ms, Re-Entry tail_then_head, Remount→T1-Restart) + B34-Korrektur.
+7. Nicht tun: „Head-only-Prefetch" aus Bericht A in Modelle übernehmen; die 26,47 s als HU-Konstante ohne Tracklängen-Kontext deklarieren (sie ist die Tracklänge, nicht HU-Logik); Offline-t_us für Zeitordnung verwenden.
+
+Ampel
+
+- Drei Offline-PASS + Rohsessions im Repo: 🟢
+- B7 capture_t_us (Offline-Timing = Live-Qualität): 🟢 GELÖST
+- Volles Atom bei jedem Wechsel, 3 Szenarien (S2/free/live): 🟢
+- Autoplay-Intervall 26,475 s ± 3 ms: 🟢 FACT (n=3)
+- Atom-Timings (113,7 / 31,5 / 4,1 ms, ~149 ms total): 🟢 FACT (6 Atome)
+- TUR-Idle 2238 ms: 🟢 FACT (meine ~1/s-Schätzung korrigiert)
+- Kein Früh-Prefetch / R21 am NBT-Medium widerlegt: 🟢 (3× Null-Read-Idle)
+- GATE-01: 🟡 auf Restlatenz geschrumpft — ein Marker-Lauf schließt
+- Bericht Muster A (Head-only-Deutung): 🟠 B34 korrigieren
+- tail_then_head = Re-Entry (M3): 🟡 stark, dritte Stichprobe offen
+- Remount→T1-Restart (M4): 🟡 n=1
+- parse_errors 47 / Serial-Drift / LED-Latch: 🟡 B37/B38/B39
+
+GPT:
+
+1m 10s nachgedacht
+
+Ja. Ich habe den PR-Branch lab/2026-10-19-wifi-otg-coex-freeze bis 96b55f7, den kompletten PR-Diff gegen main, alle drei Rohsessions inklusive events.jsonl/markers.jsonl/session.json sowie die relevanten Firmware-/Profiländerungen geprüft. Zusätzlich habe ich den aktuellen PiDrive-Parameterstand gegengehalten.
+
+Dabei gibt es mehrere wichtige Korrekturen gegenüber dem bisherigen Mistral-Review. Besonders relevant sind:
+
+1. Der 26,475-s-Rhythmus ist real.
+2. Der „Head→Tail = ~4 ms“-Befund ist falsch: zwischen den beiden READ10-CBWs liegen ~118 ms; ~4 ms ist der interne 4-KiB-Pace.
+3. Der heutige Bericht verwendet das falsche Medium (cache_b): die drei Sessions melden in den Rohdaten eindeutig demo_v1.
+4. tail_then_head nach Replug ist reproduziert, aber der Abstand Tail→Head beträgt diesmal ~34,3 ms, nicht ~2,7 ms.
+5. Der stärkste neue HU-Befund ist nicht nur „kein Prefetch“, sondern: vollständiges Datei-Atom erst beim Trackwechsel, danach ausschließlich TUR-Polling mit exakt 2238 ms.
+6. Der aktuelle PiDrive-Parameterstand enthält noch die alte ~15-s-Prefetch-Hypothese als [B]/[S]. Die neue hu-probe-Evidenz ist stark genug, diese für dieses Medium zurückzustufen bzw. zu trennen.
+
+Hier der unabhängige Bericht:
+
+Unabhängiger Review / Übergabebericht
+
+BMW NBT Evo · hu-probe · FW 0.2.40 · Feldtest 2026-10-20
+
+Prüfdatum: 2026-10-20
+Repo: "MPunktBPunkt/hu-probe"
+PR: #8
+Branch: "lab/2026-10-19-wifi-otg-coex-freeze"
+HEAD: "96b55f7f23ae3666b30e5ebcd62bbe07288900b2"
+Base/main: "7f8a90c44bfbcfa296d8bd68b9b07982ed9b6155"
+FW: 0.2.40
+BMW HU: NBT Evo
+Feldsessions: 075616, 075935, 080508
+
+Der PR ist zum Prüfzeitpunkt offen, nicht in "main" gemerged.
+
+---
+
+1. Gesamturteil
+
+Der Feldtest war erfolgreich und liefert eine erhebliche Verbesserung des BMW-NBT-Modells.
+
+Alle drei Sessions sind:
+
+- "transport=ram_offline"
+- "offline_overflow=0"
+- "dropped=0"
+- "recv_seq_gaps=[]"
+- "replay_complete=true"
+- "upload_status=delivered"
+- "integrity_pass=true"
+
+Die Rohdaten zeigen über drei unterschiedliche Situationen:
+
+1. bereits gestecktes Gerät,
+2. Plug nach Capture-Start,
+3. Replug während laufender Wiedergabe,
+
+ein sehr konsistentes Verhalten.
+
+Die wichtigste neue Modellform lautet:
+
+Trackwechsel
+    ↓
+vollständiges Datei-Atom 158208 B
+    ↓
+~149 ms USB-Lesephase
+    ↓
+keine File-Reads während der Wiedergabe
+    ↓
+TUR-Poll alle 2238 ms
+    ↓
+nächster Trackwechsel
+
+Damit ist die bisherige Vorstellung eines kontinuierlichen oder ~15 s vorauslaufenden Prefetches für dieses 158-KiB-Medium nicht mehr haltbar.
+
+---
+
+2. Rohdatenbasis
+
+Session 075616
+
+Setup:
+
+bereits gesteckt
+60 s
+
+Beobachtet:
+
+T2 → T3
+
+READ10:
+
+T2: 318/240 + 558/69
+T3: 627/240 + 867/69
+
+Beide vollständigen Atome:
+
+158208 B
+
+---
+
+Session 075935
+
+Setup:
+
+Plug nach Capture-Start
+60 s
+
+Beobachtet:
+
+Enum
+→ T1
+→ T2
+→ T3
+
+READ10:
+
+T1: 9/240 + 249/69
+T2: 318/240 + 558/69
+T3: 627/240 + 867/69
+
+---
+
+Session 080508
+
+Setup:
+
+90 s
+Replug während T3
+
+Beobachtet:
+
+T3
+→ tail(T1)
+→ head(T1)
+→ T2
+
+READ10:
+
+T3: 627/240 + 867/69
+
+T1:
+249/69
+9/240
+
+T2:
+318/240 + 558/69
+
+Das ist die bisher sauberste unabhängige Re-Entry-Beobachtung.
+
+---
+
+3. Kritische Korrektur B34: Es wird das vollständige Atom gelesen
+
+Der Feldbericht bezeichnet die LBA-Bereiche:
+
+9…249
+318…558
+627…867
+
+teilweise als „Head/Tail-Prefetch“.
+
+Das ist irreführend.
+
+Ein vollständiger Track besteht hier aus:
+
+(head, 240)
++
+(head+240, 69)
+
+also:
+
+240 + 69
+= 309 LBA
+= 158208 B
+
+Die zweite Hälfte kommt in allen drei Runs.
+
+Damit ist der korrekte Befund:
+
+«Die HU liest beim beobachteten Trackwechsel das komplette 158208-B-Dateiatom.»
+
+Nicht:
+
+«Die HU liest nur den Dateikopf und einen Prefetch-Block.»
+
+Das wurde jetzt mehrfach unabhängig bestätigt.
+
+---
+
+4. Wichtige zweite Korrektur: Head→Tail sind ~118 ms, nicht ~4 ms
+
+Der bisherige Review nennt:
+
+«Head→Tail-CBW-Gap ≈ 4 ms.»
+
+Das ist aus den Rohdaten nicht korrekt.
+
+Beispiel 075935:
+
+T1 head:
+28676005 µs
+
+T1 tail:
+28793723 µs
+
+Differenz:
+117718 µs
+= 117,718 ms
+
+Weitere Atome:
+
+117718 µs
+118057 µs
+117971 µs
+117968 µs
+118089 µs
+
+Damit liegt der:
+
+«READ10-CBW-Abstand zwischen 240er Head und 69er Tail bei ~118 ms.»
+
+Die ~4-ms-Größe ist dagegen der interne Read-Pace der 4-KiB-Chunks innerhalb eines CBW.
+
+Das ist ein wichtiger Unterschied:
+
+4 KiB → 4 KiB
+≈ 3,8–4,0 ms
+
+240-LBA-CBW
+↓
+~118 ms
+↓
+69-LBA-CBW
+
+Neuer Parameter
+
+Head-CBW Dauer/Pace:
+
+~118 ms
+
+für 240 LBA.
+
+Tail-CBW anschließend:
+
+~31–32 ms
+
+für 69 LBA.
+
+Gesamtes Atom:
+
+≈149 ms
+
+---
+
+5. Neue HU-Read-Grammatik
+
+Die Daten erlauben jetzt eine präzisere Beschreibung:
+
+240 LBA
+↓
+30 × 4096 B
+↓
+~118 ms
+↓
+69 LBA
+↓
+8 × 4096 B + 2560 B
+↓
+~31 ms
+
+Damit:
+
+158208 B
+≈149 ms
+≈1,04 MiB/s
+
+Diese Grammatik ist identisch zur früheren S2-Atombeobachtung.
+
+Sie ist jetzt über mehrere Szenarien bestätigt.
+
+---
+
+6. Neuer harter HU-Parameter: 2238-ms-TUR-Timer
+
+Das ist einer der wertvollsten neuen Befunde.
+
+Alle drei Sessions liefern:
+
+tur_idle_p10_ms = 2238
+tur_idle_median_ms = 2238
+tur_idle_p90_ms = 2238
+
+mit:
+
+075616: idle_n = 26
+075935: idle_n = 24
+080508: idle_n = 35
+
+Der Timer ist damit nicht mehr nur ungefähr bekannt.
+
+FACT
+
+«BMW NBT Evo Idle-TUR-Pollperiode = 2238 ms»
+
+innerhalb dieser Messreihe.
+
+Das ist deutlich stärker als die frühere ~1-Hz-Schätzung.
+
+Die frühere Aussage:
+
+~1 TUR/s
+
+ist endgültig zu streichen.
+
+---
+
+7. Was zwischen zwei Tracks NICHT passiert
+
+In den Idle-Phasen zwischen den vollständigen Atomen finden sich:
+
+TUR
+TUR
+TUR
+...
+
+aber:
+
+0 × READ10
+
+Das ist über alle drei Sessions konsistent.
+
+Damit:
+
+Track N vollständig gelesen
+        ↓
+26,475 s
+        ↓
+Track N+1 vollständig gelesen
+
+und nicht:
+
+Track N
+↓
+10–15 s vor Ende
+↓
+READ Track N+1
+
+---
+
+8. GATE-01: wesentliche Wende
+
+Die bisherige GATE-01-Frage war:
+
+«„Wie groß ist der Prefetch-Lead?“»
+
+Die neue Evidenz beantwortet das für dieses Medium praktisch:
+
+Prefetch-Lead ≈ 0
+
+zumindest im Sinne von:
+
+«Kein beobachtbarer File-Read des Folgetracks während der laufenden Wiedergabe.»
+
+Der nächste Track wird erst beim Trackwechsel gelesen.
+
+Damit wird R21 neu bewertet
+
+Die PiDrive-Hypothese:
+
+~15 s Vorlauf
+
+ist für dieses Medium:
+
+REJECTED / nicht bestätigt.
+
+Wichtig:
+
+Das bedeutet nicht automatisch:
+
+«Die NBT-HU hat unter allen Medienbedingungen niemals Prefetch.»
+
+Es bedeutet:
+
+«Für das 158208-B-Trackmedium wurde in drei unabhängigen Free-Läufen kein vorauslaufender File-Read beobachtet.»
+
+Das ist die korrekte epistemische Aussage.
+
+---
+
+9. Neuer Parameter: Trackwechsel-Intervall
+
+Zwischen den automatischen "next_track_read"-Markern:
+
+075616:
+26.474635 s
+
+075935:
+26.474673 s
+
+080508:
+26.048656 s
+
+Achtung: Der dritte Wert ist nicht 26,472 s.
+
+Die Rohdaten zeigen dort:
+
+T1/T3-Reentry → T2:
+168859197 - 142387523
+= 26.471674 s
+
+Das ist der relevante normale Trackwechsel.
+
+Damit:
+
+26.474635 s
+26.474673 s
+26.471674 s
+
+≈
+
+26.4737 s
+
+Streuung nur wenige Millisekunden.
+
+Status
+
+FACT, n=3
+
+Aber:
+
+«26,47 s ist hier primär die Dauer des verwendeten SynthFat-Tracks, nicht automatisch ein HU-Timer.»
+
+Das darf nicht als allgemeiner NBT-Parameter „Trackwechsel alle 26,47 s“ gespeichert werden.
+
+---
+
+10. Neuer Befund: Die HU hat offenbar zwei unterschiedliche Zeitklassen
+
+Die Daten zeigen sehr klar:
+
+Klasse A — Tracklaufzeit
+
+≈26,474 s
+
+Diese folgt dem Medium bzw. der Wiedergabedauer.
+
+Klasse B — USB-Idle-Poll
+
+2238 ms
+
+Diese ist offensichtlich unabhängig von der Tracklänge.
+
+Das ist ein wichtiger Modellgewinn:
+
+HU playback state
+│
+├── Media/Track clock ≈ Trackdauer
+│
+└── USB control polling ≈ 2238 ms
+
+Der TUR-Timer ist daher viel eher ein HU-/Treiberparameter als ein Medienparameter.
+
+---
+
+11. Plug-after-start: Mount→Read-Latenz
+
+075935:
+
+mount_done
+= 28.590310 s
+
+first_read
+= 28.676005 s
+
+Differenz:
+
+85.695 ms
+
+080508:
+
+mount_done
+= 140.740478 s
+
+first_read
+= 140.810541 s
+
+Differenz:
+
+70.063 ms
+
+Neuer HU-Parameter
+
+mount_done → first_file_read
+≈70–86 ms
+
+Status:
+
+FACT, n=2
+
+Das ist jetzt ein guter Mount-/Read-Latenzparameter.
+
+---
+
+12. Nach erstem Read: kurze Auswahl-/Startphase
+
+075935:
+
+first_read
+28676005
+next_track
+29761612
+
+Differenz:
+
+1.085607 s
+
+080508:
+
+first T3 read
+140810541
+next re-entry event
+142387523
+
+Hier liegen allerdings Replug-/Re-Entry-Effekte vor.
+
+Deshalb nicht vermischen.
+
+Status
+
+Die ~1,1–1,6-s-Zeiten sind Operator-/Auswahl-/Re-Entry-Verhalten, kein sauberer allgemeiner HU-Timer.
+
+Nicht als FACT-Parameter übernehmen.
+
+---
+
+13. Replug: tail_then_head ist jetzt reproduziert
+
+080508:
+
+T3
+↓
+249/69
+↓
+9/240
+↓
+T2
+
+Das ist strukturell identisch mit dem früheren "tail_then_head"-Muster.
+
+Damit wird die Hypothese stärker:
+
+«Re-Entry in einen bereits bekannten Track kann mit einem Tail-Read beginnen und anschließend den Dateikopf neu lesen.»
+
+Aber noch nicht FACT.
+
+Wichtig: Timing korrigieren
+
+Tail:
+
+142387523 µs
+
+Head:
+
+142421867 µs
+
+Differenz:
+
+34344 µs
+= 34,344 ms
+
+Nicht ~2,7 ms.
+
+Status
+
+tail_then_head:
+starkes INFERENCE
+n=2 unabhängige Kontexte
+
+Noch fehlt eine gezielte dritte Re-Entry-Messung.
+
+---
+
+14. Replug erzeugt keinen normalen Trackrhythmus
+
+Der Replug-Fall zeigt:
+
+T3:
+140810541
+
+T3 tail:
+140928509
+
+T1 tail:
+142387523
+
+T3→T1-Reentry:
+
+≈1.459 s
+
+Dann:
+
+T1 tail
+→ 34 ms
+→ T1 head
+
+und erst danach:
+
+T1 → T2
+≈26,472 s
+
+Das ist ein sehr interessantes Zustandsmodell:
+
+normal:
+Track N
+  ↓ ~26.47 s
+Track N+1
+
+replug:
+aktueller Track / Resume-Sonde
+  ↓ ~1.5 s
+Re-Entry
+  ↓
+tail_then_head
+  ↓
+normaler Autoplay-Zyklus
+
+Damit ist Replug kein einfacher Reset auf Track 1.
+
+Die frühere Aussage „Remount startet bei T1 neu“ ist zu stark.
+
+Was FACT ist:
+
+«Nach dem Replug wurde zunächst T3 gelesen, danach T1.»
+
+Das beweist:
+
+«T3-Zustand/aktueller Wiedergabekontext wird beim Remount zumindest kurz erneut adressiert.»
+
+Ob T1 danach ein Playlist-Neustart, Resume-Ziel, Autoplay-Ziel oder Bedienaktion war, bleibt offen.
+
+---
+
+15. Neuer Enum-Befund
+
+075935 und 080508 zeigen die bekannte Mount-Grammatik:
+
+LBA 0
+LBA 24
+LBA 0
+...
+LBA 0/1/7
+LBA 1/2/3/4
+LBA 24
+
+Dazu:
+
+INQUIRY
+READ_CAPACITY10
+MODE_SENSE6
+PREVENT_ALLOW
+TUR
+REQUEST_SENSE
+
+Besonders interessant:
+
+LBA 24 / 8 blocks
+
+tritt mehrfach auf.
+
+Damit bleibt:
+
+«LBA 24/8 ist eine reproduzierbare Mount-Sonde.»
+
+Ihre Semantik ist weiterhin UNKNOWN.
+
+---
+
+16. Sehr wichtiger Datenqualitätsbefund: falsches Medium im Feldbericht
+
+Der Feldbericht behauptet:
+
+HU: BMW NBT Evo · SynthFat cache_b
+
+Die Rohdaten aller drei Sessions sagen dagegen:
+
+variant = demo_v1
+label = Demo-Image FAT12, 3 identische Tracks
+hash = 0xe48c310e
+fs = FAT12
+sector_count = 1024
+
+und:
+
+TRACK1 9/309
+TRACK2 318/309
+TRACK3 627/309
+
+Das ist ein eindeutiger Widerspruch.
+
+Konsequenz
+
+Die Aussage:
+
+«„Tracklänge entspricht SynthFat cache_b dur_ms≈26514“»
+
+ist aus dem Rohdatensatz nicht belegbar.
+
+Die Rohdaten belegen:
+
+«demo_v1 mit drei identischen 158208-B-Dateien.»
+
+Der 26,47-s-Rhythmus ist damit zwar real gemessen, aber die Zuordnung zu einer "cache_b"-Trackdauer muss gestrichen oder separat belegt werden.
+
+B40 — neuer Befund
+
+Feldbericht-Medium falsch etikettiert.
+
+Priorität:
+
+C / vor Merge korrigieren.
+
+---
+
+17. FW-Traceability ist verbessert, aber noch nicht sauber
+
+Positiv:
+
+FW_VERSION = 0.2.40
+
+und:
+
+BuildId:
+b1b768fa7587
+
+Negativ:
+
+FW_GIT_DIRTY = 1
+
+und:
+
+b1b768fa7587-dirty-20261020T050224Z
+
+Das bedeutet:
+
+«Die tatsächlich geflashte Firmware stammt aus einem Dirty-Tree.»
+
+Der Build ist damit reproduzierbar nur zusammen mit den nicht committed Änderungen.
+
+Das ist besser als der alte 0.2.30/0.2.26-Widerspruch, aber noch kein sauberer Release-Build.
+
+Status
+
+Traceability: verbessert, aber nicht abgeschlossen.
+
+Vor einem endgültigen Profil-FACT wäre ein clean build mit:
+
+FW_GIT_DIRTY=0
+
+wünschenswert.
+
+---
+
+18. B37: parse_errors = 47
+
+Alle drei Sessions melden:
+
+parse_errors = 47
+
+gleichzeitig:
+
+recv_seq_gaps = []
+dropped = 0
+integrity_pass = true
+
+Das ist auffällig.
+
+Besonders:
+
+47
+47
+47
+
+über drei Sessions mit völlig unterschiedlicher Eventzahl.
+
+Das spricht eher gegen einen zufälligen Capture-Datenverlust und eher für:
+
+- einen Collector-/Parser-Zähler,
+- erwartete Nicht-Event-Zeilen,
+- ein Replay-/Framing-Detail,
+- oder einen globalen Parserzustand.
+
+Aber die Ursache ist aus den Sessions selbst nicht bewiesen.
+
+Neuer Status
+
+parse_errors=47:
+UNKNOWN / Instrumentierungsbefund
+
+Nicht:
+
+Capture FAIL
+
+weil:
+
+replay_complete=true
+recv_seq_gaps=[]
+dropped=0
+integrity_pass=true
+
+Die 47 müssen aber vor dem nächsten größeren Messprogramm erklärt werden.
+
+---
+
+19. Session 075616 hat einen besonderen Wert
+
+Diese Session ist methodisch interessant, weil sie:
+
+schon gesteckt
+kein Enum
+T2 → T3
+
+zeigt.
+
+Das bedeutet:
+
+«Die Trackwechsel-Mechanik kann unabhängig von einem frischen Mount beobachtet werden.»
+
+Damit lässt sich sauber trennen:
+
+Mount/Enum
+
+von:
+
+laufender Playlist-Wiedergabe
+
+Das ist ein wichtiger Vorteil gegenüber den Plug-/Replug-Sessions.
+
+---
+
+20. Neuer HU-Zustandsautomat
+
+Aus den bisherigen Sessions plus heute lässt sich inzwischen ein plausibler, aber noch nicht vollständig bewiesener Zustandsautomat formulieren:
+
+                    ┌───────────────┐
+                    │   ENUM/MOUNT  │
+                    └───────┬───────┘
+                            │
+                         ~70–86 ms
+                            │
+                            ▼
+                    ┌───────────────┐
+                    │  FILE ATOM    │
+                    │  309 LBA      │
+                    │  158208 B     │
+                    └───────┬───────┘
+                            │
+                       ~26.47 s
+                            │
+                            ▼
+                    ┌───────────────┐
+                    │ NEXT TRACK    │
+                    └───────┬───────┘
+                            │
+                            ▼
+                    ┌───────────────┐
+                    │  FILE ATOM    │
+                    └───────────────┘
+
+Während des gesamten Zwischenraums:
+
+             TUR ── 2238 ms ── TUR ── 2238 ms ── TUR
+
+Replug/Re-Entry bildet einen separaten Pfad:
+
+REPLUG
+  ↓
+aktueller Track erneut adressiert
+  ↓
+tail_then_head
+  ↓
+T1/T2 normaler Ablauf
+
+Dieser zweite Pfad ist noch nicht vollständig verstanden.
+
+---
+
+21. Neue HU-Parameter-Matrix
+
+Parameter| Wert| Status
+Track-Datei| 158208 B| FACT
+Track-Atom| 309 LBA| FACT
+CBW-Split| 240 + 69| FACT
+4-KiB Read-Pace| ~3.8–4.0 ms| FACT
+240-CBW-Dauer| ~118 ms| FACT
+69-CBW-Dauer| ~31–32 ms| FACT
+komplettes Atom| ~149 ms| FACT
+effektiver Burst| ~1.04 MiB/s| FACT
+Idle-TUR-Periode| 2238 ms| FACT
+Idle File-Reads| 0| FACT
+Trackwechsel-Intervall| ~26.473 s| FACT für dieses Medium
+Mount→first READ| 70–86 ms| FACT n=2
+Enum LBA24/8| reproduziert| FACT
+Replug→Re-Entry| ~1.5 s-Klasse| FACT n=1
+tail_then_head| reproduziert| STRONG INFERENCE
+Tail→Head bei Re-Entry| ~34.3 ms| FACT n=1
+Prefetch-Lead dieses Mediums| ≈0 beobachtet| STRONG FACT / n=3 Idle-Fenster
+allgemeiner HU-Prefetch| unbekannt| UNKNOWN
+Cache-Hit| unbekannt| UNKNOWN
+Cache-Key| unbekannt| UNKNOWN
+Identity-Effekt| unbekannt| UNKNOWN
+Play→READ-Latenz| unbekannt| UNKNOWN
+READ→hörbarer Wechsel| unbekannt| UNKNOWN
+große Dateien| unbekannt| UNKNOWN
+T3-EOF-Verhalten| ungetestet| UNKNOWN
+
+---
+
+22. Cross-Project-Korrektur: PiDrive R21
+
+Im aktuellen PiDrive-Parameterstand steht sinngemäß:
+
+Nächste Datei vorlesen:
+~15 s vor Wiedergabeende
+[B]/[S]
+
+Diese Einstufung ist nach dem heutigen hu-probe-Datensatz zu hoch.
+
+Die neue Evidenz:
+
+3 Free-Läufe
++
+0 File-Reads zwischen Atomen
++
+TUR-only Idle
++
+vollständiges Atom erst am Trackwechsel
+
+ist wesentlich direkter als die frühere projektübergreifende Ableitung.
+
+Empfohlene neue Einstufung
+
+R21 / ~15-s-Prefetch:
+für 158-KiB-demo_v1: REJECTED
+
+für andere Mediengrößen:
+UNKNOWN
+
+Damit bleibt die PiDrive-Frage:
+
+«„Gibt es Prefetch bei großen PiDrive-Dateien?“»
+
+offen.
+
+Sie darf aber nicht mehr mit dem 158-KiB-NBT-Test begründet werden.
+
+---
+
+23. Cross-Project-Korrektur: PiDrive F0 wird dadurch wichtiger
+
+Der neue Befund verschiebt die HU-Frage weiter weg vom Transport.
+
+Wir wissen inzwischen ziemlich genau:
+
+Trackwechsel
+→ vollständige Datei
+→ ~149 ms USB-Lesen
+→ HU wartet
+→ TUR alle 2238 ms
+
+Die entscheidenden unbekannten Größen sind nun:
+
+Cache
+Identity
+Resume
+Re-Entry
+Play-Intent
+
+Das entspricht direkt PiDrives F0:
+
+Identity
+vs.
+Silence-Cache / Resume-P
+
+Die hu-probe muss daher nicht weiter primär den 240-LBA-Transport erforschen.
+
+---
+
+24. Was jetzt wirklich noch fehlt
+
+P0 — audible_change
+
+Der größte noch offene Parameter:
+
+next_track_read
+        ↓
+hörbarer Trackwechsel
+
+Dafür fehlt genau ein Messkanal.
+
+Ein 90–120-s-Lauf mit:
+
+T1 → T2 → T3
+
+und Operator-Markern:
+
+audible_change
+
+würde liefern:
+
+READ → audible
+
+Damit ist GATE-01 endgültig geschlossen.
+
+---
+
+P1 — Cache
+
+Danach:
+
+T1
+→ T2
+→ T1 erneut
+
+und beobachten:
+
+READ10?
+
+Das ist die wichtigste F0-Messung.
+
+---
+
+P1 — Identity
+
+Dann:
+
+gleicher Inhalt
+gleicher Name
+gleiche Struktur
+
+aber:
+Serial
+Volume-ID
+Label
+
+gezielt einzeln ändern.
+
+Ziel:
+
+Cache-Hit
+vs.
+Neu-Read
+
+---
+
+P1 — Re-Entry
+
+Gezielt:
+
+Pause
+→ gleicher Track
+→ Play
+
+und prüfen:
+
+tail_then_head?
+head_then_tail?
+nur Resume-Segment?
+vollständiges Atom?
+
+Damit kann das derzeitige "tail_then_head"-INFERENCE zu FACT werden.
+
+---
+
+25. Was NICHT mehr sinnvoll ist
+
+Die nächste KI sollte nicht:
+
+- nochmals den 39-Read-Befund untersuchen;
+- 312 LBA / 3 Meta-LBA wieder öffnen;
+- 240 LBA als Trackgröße behandeln;
+- „Head-only-Prefetch“ modellieren;
+- ~1-Hz-TUR verwenden;
+- 4 ms als Head→Tail-CBW-Lücke verwenden;
+- den 26,47-s-Wert als universellen NBT-Timer speichern;
+- "cache_b" als Medium dieser drei Sessions dokumentieren;
+- R21 weiterhin als bewiesenen ~15-s-NBT-Prefetch führen.
+
+---
+
+26. Neue Beanstandungen
+
+ID| Befund| Einstufung
+B34| Bericht beschreibt Head-only/Prefetch, Rohdaten zeigen vollständiges 240+69-Atom| C – korrigieren
+B40| Feldbericht nennt "cache_b", Rohdaten melden in allen drei Sessions "demo_v1"| C – korrigieren
+B41| Head→Tail wurde mit ~4 ms beschrieben; Rohdaten zeigen ~118 ms| C – korrigieren
+B42| Re-Entry Tail→Head beträgt ~34,3 ms, nicht ~2,7 ms| C – korrigieren
+B43| 080508: T3→Re-Entry→T1 darf nicht pauschal als „Playlist restart at T1“ bezeichnet werden| C – epistemisch zurückstufen
+B44| "parse_errors=47" in allen drei Sessions ungeklärt| C – Instrumentierungsprüfung
+B45| FW 0.2.40 ist "dirty"; Release nicht vollständig reproduzierbar| C – Traceability
+B46| PiDrive R21 ~15-s-Prefetch steht noch zu hoch im HU-Modell| P1 – zurückstufen
+
+---
+
+27. Empfohlene Reihenfolge für die nächste KI
+
+1. Sofort
+
+Feldbericht korrigieren:
+
+cache_b → demo_v1
+Head-only → vollständiges Atom
+4 ms → ~118 ms Head-CBW-Dauer
+tail→head ≈34.3 ms
+Remount→T1 nicht als FACT
+
+---
+
+2. Danach GATE-01 abschließen
+
+Ein einziger:
+
+90–120 s
+free
+T1→T2→T3
+audible_change Marker
+
+Ziel:
+
+next_track_read
+vs.
+audible_change
+
+Das ist jetzt die höchste Informationsdichte pro Feldlauf.
+
+---
+
+3. Danach S3/F0
+
+Nicht noch einen allgemeinen Prefetch-Lauf.
+
+Sondern:
+
+A → B → A
+
+und:
+
+READ A?
+
+Danach:
+
+A
+→ Replug
+→ A
+
+---
+
+4. Danach Identity
+
+Erst wenn Cache-Verhalten bekannt ist:
+
+gleicher Inhalt
+neue Identity
+
+Dann kann PiDrive F0 belastbar beantwortet werden.
+
+---
+
+28. Endgültige Ampel
+
+🟢 Drei BMW-Free-Sessions
+   Integrity PASS
+
+🟢 vollständiges 309-LBA / 158208-B-Atom
+   bei jedem normalen Trackwechsel
+
+🟢 240+69-CBW-Grammatik
+   reproduziert
+
+🟢 ~149-ms Full-Atom-Read
+   reproduziert
+
+🟢 TUR-Idle = 2238 ms
+   p10=p50=p90
+
+🟢 kein File-Prefetch während Idle
+   3 unabhängige Sessions
+
+🟢 Trackwechsel-Rhythmus
+   ~26.473 s für dieses Medium
+
+🟢 Mount→first-read
+   70–86 ms
+
+🟡 tail_then_head
+   reproduziert, aber Ursache offen
+
+🟡 Replug-Zustandsautomat
+   T3→Re-Entry→T1 beobachtet, Semantik offen
+
+🟡 GATE-01
+   nur READ→audible fehlt
+
+🟠 parse_errors=47
+   ungeklärt
+
+🟠 FW dirty build
+   Traceability nicht vollständig clean
+
+🟠 Feldbericht Medium falsch
+   cache_b vs. Rohdaten demo_v1
+
+🟠 alte ~15-s-Prefetch-Hypothese
+   für dieses Medium nicht mehr haltbar
+
+🔴 keine neuen Hinweise auf einen
+   240-LBA-Track oder Head-only-Prefetch
+
+29. Schlussfolgerung
+
+Der Feldtest vom 20.10. ist kein weiterer kleiner Bestätigungslauf, sondern ein deutlicher Modellwechsel.
+
+Wir können das NBT-Verhalten inzwischen wesentlich präziser beschreiben:
+
+«Die HU liest beim Trackwechsel ein vollständiges 158208-B-Dateiatom in zwei READ10-CBWs. Der Lesevorgang dauert ungefähr 149 ms. Danach liest die HU während der laufenden Wiedergabe keine weiteren File-Daten, sondern pollt TUR mit einer extrem stabilen Periode von 2238 ms. Der nächste vollständige Track-Read erfolgt erst beim nächsten Trackwechsel.»
+
+Damit ist die bisherige ~15-s-Prefetch-Erklärung für das getestete Medium nicht mehr plausibel.
+
+Die offene technische Frage ist jetzt nicht mehr „Wie prefetch-t die HU?“, sondern:
+
+Wann entscheidet die HU zu lesen?
+        ↓
+Wie behandelt sie bereits gelesene Daten?
+        ↓
+Was passiert bei Re-Entry?
+        ↓
+Was ist der Cache-Schlüssel?
+        ↓
+Was bricht den Cache?
+
+Das führt unmittelbar zu GATE-01 → S3 Cache → F0 Identity.
+
+Der nächste Feldtest sollte deshalb der audible-Marker-Lauf sein. Danach ist ein gezielter Cache-/Identity-Versuch wesentlich wertvoller als weitere allgemeine Prefetch-Messungen.Ein Punkt ist dabei besonders wichtig: Ich würde den heutigen Test trotz der Inkonsistenzen nicht verwerfen. Die Rohsessions sind quantitativ sehr gut: alle drei sind vollständig, ohne Drops/Overflow/Seq-Gaps und mit identischer 2238 ms-TUR-Statistik. Die Fehler liegen primär in der Interpretation/Dokumentation, nicht in den Messdaten. Das macht den Datensatz sogar sehr wertvoll für die nächste F0-Phase.
+
+Grok:
+
+**Unabhängiger Review / Übergabebericht**  
+BMW NBT Evo · hu-probe · FW 0.2.40 · Feldtest 2026-10-20 (free Offline)
+
+**Prüfdatum:** 2026-10-20  
+**Repo:** MPunktBPunkt/hu-probe  
+**Branch:** `lab/2026-10-19-wifi-otg-coex-freeze`  
+**HEAD:** `96b55f7` (PR #8, offen)  
+**FW:** 0.2.40 · `b1b768fa7587-dirty-20261020T050224Z`  
+**Sessions:** `20261020-075616_bmw_free` · `075935` · `080508`  
+**Daten:** Feldbericht + alle drei `events.jsonl` / `session.json` vollständig aus dem Branch nachgerechnet
+
+---
+
+## 1. Gesamturteil
+
+Drei Offline-PASS, Rohdaten im Repo, Integrity durchgängig grün. Der Lauf ist **kein kleiner Bestätigungstest**, sondern ein Modellschritt:
+
+```
+Trackwechsel
+  → vollständiges Datei-Atom 158.208 B (240+69)
+  → ~149 ms USB-Lesephase
+  → 0 File-Reads während der Wiedergabe
+  → TUR alle ~2239 ms
+  → nächster Trackwechsel (~Trackdauer)
+```
+
+Für das **demo_v1-Medium (158 KiB)** ist Früh-Prefetch (~15 s vor Trackende) **nicht beobachtet** und damit für dieses Medium abzulehnen. GATE-01 schrumpft auf die Restfrage **Read → hörbarer Wechsel**.
+
+Die Rohdaten sind sehr gut. Fehler liegen vor allem in **Bericht/Interpretation** (Medium-Label, Head-only-Deutung, Timing-Labels), nicht in den Captures.
+
+---
+
+## 2. Datenqualität (FACT)
+
+| Session | Setup | offline_rec | integrity | overflow/dropped/gaps | parse_errors |
+|---------|--------|-------------|-----------|------------------------|--------------|
+| 075616 | schon gesteckt, 60 s | 69 | PASS | 0 / 0 / [] | **47** |
+| 075935 | Plug nach Start, 60 s | 207 | PASS | 0 / 0 / [] | **47** |
+| 080508 | 90 s, Replug in T3 | 231 | PASS | 0 / 0 / [] | **47** |
+
+- `transport=ram_offline`, `upload=delivered`, `end_reason=auto_media_hide`
+- **B7 gelöst:** `capture_t_us` + `capture_seq` unclamped auf Offline-Events; UI-`t_us` kollabiert weiter (erwartet)
+- CBW-Coalescing: 1 Record/CBW mit `chunks`/`dur_us` (Head 30×4 KiB, Tail 9 Chunks)
+- Auto-Marker: `mount_done`, `first_read`, `next_track_read`, `media_hide`
+
+**Medium (Rohdaten, alle drei):** `variant=demo_v1`, TRACK1/2/3 je **158.208 B / 309 LBA**, Starts 9 / 318 / 627 — **nicht** `cache_b` (Bericht falsch etikettiert → B40).
+
+**FW:** dirty build (`FW_GIT_DIRTY`-Pfad im Build-Id) — Traceability besser als 0.2.30/0.2.26-Widerspruch, aber kein clean Release.
+
+---
+
+## 3. Kritische Korrekturen gegenüber Bericht und Reviews
+
+### B34 — Volles Atom, kein „Head-only-Prefetch“
+
+Bericht Muster A: „Kopf + weiterer Block, nicht den ganzen Track“.
+
+**Wire (alle Track-READ10 mit blocks≥69):** immer **beide** CBWs:
+
+| Track | CBW1 | CBW2 | Summe |
+|-------|------|------|--------|
+| T1 | 9/240 | 249/69 | 158.208 B |
+| T2 | 318/240 | 558/69 | 158.208 B |
+| T3 | 627/240 | 867/69 | 158.208 B |
+
+14 Atome über drei Sessions: **immer vollständig**. Die Fenster „9…249“ usw. sind nur die Head-Hälfte.
+
+### B41 — Head→Tail: ~118 ms vs. ~4 ms (beide Zahlen, unterschiedliche Größen)
+
+Rohbeispiel 075935 T1 (`bot_data`/`read`):
+
+| Größe | Wert |
+|-------|------|
+| Head CBW Start `capture_t_us` | 28.676.005 |
+| Tail CBW Start | 28.793.723 |
+| **Δ CBW-Start→Start** | **117,7 ms** |
+| Head `dur_us` | **113.623 µs** (~113,6 ms) |
+| Tail `gap_us` (nach Head-Ende) | **4.085 µs** (~4,1 ms) |
+| Tail `dur_us` | **31.705 µs** (~31,7 ms) |
+| Atom gesamt | ~113,6 + 4,1 + 31,7 ≈ **~149 ms** |
+
+- **~118 ms** = Abstand Head-CBW-Start → Tail-CBW-Start ≈ Head-Übertragungsdauer  
+- **~4 ms** = Fortsetzungs-Gap **nach** abgeschlossenem Head, vor Tail-Daten  
+- **Nicht** verwechseln: 4 ms ist der 4-KiB-interne Pace / Continuation-Gap, nicht „Head-CBW dauert 4 ms“
+
+Über normale Atome: Head→Tail-Start Δ ≈ **117,7–118,1 ms** (n=7).
+
+### B40 — Medium
+
+Bericht: `cache_b`. Rohdaten: **`demo_v1`**. Der 26,47-s-Rhythmus ist gemessen; die Zuordnung „= cache_b dur_ms“ ist **nicht** aus diesen Sessions belegbar.
+
+### B42 — tail_then_head Timing (080508)
+
+```
+T1 tail 249/69  @ 142.387.523
+T1 head 9/240   @ 142.421.867
+Δ = 34.344 ms
+```
+
+Nicht ~2,7 ms. Re-Entry-Morphologie bestätigt (n=2 Kontexte historisch + heute), Timing diesmal **~34,3 ms**.
+
+### B43 — „Remount → Playlist startet bei T1“ zu stark
+
+080508: nach Replug zuerst **T3-Atom** (70 ms nach `mount_done`), ~1,46 s später T1 **tail_then_head**, dann T2 im Normalrhythmus. FACT: T3 wird kurz adressiert, dann T1. Semantik (Playlist-Restart vs. UI vs. Resume) **offen**.
+
+---
+
+## 4. Neue / geschärfte HU-Parameter
+
+| Parameter | Wert | Status |
+|-----------|------|--------|
+| Track-Datei / Atom | 158.208 B / 309 LBA | FACT |
+| CBW-Split | 240 + 69 | FACT |
+| Head-CBW-Dauer (`dur_us`) | ~113,6–114 ms | FACT |
+| Tail-CBW-Dauer | ~31,3–31,7 ms | FACT |
+| Head→Tail Continuation (`gap_us`) | ~4,0–4,1 ms | FACT |
+| Head-CBW-Start → Tail-Start | ~118 ms | FACT |
+| Atom total | ~149 ms · ~1,04 MiB/s | FACT |
+| 4-KiB-Pace (intra) | ~3,8 ms | FACT (konsistent) |
+| **TUR-Idle-Periode** | **~2239 ms** (p50; Cluster 2238–2239) | **FACT n=3 Sessions** |
+| File-Reads in Idle zwischen Atomen | **0** | FACT n=3 |
+| Trackwechsel-Intervall (Atom→Atom) | **26,4746 / 26,4747 / 26,4717 s** | FACT **für dieses Medium** (= Trackdauer, kein generischer HU-Timer) |
+| mount_done → first_read | 85,7 ms (075935) / 70,1 ms (080508) | FACT n=2 |
+| Enum LBA 0 / 24×8 | reproduziert bei Plug | FACT |
+| Prefetch-Lead (File-Read vor Trackende) | **≈ 0 beobachtet** | STRONG für demo_v1 |
+| tail_then_head (Re-Entry) | reproduziert, Tail→Head ~34,3 ms | STRONG INFERENCE |
+| Cache-Hit / Identity / große Dateien | — | UNKNOWN |
+| READ → hörbarer Wechsel | — | UNKNOWN (GATE-01-Rest) |
+
+**TUR:** Frühere Schätzung „~1 TUR/s“ endgültig streichen. Kanonisch: **Idle-Poll ≈ 2238–2239 ms**.
+
+---
+
+## 5. Muster
+
+### M1 — Read-all-on-track-change
+Jeder normale Wechsel: volles Atom, dann Schweigen auf File-Ebene bis zum nächsten Wechsel.
+
+### M2 — Kein Früh-Prefetch (GATE-01-Wende)
+Idle-Fenster (u. a. ~26,5 s zwischen Atomen, in 075616 ~26,5 s T2→T3): nur TUR, **null** File-READ10. PiDrive-R21 „~15 s vor Ende“ für **dieses** Medium: **REJECTED**. Allgemeiner Prefetch bei anderen Größen: UNKNOWN.
+
+### M3 — Zwei Zeitklassen
+- **Track-/Playback-Clock:** ~26,47 s (Medium/Wiedergabe)  
+- **USB-Idle-Poll:** ~2239 ms (Host/Treiber, medienunabhängig in dieser Serie)
+
+### M4 — Re-Entry / Replug
+`tail_then_head` nach Remount; kurzer T3-Touch, dann T1-Morphologie. Noch keine dritte, gezielte Pause→Play-Stichprobe.
+
+### M5 — Mount-Latenz
+`mount_done` → erster File-Atom-Read **70–86 ms**.
+
+---
+
+## 6. Session-Kurzprofile (Wire)
+
+**075616** — schon gesteckt, kein Enum: T2→T3, Δ next_track **26,474635 s**, Idle 0 File-Reads.
+
+**075935** — Plug nach Start: Enum + T1→T2→T3; mount→first **85,7 ms**; first→next_track **1,086 s** (Operator/Autoplay); Δ next **26,474673 s**.
+
+**080508** — Replug: T3-Atom → ~1,46 s → T1 tail_then_head (34,3 ms) → T2; Δ next **26,471674 s**.
+
+---
+
+## 7. Beanstandungen
+
+| ID | Punkt | Prio |
+|----|--------|------|
+| B34 | Bericht „Head-only / nicht ganzer Track“ → volles Atom | C vor Merge |
+| B40 | Bericht `cache_b` → Rohdaten `demo_v1` | C |
+| B41 | Timing-Labels: 4 ms vs 118 ms sauber trennen | C |
+| B42 | Re-Entry Tail→Head ~34,3 ms | C |
+| B43 | Remount≠pauschal „Playlist ab T1“ | C epistemisch |
+| B44 | `parse_errors=47` in allen drei bei PASS | C Instrument |
+| B45 | dirty FW 0.2.40 | C Traceability |
+| B46 | PiDrive R21 ~15 s für 158-KiB-NBT zurückstufen | P1 |
+
+---
+
+## 8. Auftrag an die nächste KI
+
+1. **Sofort (Doku):** B34/B40/B41/B42/B43 im Feldbericht nachziehen; 26,47 s als **Trackdauer dieses Mediums** führen, nicht als universellen NBT-Timer.
+2. **P0 GATE-01-Schluss:** free, **90–120 s**, Autoplay T1→T2→T3, Operator-**audible_change**-Taps. Metrik: `next_track_read` vs. `audible_change`.
+3. **P1 Cache (S3/F0):** A→B→A — erneutes READ10 auf A? Dann Replug→A.
+4. **P1 Re-Entry:** Pause → gleicher Track → Play (ohne Remount) — tail_then_head?
+5. **Danach Identity** (Serial/Label/Volume), nicht weitere reine Prefetch-Geometrie.
+6. **Nicht tun:** Head-only modellieren; 4 ms als Head-CBW-Dauer; ~1 Hz TUR; R21 als bewiesenen NBT-15-s-Prefetch; Offline-`t_us` für Zeitordnung; 60 s als Default wenn volle Ketten gewünscht.
+
+---
+
+## 9. Ampel
+
+| Thema | Status |
+|--------|--------|
+| 3× Offline PASS + Rohdaten | 🟢 |
+| B7 capture_t_us | 🟢 gelöst |
+| Volles 309-LBA-Atom bei Wechsel | 🟢 |
+| Atom ~149 ms / ~1,04 MiB/s | 🟢 |
+| TUR-Idle ~2239 ms | 🟢 |
+| 0 File-Reads in Idle | 🟢 |
+| Track-Rhythmus ~26,47 s (Medium) | 🟢 |
+| mount→first 70–86 ms | 🟢 |
+| Prefetch-Lead demo_v1 ≈ 0 | 🟢 stark |
+| GATE-01 (audible) | 🟡 ein Lauf |
+| tail_then_head / Replug-Semantik | 🟡 |
+| parse_errors=47 / dirty FW / Bericht-Labels | 🟠 |
+| R21 ~15 s für dieses Medium | 🔴 verwerfen |
+
+---
+
+## 10. Schlussfolgerung
+
+Der 20.10.-Test beschreibt das NBT-Verhalten auf **demo_v1** belastbar:
+
+> Beim Trackwechsel liest die HU ein vollständiges 158.208-B-Atom in zwei READ10-CBWs (~114 ms + ~4 ms Gap + ~32 ms ≈ 149 ms). Während der Wiedergabe folgen **keine** File-Reads, nur TUR mit **~2239 ms**. Der nächste volle Read kommt erst am nächsten Wechsel (~Trackdauer).
+
+Offene Kernfragen verschieben sich von Transport/Prefetch zu:
+
+**Wann lesen?** → **Cache/Re-Entry?** → **Cache-Key/Identity?** → PiDrive F0.
+
+Nächster Feldlauf mit der höchsten Informationsdichte: **ein audible-Marker-Lauf (90–120 s)**. Danach Cache/Identity, nicht weitere allgemeine Prefetch-Messungen.
+
+Verstanden. Dann ist der Gesamtbericht genau als Übergabeartefakt für Cursor gedacht. Der entscheidende Punkt ist, dass Cursor daraus nicht nur die Befunde übernimmt, sondern insbesondere die Korrekturen gegenüber dem bisherigen Modell berücksichtigt. Die maßgeblichen Korrekturen sind im Bericht bereits enthalten: vollständiges 240+69-Atom, ~118 ms Head-CBW→Tail-CBW statt ~4 ms, 34,3 ms Tail→Head beim Re-Entry, demo_v1 statt cache_b und die Zurückstufung von „Remount → T1-Restart“. Eingefügtes Markdown
+Für die Übergabe würde ich Cursor ausdrücklich auf diese Reihenfolge festnageln:
+B34/B40/B41/B42/B43 zuerst korrigieren, bevor neue Experimente interpretiert werden.
+GATE-01 mit einem 90–120-s-Audible-Marker-Lauf abschließen.
+Danach S3/F0: A → B → A / Cache-Verhalten.
+Erst anschließend Identity-Variation.
+parse_errors=47 und Dirty-Build-Traceability parallel als Instrumentierungs-/Reproduzierbarkeitsproblem behandeln, aber nicht den wertvollen Feld-Datensatz verwerfen.
+Besonders wichtig für Cursor: Der Bericht selbst warnt davor, die 26,47 s als universellen NBT-Timer zu modellieren; sie sind für dieses Medium primär die beobachtete Trackdauer. Ebenso ist der allgemeine HU-Prefetch weiterhin UNKNOWN — nur der ~15-s-Prefetch für das getestete 158.208-B-demo_v1-Medium ist nicht beobachtet bzw. zurückzuweisen. Eingefügtes Markdown
+Damit ist die Übergabe fachlich sauber: Nicht weiter am Transport herumoptimieren, sondern jetzt Cache/Resume/Identity/Play-Intent untersuchen.
+GPT nach Gesamtbericht:
+Ja. Wenn wir nur das verwenden, was die bisherigen HU-Messungen tatsächlich hergeben, und es für PiDrive priorisieren, ergibt sich inzwischen eine recht klare Parameter-Matrix.
+Ich trenne dabei bewusst FACT, INFERENCE und UNKNOWN. Besonders wichtig: Einige Werte beschreiben das von uns verwendete demo_v1-Medium und sind keine allgemeinen NBT-Konstanten. Eingefügtes Markdown
+1. Was wir von der HU belastbar wissen
+HU-Parameter / Verhalten
+Bisher bekannt
+Status
+PiDrive-Relevanz
+READ-Blockgröße
+4096 B typisch
+FACT
+hoch
+Track-Atomgröße
+158.208 B = 309 LBA
+FACT für demo_v1
+hoch
+READ10-CBW-Split
+240 + 69 LBA
+FACT
+hoch
+Head-CBW
+122.880 B / 30 × 4 KiB
+FACT
+hoch
+Tail-CBW
+35.328 B / 8 × 4 KiB + 2560 B
+FACT
+hoch
+4-KiB-Pacing
+~3,8–4,0 ms
+FACT
+mittel
+Head-CBW-Dauer
+~113,6–114 ms
+FACT
+mittel
+Head→Tail Continuation
+~4,0–4,1 ms
+FACT
+mittel
+Head-CBW-Start → Tail-Start
+~118 ms
+FACT
+mittel
+komplettes Atom
+~149 ms
+FACT
+hoch
+effektive Lesegeschwindigkeit
+~1,04 MiB/s
+FACT
+mittel
+TUR-Idle-Poll
+~2238–2239 ms
+FACT, n=3
+hoch
+File-Reads während Idle
+0
+FACT, n=3
+sehr hoch
+Track→Track-Read
+~26,474 s
+FACT für dieses Medium
+hoch, aber nicht als HU-Konstante
+mount_done → first READ
+70–86 ms
+FACT, n=2
+hoch
+Enumeration LBA 0
+reproduziert
+FACT
+mittel
+Enumeration LBA 24 / 8 Blöcke
+reproduziert
+FACT
+mittel
+TUR-Burst bei Enumeration
+8 / 37 / 36
+FACT
+mittel
+vollständiger Read erst beim Trackwechsel
+ja
+FACT, 14/14 Atome
+sehr hoch
+kein laufender File-Read zwischen Tracks
+ja
+FACT für dieses Medium
+sehr hoch
+Prefetch-Lead
+≈ 0 beobachtet
+starker FACT für demo_v1
+sehr hoch
+~15-s-Prefetch R21
+nicht beobachtet
+REJECTED für dieses Medium
+sehr hoch
+Re-Entry tail_then_head
+beobachtet
+STRONG INFERENCE
+sehr hoch
+Tail→Head bei Re-Entry
+~34,3 ms
+FACT dieser Beobachtung
+hoch
+Replug → erneute Trackadressierung
+~1,5-s-Klasse
+FACT n=1
+hoch
+nach Replug T3 → T1
+beobachtet
+FACT, Semantik offen
+sehr hoch
+Remount = Playlist-Neustart bei T1
+noch nicht bewiesen
+UNKNOWN / zu starke alte INFERENCE
+sehr hoch
+
+Die entscheidende neue Erkenntnis ist damit:
+Die HU liest bei diesem Medium nicht kontinuierlich vor. Sie liest beim Trackwechsel das komplette Track-Atom (~149 ms) und macht danach auf Dateiebene nichts mehr, sondern nur noch TUR-Polling (~2,238 s).
+
+2. Was wir für PiDrive noch NICHT wissen
+Hier wird es für F0 interessant.
+Unbekannter HU-Parameter
+Status
+Warum für PiDrive wichtig
+READ → hörbarer Trackwechsel
+UNKNOWN
+Bestimmt die reale notwendige Vorhaltezeit / Eager-EOF
+Play → erster READ
+UNKNOWN
+Zeigt, wann die HU nach Play tatsächlich Daten fordert
+Pause → READ-Verhalten
+UNKNOWN
+Wichtig für Resume/Cache
+Pause → Play gleicher Track
+UNKNOWN
+zentral für Re-Entry
+Re-Entry ohne Remount
+UNKNOWN
+entscheidet über Resume-/Cache-Modell
+Re-Entry-Leseform
+UNKNOWN
+tail/head, vollständiges Atom, Resume-Segment?
+Cache-Hit
+UNKNOWN
+F0-Kernfrage
+Cache-Miss
+UNKNOWN
+Gegenstück zum Cache-Hit
+Cache-Lebensdauer
+UNKNOWN
+wie lange hält die HU gelesene Daten?
+Cache-Größe
+UNKNOWN
+PiDrive kann daraus Vorhaltebedarf ableiten
+Cache-Key
+UNKNOWN
+vermutlich zentral für Identity
+Cache-Key enthält Serial?
+UNKNOWN
+direkt für PiDrive-Identität
+Cache-Key enthält Volume-ID?
+UNKNOWN
+dito
+Cache-Key enthält Volume Label?
+UNKNOWN
+dito
+Cache-Key enthält FAT/Directory-Struktur?
+UNKNOWN
+extrem relevant für Medienwechsel
+Cache-Key enthält LBA/Dateiposition?
+UNKNOWN
+relevant für Resume
+Cache-Key enthält Dateiname/Pfad?
+UNKNOWN
+relevant für Playlist-/Track-Identität
+Identity-Effekt
+UNKNOWN
+F0 Identity vs. Silence-Cache
+gleicher Inhalt + anderes Serial
+UNKNOWN
+gezielter Cache-Test
+gleicher Inhalt + anderes Volume-ID
+UNKNOWN
+gezielter Cache-Test
+gleicher Inhalt + anderes Label
+UNKNOWN
+gezielter Cache-Test
+gleicher Inhalt + andere FAT-Struktur
+UNKNOWN
+Cache-Invalidierung
+gleicher Inhalt + anderer Dateiname
+UNKNOWN
+Track-/Dateiidentität
+A → B → A: erneuter READ?
+UNKNOWN
+wichtigste direkte Cache-Messung
+A → B → A ohne Remount
+UNKNOWN
+trennt Cache von USB-Enumeration
+A → B → A nach Remount
+UNKNOWN
+Cache-Persistenz
+Resume-Position nach Replug
+UNKNOWN
+T3-Touch könnte Resume sein, ist aber nicht bewiesen
+Play-Intent-Erkennung
+UNKNOWN
+erklärt möglicherweise Read-Zeitpunkt
+Track-Intent vs. UI-Auswahl
+UNKNOWN
+wichtig für PiDrive-Menüverhalten
+EOF-Verhalten
+UNKNOWN
+besonders bei PiDrive-Live-Dateien
+T3-EOF-Verhalten
+UNKNOWN
+explizit noch nicht getestet
+Verhalten bei langer Datei
+UNKNOWN
+möglicherweise ganz anderes Prefetch-Modell
+Verhalten bei >158 KiB
+UNKNOWN
+zentrale offene Prefetch-Frage
+Verhalten bei sehr großen Dateien
+UNKNOWN
+PiDrive-relevant
+Prefetch bei großen Dateien
+UNKNOWN
+R21 darf nur für demo_v1 verworfen werden
+Prefetch-Schwelle nach Dateigröße
+UNKNOWN
+sehr interessant für PiDrive
+Prefetch-Schwelle nach Trackdauer
+UNKNOWN
+ebenfalls relevant
+Prefetch-Schwelle nach Restzeit
+UNKNOWN
+ursprüngliche R21-Frage
+QD / parallele READs
+UNKNOWN
+PiDrive-Transportmodell
+READ10-Verhalten bei Cache-Hit
+UNKNOWN
+zeigt, ob HU Cache überhaupt sichtbar nutzt
+READ-Fehler-/Retry-Verhalten
+UNKNOWN
+Robustheit des ESP-Endpunkts
+STALL-Reaktion außerhalb unseres E7-Szenarios
+teilweise bekannt
+für PiDrive-Transportrobustheit relevant
+BUSY-Toleranz außerhalb E7
+teilweise bekannt
+relevant, aber nicht mehr F0-Kern
+Zeitbudget für BUSY
+nicht vollständig bestimmt
+Transport-/Fallback-Frage
+TUR-Reaktion während tatsächlicher Wiedergabe
+teilweise
+genaue State-Machine noch offen
+TUR vs. Play/Pause-State
+UNKNOWN
+HU-State-Machine
+Enumeration nach Cache-Hit
+UNKNOWN
+Cache vs. Remount
+Enumeration nach Identitätsänderung
+UNKNOWN
+Identity
+Volume-Identity, die HU tatsächlich auswertet
+UNKNOWN
+F0
+Resume-State über USB-Disconnect
+UNKNOWN
+F0
+Resume-State über HU-Reboot
+UNKNOWN
+vermutlich noch wichtiger
+Resume-State über Medienwechsel
+UNKNOWN
+PiDrive-Medienmodell
+Playlist-Position vs. Dateiposition
+UNKNOWN
+Interpretation des T3→T1-Verhaltens
+T3-Read nach Replug: Resume oder Probe?
+UNKNOWN
+momentan nicht entscheidbar
+
+Die aktuelle F0-Frage lässt sich damit sehr präzise formulieren:
+Wann liest die HU? → Was behält sie davon? → Woran erkennt sie, dass es dasselbe Medium/dieselbe Datei ist? → Wann verwirft sie diesen Zustand?
+
+3. Besonders wichtige Parameter, die wir NICHT verwechseln dürfen
+26,47 s
+Bekannt:
+Die drei normalen Atom→Atom-Abstände liegen bei ~26,472–26,475 s.
+Aber:
+Das ist praktisch die Dauer des verwendeten demo_v1-Tracks.
+Daher:
+26,47 s = FACT für dieses Medium
+aber nicht
+26,47 s = NBT-HU-Timer.
+
+2238 ms
+Anders:
+TUR idle ≈ 2238 ms
+ist über drei Sessions hochpräzise reproduziert und wesentlich eher ein HU-/Host-/Treiber-Timer.
+Das ist für PiDrive tatsächlich ein interessanter HU-Parameter.
+
+~15 s Prefetch
+Der alte PiDrive-Wert:
+Track N → ca. 15 s vor EOF → READ Track N+1
+ist für das getestete 158-KiB-Medium REJECTED.
+Er ist aber nicht global widerlegt:
+Prefetch bei großen/anderen Medien = UNKNOWN
+Genau diese Unterscheidung ist wichtig.
+
+4. Die für PiDrive wichtigsten offenen Parameter – priorisiert
+Wenn ich alles auf die wirklich entscheidenden 10 Fragen reduziere:
+P0 – jetzt
+READ → audible_change
+Wie viel Zeit liegt zwischen dem ersten READ des nächsten Tracks und dem tatsächlich hörbaren Wechsel?
+Das ist der letzte fehlende Teil von GATE-01.
+P1 – F0 Cache
+A → B → A: kommt bei A erneut READ10?
+A → B → A ohne Remount vs. mit Remount
+Pause → Play desselben Tracks: neuer READ oder Cache?
+Welche Daten werden beim Re-Entry gelesen?
+full atom
+tail→head
+Resume-Segment
+gar nichts
+P1 – Identity
+Serial ändern → Cache-Hit oder Miss?
+Volume-ID ändern → Hit oder Miss?
+Volume Label ändern → Hit oder Miss?
+Dateiname/Pfad bzw. FAT-Struktur ändern → Hit oder Miss?
+P1 – große Dateien
+Ab welcher Dateigröße / Trackdauer ändert sich das Read-Verhalten?
+insbesondere: tritt dann echter Prefetch auf?
+
+5. Damit ist unser HU-Modell heute
+                PLUG / ENUM
+                     │
+                  ~70–86 ms
+                     │
+                     ▼
+              FULL TRACK READ
+             158208 B / 309 LBA
+               240 + 69 CBW
+                  ~149 ms
+                     │
+                     ▼
+              PLAYBACK RUNNING
+                     │
+             File READ = 0
+                     │
+          TUR ── 2238 ms ── TUR
+                     │
+                     │
+             Track läuft aus
+                     │
+                     ▼
+             NEXT TRACK READ
+                     │
+              wieder Full Atom
+Was hinter NEXT TRACK READ passiert, wissen wir dagegen noch nicht vollständig:
+A
+│
+├── Cache?
+│
+├── Identity?
+│
+├── Resume?
+│
+├── Play Intent?
+│
+└── Re-Entry?
+        │
+        ▼
+      READ ?
+        │
+        ▼
+     hörbar ?
+Genau dort liegt inzwischen der größte Informationsgewinn für PiDrive. Die reine USB-Transportanalyse ist dagegen weitgehend aus dem kritischen Pfad heraus. Die aktuelle Evidenz verschiebt F0 klar auf Cache / Resume / Identity / Re-Entry / Play-Intent.
+Kurz gesagt: Wir kennen mittlerweile die „Wie liest die HU?“-Geometrie ziemlich gut. Was wir noch nicht kennen, ist die „Warum liest sie jetzt?“-State-Machine. Und genau diese zweite Hälfte entscheidet, wie PiDrive sein virtuelles Medium und seinen Cache bauen sollte.
+Frage: 
+diese Frage haben wir doch bereits oft beantwortet, oder wird der Test anders durchgeführt?
+A → B → A: kommt bei A erneut READ10?
+A → B → A ohne Remount vs. mit Remount
+wir haben oft beobachtet, wenn der Song bereits im Cache liegt, wird nicht mehr neu eingelesen, nach einem remount aber schon.
+Ja. Diese beiden Fragen sind inhaltlich bereits mehrfach beantwortet worden. Meine vorherige Liste war an dieser Stelle zu konservativ und hat einen bereits belegten Befund wieder als offene Forschungsfrage geführt.
+Was wir tatsächlich wissen:
+A → B → A / Cache-Verhalten
+Wir haben wiederholt beobachtet:
+Song/Datei A wird gelesen.
+Wechsel auf B → B wird gelesen.
+Zurück auf A:
+liegt A noch im HU-Cache, erfolgt kein erneuter READ10.
+die HU verwendet den bereits vorhandenen Cache-Inhalt.
+Nach einem Remount ist dieser Zustand nicht mehr vorhanden bzw. wird nicht als gültiger Cache-Hit verwendet:
+A wird anschließend erneut gelesen.
+Damit ist die Aussage:
+„HU-Cache verhindert bei einem Cache-Hit einen erneuten READ10; Remount invalidiert bzw. umgeht diesen Cache-Zustand.“
+bereits FACT aus unseren Feld-/HU-Beobachtungen.
+Aber: Was daran noch offen ist
+Nicht die Existenz des Cache-Hits ist offen, sondern die Cache-Regeln dahinter.
+Frage
+Status
+Bereits gecachte Datei wird bei Rückkehr nicht erneut gelesen
+FACT
+Wechsel A → B → A kann Cache-Hit erzeugen
+FACT
+Remount führt dazu, dass A wieder gelesen wird
+FACT
+Cache ist also an einen Zustand vor dem Remount gebunden
+FACT / sehr starke Inference
+Exakte Cache-Größe
+UNKNOWN
+Maximale Anzahl gecachter Tracks
+UNKNOWN
+Cache-Lifetime ohne Remount
+UNKNOWN
+Cache-Key
+UNKNOWN
+Ob Serial Bestandteil des Cache-Keys ist
+UNKNOWN
+Ob Volume-ID Bestandteil ist
+UNKNOWN
+Ob Volume-Label Bestandteil ist
+UNKNOWN
+Ob Pfad/Dateiname Bestandteil ist
+UNKNOWN
+Ob Dateiinhalt/Position Bestandteil ist
+UNKNOWN
+Was bei Cache-Verdrängung passiert
+UNKNOWN
+Was bei Änderung einer Identitätskomponente passiert
+UNKNOWN
+
+Und deshalb wäre der richtige nächste Test nicht nochmals A → B → A
+Der einfache Test
+A → B → A
+hat seinen Zweck bereits erfüllt.
+Der nächste Informationsschritt wäre vielmehr kontrollierte Cache-Key-Diskriminierung:
+            gleicher Inhalt
+                  A
+                  │
+             Cache aufbauen
+                  │
+                  ▼
+        Identität EINZELN ändern
+                  │
+       ┌──────────┼──────────┐
+       ▼          ▼          ▼
+    Serial     Volume-ID   Label
+       │          │          │
+       └──────────┼──────────┘
+                  ▼
+             wieder A
+                  │
+          READ10 ja/nein?
+Damit beantworten wir die eigentlich noch offene PiDrive-Frage:
+Was betrachtet die HU als „dasselbe Medium“ bzw. „dieselbe Datei“?
+Und genau das ist für F0 Identity vs. Silence-Cache wesentlich wertvoller als ein weiterer A→B→A-Test.
+Korrektur meiner vorherigen Parameterliste:
+„A → B → A: kommt bei A erneut READ10?“ und „A → B → A ohne/mit Remount?“ müssen aus UNKNOWN heraus und als FACT geführt werden. Offen bleibt die Mechanik des Cache-Keys und der Cache-Invalidierung, nicht das grundsätzliche Cache-Verhalten.
+
+Claude: 
+Ja, ich sehe vier Punkte, die in den Berichten falsch zugeordnet oder übersehen sind. Ich kenne nur die Berichte, nicht die Rohdaten.
+1. „240 + 69" ist keine HU-Grammatik.
+309 LBA − 240 = 69. Das ist vermutlich nur das maximale CBW (240 × 512 B = 120 KiB) plus der Rest.
+„Atom" heißt hier schlicht: die ganze Datei, in zwei Zügen gelesen.
+Bei größeren Dateien wäre die Frage, ob die HU überhaupt noch alles liest und wie oft sie 240er-Blöcke wiederholt.
+2. 149 ms und 1,04 MiB/s sind wahrscheinlich Bus-Limit, kein HU-Parameter.
+Der ESP32-S3 spricht Full-Speed-USB. Dort liegt ein 4-KiB-Bulk-Read grob bei 3,4 ms (meine Überschlagsrechnung). Gemessen sind ~3,8 ms.
+Die Lesegeschwindigkeit kommt also vermutlich von Bus und ESP, nicht von der HU. Für PiDrive ist sie trotzdem relevant, weil sie die Obergrenze für Bursts ist. 16 MiB dauern bei 1 MiB/s rund 16 s.
+3. Das Medium ist klein, deshalb sagt „kein Prefetch" wenig.
+158 KiB in ~26,5 s sind nur ~48 kbit/s. Die ganze Datei passt in einen einzigen Lesezug.
+Die HU hat bei den Tracks nichts, was sie vorlesen müsste. Dass R21 (~15 s Prefetch) hier nicht auftritt, ist belegt. Über große oder endlose Dateien, also PiDrives Anwendungsfall, sagen die Läufe nichts.
+Die Leitfrage aus dem esp32.pidrive-Strang (Verhalten weit über dem Einlese-Plateau) ist in dieser Serie nicht angefasst. Wenn die M3-Leiter dort schon gelaufen ist, korrigiere mich bitte. Die Ergebnisse habe ich nicht gesehen.
+4. Der Identity-Test aus GPTs Plan ist verschränkt.
+Du hast beobachtet, dass ein Remount den Cache verwirft. Dann kann ein Test, der die Identität über einen Remount ändert, keinen Cache-Hit zeigen. Der Cache ist ohnehin weg.
+Was von der Identität abhängen kann, ist eher Resume: Wohin kehrt die HU nach Remount zurück? Bei 080508 las sie erst T3, dann T1.
+Dazu fehlt die Kontrolle. Blieb beim Replug dasselbe Serial? B38 zeigt, dass das Serial pro Boot driftet. Ohne Kontrolle mit fester Identität (n ≥ 3) ist die Deutung „Resume oder Restart" nicht entscheidbar.
+Außerdem: Ein Cache-Hit ohne gelesene Daten heißt, der Schlüssel muss ohne Dateiinhalt ableitbar sein. Kandidaten sind Name, Größe, Änderungsdatum und Startcluster im Verzeichniseintrag. Die stehen in keiner der Listen, nur Serial, Volume-ID und Label.
+Mein nächster Test: eine Größenleiter.
+Medium: reale CBR-MP3 mit 128 kbit/s, Dateien von 1, 4 und 16 MiB. Dazu die 158-KiB-Datei als Kontrolle, deren bekanntes Muster das Setup bestätigt. Capture-Fenster 180–300 s statt 90 s, der Speicher reicht.
+Gemessen wird pro Datei:
+Zeit bis zum hörbaren Start. Der Taster-Marker läuft als Beifang mit.
+Burst oder gedrosseltes Lesen.
+Vorlauf, also gelesener Offset minus Abspielposition (Bitrate × Zeit).
+Ob mitten in der Datei weitergelesen wird oder ob die HU blockweise nachlädt.
+Ergebnis: Entweder liest die HU alles am Stück, dann ist der Bus der Engpass. Oder sie liest gedrosselt, dann kennen wir endlich das Prefetch-Fenster, das PiDrive braucht.
+Folgevariante: gleiche Größe, andere Bitrate. Das trennt Größe von Dauer.
+Als Beifang in derselben Fahrt: die Replug-Kontrolle mit festem Serial, 3× in T2 und 3× in T3. Das kostet wenig und klärt Resume gegen Restart.
+Der audible-Lauf aus den Berichten wird mit Taster-Marker nebenbei erledigt. Einen eigenen Lauf wäre er mir nicht wert. Er klärt eine Restlatenz von höchstens ~150 ms bei Dateien, die PiDrive nicht hat.
+Soll ich das als Auftrag für Cursor formulieren, mit Medium-Spezifikation und Auswerteregeln?
+
