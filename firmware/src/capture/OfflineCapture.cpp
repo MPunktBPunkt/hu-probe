@@ -1,6 +1,7 @@
 #include "capture/OfflineCapture.h"
 #include "BuildFlags.h"
 #include "core/EmitOrigin.h"
+#include "core/HuMem.h"
 #include "core/HwInfo.h"
 #include "core/ProbeClock.h"
 #include "core/PanicTail.h"
@@ -130,15 +131,38 @@ const char* OfflineCapture::stateName() const {
 
 bool OfflineCapture::allocBuffer() {
     freeBuffer();
-    // Prefer 64 KiB; fall back under fragmentation after long tcp_live sessions.
-    static const size_t kTry[] = {64 * 1024, 48 * 1024, 32 * 1024, 24 * 1024};
     buf_ = nullptr;
     cap_ = 0;
-    for (size_t i = 0; i < sizeof(kTry) / sizeof(kTry[0]); i++) {
-        buf_ = static_cast<uint8_t*>(malloc(kTry[i]));
-        if (buf_) {
-            cap_ = kTry[i];
+#ifdef BOARD_HAS_PSRAM
+    // Leave ~512 KiB PSRAM for EventBus slots / WiFi; use the rest for capture.
+    static const size_t kTryPsram[] = {1024 * 1024, 768 * 1024, 512 * 1024, 256 * 1024,
+                                      128 * 1024, 64 * 1024};
+    for (size_t i = 0; i < sizeof(kTryPsram) / sizeof(kTryPsram[0]); i++) {
+        buf_ = static_cast<uint8_t*>(HuMem::allocPreferPsram(kTryPsram[i]));
+        if (buf_ && HuMem::ptrInPsram(buf_)) {
+            cap_ = kTryPsram[i];
             break;
+        }
+        if (buf_) {
+            // Got internal heap unexpectedly — keep only if ≥ default target.
+            if (kTryPsram[i] >= kDefaultCap) {
+                cap_ = kTryPsram[i];
+                break;
+            }
+            HuMem::freePreferPsram(buf_);
+            buf_ = nullptr;
+        }
+    }
+#endif
+    if (!buf_) {
+        // Prefer 64 KiB; fall back under fragmentation after long tcp_live sessions.
+        static const size_t kTry[] = {64 * 1024, 48 * 1024, 32 * 1024, 24 * 1024};
+        for (size_t i = 0; i < sizeof(kTry) / sizeof(kTry[0]); i++) {
+            buf_ = static_cast<uint8_t*>(malloc(kTry[i]));
+            if (buf_) {
+                cap_ = kTry[i];
+                break;
+            }
         }
     }
     if (!buf_) {
@@ -156,14 +180,15 @@ bool OfflineCapture::allocBuffer() {
     overflow_ = 0;
     postFinalizeRecords_ = 0;
     postFinalizeDropped_ = 0;
-    Serial.printf("[OFFLINE] capture buffer %u bytes (free_heap=%u)\n", (unsigned)cap_,
-                  (unsigned)ESP.getFreeHeap());
+    Serial.printf("[OFFLINE] capture buffer %u bytes psram=%d free_heap=%u free_psram=%u\n",
+                  (unsigned)cap_, HuMem::ptrInPsram(buf_) ? 1 : 0, (unsigned)ESP.getFreeHeap(),
+                  (unsigned)ESP.getFreePsram());
     return true;
 }
 
 void OfflineCapture::freeBuffer() {
     if (buf_) {
-        free(buf_);
+        HuMem::freePreferPsram(buf_);
         buf_ = nullptr;
     }
     cap_ = used_ = 0;
@@ -189,7 +214,8 @@ bool OfflineCapture::wifiOn() {
     WiFi.setSleep(false);
     esp_wifi_set_ps(WIFI_PS_NONE);
     WiFi.setTxPower(WIFI_POWER_19_5dBm);
-    WiFi.setAutoReconnect(true);
+    // App::superviseWifi owns reconnect — do not re-enable stack AutoReconnect (B28).
+    WiFi.setAutoReconnect(false);
     WiFi.begin();  // NVS creds from WiFiManager
     unsigned long t0 = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - t0 < 25000) {
@@ -200,7 +226,7 @@ bool OfflineCapture::wifiOn() {
         Serial.println("[OFFLINE] WiFi reconnect FAILED");
         return false;
     }
-    Serial.printf("[OFFLINE] WiFi %s\n", WiFi.localIP().toString().c_str());
+    Serial.printf("[OFFLINE] WiFi %s autoReconnect=0\n", WiFi.localIP().toString().c_str());
     return true;
 }
 
@@ -211,6 +237,7 @@ void OfflineCapture::reconnectWifiThrottled() {
     if (lastWifiReconnectMs_ != 0 && now - lastWifiReconnectMs_ < kWifiReconnectEveryMs) return;
     lastWifiReconnectMs_ = now;
     Serial.println("[OFFLINE] WiFi lost during upload — reconnect");
+    WiFi.setAutoReconnect(false);
     WiFi.reconnect();
 }
 
@@ -733,8 +760,30 @@ bool OfflineCapture::drainUpload(uint32_t maxMs) {
     return EventBus::instance().pending() == 0;
 }
 
+bool OfflineCapture::isLabDebian() const {
+    return vehicle_ == "lab_debian" || profileId_ == "lab_debian";
+}
+
+void OfflineCapture::ensureLabDetached(const char* why) {
+    if (!msc_ || !isLabDebian()) return;
+    // Cancel softCycle auto-reattach so Lab stays detached.
+    if (msc_->usbSoftAttached()) {
+        msc_->softDetach(0);
+    }
+    Serial.printf("[MSC] lab detach (%s) soft=%d\n", why ? why : "?",
+                  msc_->usbSoftAttached() ? 1 : 0);
+}
+
 void OfflineCapture::restoreUsbAfterUpload() {
     if (!msc_) return;
+    // Lab: never restore media / soft-attach after offline — that reopens OTG+WiFi coex
+    // (restoreMedia-before-detach was the T3b killer). Stay soft-detached.
+    if (isLabDebian()) {
+        fallbackDetached_ = false;
+        mediaHidden_ = false;
+        ensureLabDetached("after-offline");
+        return;
+    }
     if (fallbackDetached_) {
         msc_->softAttach();
         fallbackDetached_ = false;
@@ -845,6 +894,8 @@ void OfflineCapture::pollUpload() {
     if (state_ != State::Uploading) return;
     switch (uploadPhase_) {
         case UploadPhase::Wifi: {
+            // Lab: detach USB before WiFi comes back — upload must not share the chip with OTG.
+            ensureLabDetached("before-wifiOn");
             // One blocking wifiOn (≤25s) — only once per capture; App stays responsive after.
             if (WiFi.status() == WL_CONNECTED || wifiOn()) {
                 if (tcp_) tcp_->setOfflineDrain(true);

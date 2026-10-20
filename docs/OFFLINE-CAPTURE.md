@@ -36,7 +36,8 @@ Offline-Markern.
 # Experiment (Profil-Defaults + Marker-Sequenz)
 curl -X POST http://PROBE/api/experiment/start \
   -H 'Content-Type: application/json' \
-  -d '{"vehicle":"bmw","experiment":"s2_prefetch","soft_usb":true,"measure_ms":60000}'
+  -d '{"vehicle":"bmw","experiment":"free"}'
+# WebUI-Default: bmw + free · 60 s · soft_usb=false · media_hide · Unmount beendet nicht
 
 # Roh-Offline (wie bisher; Marker aus Szenario-Profil, falls bekannt)
 curl -X POST http://PROBE/api/offline/start \
@@ -62,6 +63,7 @@ verwenden.
 | `s3_cache_hit` | 90 s | media_hide | play_start → audible → stop → replay → … |
 | `s4_remount` | 90 s | soft_detach | inkl. replug |
 | `s5`…`s7` | 60–120 s | media_hide | generische Operator-Marker |
+| `free` (**WebUI-Default**) | 60 s (max 10 min) | media_hide, `soft_usb=false`, Unmount beendet nicht | BOOT kurz = mark_NN · BOOT 2× = Soft-Steckzyklus |
 
 Epistemik (Audit): ohne `play_start` + (`audible_change` | `track_next`) bleibt
 S2 = **UNKNOWN**.

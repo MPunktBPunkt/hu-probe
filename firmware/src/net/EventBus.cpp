@@ -1,11 +1,34 @@
 #include "EventBus.h"
+#include "core/HuMem.h"
 
 EventBus& EventBus::instance() {
     static EventBus bus;
     return bus;
 }
 
+bool EventBus::ensureRing() {
+    if (ring_) return true;
+    // Slot objects in PSRAM (~32–64 KiB for 2048 Strings) — payloads still use heap,
+    // but DRAM pressure from the slot array itself drops sharply.
+    void* mem = HuMem::callocPreferPsram(EVENT_RING_SIZE, sizeof(String));
+    if (!mem) return false;
+    ring_ = static_cast<String*>(mem);
+    ringSize_ = EVENT_RING_SIZE;
+    ringInPsram_ = HuMem::ptrInPsram(ring_);
+    for (size_t i = 0; i < ringSize_; i++) {
+        new (&ring_[i]) String();
+    }
+    Serial.printf("[BUS] ring slots=%u in_psram=%d free_heap=%u free_psram=%u\n",
+                  (unsigned)ringSize_, ringInPsram_ ? 1 : 0, (unsigned)ESP.getFreeHeap(),
+                  (unsigned)ESP.getFreePsram());
+    return true;
+}
+
 void EventBus::begin() {
+    if (!ensureRing()) {
+        Serial.println("[BUS] ring alloc FAILED");
+        return;
+    }
     clear();
     portENTER_CRITICAL(&mux_);
     dropped_ = 0;
@@ -20,10 +43,11 @@ void EventBus::begin() {
 }
 
 void EventBus::clear() {
+    if (!ring_) return;
     portENTER_CRITICAL(&mux_);
     while (count_ > 0) {
         ring_[head_] = String();
-        head_ = (head_ + 1) % EVENT_RING_SIZE;
+        head_ = (head_ + 1) % ringSize_;
         count_--;
     }
     head_ = tail_ = count_ = 0;
@@ -36,16 +60,17 @@ void EventBus::noteTcpTxOk() {
 }
 
 void EventBus::publish(JsonDocument& doc) {
+    if (!ensureRing()) return;
     String line;
     serializeJson(doc, line);
     portENTER_CRITICAL(&mux_);
-    if (count_ >= EVENT_RING_SIZE) {
-        head_ = (head_ + 1) % EVENT_RING_SIZE;
+    if (count_ >= ringSize_) {
+        head_ = (head_ + 1) % ringSize_;
         count_--;
         dropped_++;
     }
     ring_[tail_] = line;
-    tail_ = (tail_ + 1) % EVENT_RING_SIZE;
+    tail_ = (tail_ + 1) % ringSize_;
     count_++;
     published_++;
     if (count_ > highwater_) highwater_ = (uint32_t)count_;
@@ -54,7 +79,7 @@ void EventBus::publish(JsonDocument& doc) {
 
 bool EventBus::peek(String& out) {
     portENTER_CRITICAL(&mux_);
-    if (count_ == 0) {
+    if (!ring_ || count_ == 0) {
         portEXIT_CRITICAL(&mux_);
         return false;
     }
@@ -65,12 +90,12 @@ bool EventBus::peek(String& out) {
 
 bool EventBus::pop(String& out) {
     portENTER_CRITICAL(&mux_);
-    if (count_ == 0) {
+    if (!ring_ || count_ == 0) {
         portEXIT_CRITICAL(&mux_);
         return false;
     }
     out = ring_[head_];
-    head_ = (head_ + 1) % EVENT_RING_SIZE;
+    head_ = (head_ + 1) % ringSize_;
     count_--;
     portEXIT_CRITICAL(&mux_);
     return true;
@@ -93,5 +118,6 @@ void EventBus::fillCaptureHealth(JsonObject obj, uint32_t seqFirst, uint32_t seq
     obj["queue_highwater"] = highwater_;
     obj["tcp_connected"] = tcpConnected;
     obj["tcp_disconnects"] = tcpDisconnects_;
-    obj["ring_size"] = EVENT_RING_SIZE;
+    obj["ring_size"] = (uint32_t)ringSize_;
+    obj["ring_in_psram"] = ringInPsram_;
 }

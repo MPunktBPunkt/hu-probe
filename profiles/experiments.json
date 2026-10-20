@@ -73,6 +73,16 @@
       "soft_usb": true,
       "end_strategy": "media_hide",
       "markers": ["play_start", "track_next", "audible_change", "replay", "stop"]
+    },
+    {
+      "id": "free",
+      "label": "Freie Aufnahme (1 min, bis 10 min · BOOT 2x = Steckzyklus)",
+      "measure_ms": 60000,
+      "soft_usb": false,
+      "end_strategy": "media_hide",
+      "end_on_unmount": false,
+      "free_markers": true,
+      "markers": []
     }
   ]
 }

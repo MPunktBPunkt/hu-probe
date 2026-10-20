@@ -108,6 +108,8 @@ private:
     void publishOfflineHealth(bool final);
     bool drainUpload(uint32_t maxMs);
     void restoreUsbAfterUpload();
+    bool isLabDebian() const;
+    void ensureLabDetached(const char* why);
     void appendMarkerRec(int64_t tUs, const char* name);
     /** Space for one record of n bytes, or nullptr (counts overflow / post-finalize drop). */
     uint8_t* reserveRec(size_t n, bool post, int64_t tUs);

@@ -36,13 +36,29 @@
 #ifndef WIFI_TCP_STALL_PENDING
 #define WIFI_TCP_STALL_PENDING 32
 #endif
-/** After WiFi returns from coex soft-detach: hold USB off to flush TCP. */
+/** After WiFi returns from coex soft-detach: hold USB off until ring drains. */
 #ifndef WIFI_COEX_FLUSH_MS
-#define WIFI_COEX_FLUSH_MS 8000
+#define WIFI_COEX_FLUSH_MS 15000
 #endif
 /** Only full-chip restart if soft-detach still cannot bring WiFi back. */
 #ifndef WIFI_RESTART_AFTER_COEX_MS
 #define WIFI_RESTART_AFTER_COEX_MS 90000
+#endif
+/** Reattach only when EventBus is this quiet (was: timer alone → kill WiFi again). */
+#ifndef WIFI_COEX_REATTACH_PENDING
+#define WIFI_COEX_REATTACH_PENDING 16
+#endif
+/** No stall until TCP has succeeded at least once + this grace after STA up. */
+#ifndef WIFI_STALL_GRACE_MS
+#define WIFI_STALL_GRACE_MS 30000
+#endif
+/** tcp_tx_ok within this window ⇒ IP data path alive. */
+#ifndef WIFI_TCP_ALIVE_MS
+#define WIFI_TCP_ALIVE_MS 8000
+#endif
+/** Zombie (assoc, no data) before hard STA restart in coex hold. */
+#ifndef WIFI_COEX_ZOMBIE_RESTART_MS
+#define WIFI_COEX_ZOMBIE_RESTART_MS 20000
 #endif
 
 App& App::instance() {
@@ -94,10 +110,13 @@ void App::setupWifi() {
     WiFi.setSleep(false);
     esp_wifi_set_ps(WIFI_PS_NONE);
     WiFi.setTxPower(WIFI_POWER_19_5dBm);
-    WiFi.setAutoReconnect(true);
+    // Manual superviseWifi owns reconnect — auto + manual race under coex.
+    WiFi.setAutoReconnect(false);
     wifiDownSinceMs_ = 0;
     wifiReconnectAttempts_ = 0;
-    Serial.printf("[WIFI] %s ps=none tx=19.5\n", WiFi.localIP().toString().c_str());
+    wifiConnectedAtMs_ = millis();
+    Serial.printf("[WIFI] %s ps=none tx=19.5 autoReconnect=0\n",
+                  WiFi.localIP().toString().c_str());
 }
 
 void App::setupMdns() {
@@ -130,6 +149,14 @@ void App::begin() {
 
     setupWifi();
     setupMdns();
+
+    // Lab: keep MSC soft-detached by default — Enum/Mount must not kill WiFi.
+    // Reattach only via WebUI / Sequence "MSC arm" (explicit softAttach).
+    if (isLabDebian()) {
+        msc_.softDetach(0);
+        labMscDetachedDefault_ = true;
+        Serial.println("[MSC] lab_debian: soft-detached by default (WiFi first)");
+    }
 
     if (config_.enableNtp) {
         configTime(0, 0, config_.ntpServer.c_str());
@@ -231,71 +258,176 @@ void App::emitCaptureHealth() {
     }
 }
 
+bool App::isLabDebian() const {
+    return config_.vehicleId == "lab_debian" || config_.profileId == "lab_debian";
+}
+
+bool App::tcpDataAlive(unsigned long now) const {
+    if (!config_.enableCollector) return true;
+    const unsigned long lastOk = EventBus::instance().lastTcpTxOkMs();
+    if (lastOk == 0) return false;
+    return (now - lastOk) < WIFI_TCP_ALIVE_MS;
+}
+
+void App::enterCoexHold(const char* reason) {
+    EventBus& bus = EventBus::instance();
+    const size_t pendingBefore = bus.pending();
+    if (msc_.usbSoftAttached()) {
+        msc_.softDetach(0);
+    }
+    coexDetachedForWifi_ = true;
+    coexRecoveredAtMs_ = 0;
+    coexZombieSinceMs_ = 0;
+    // B23: never wipe live session evidence — only clear when idle / no session.
+    if (!session_.active()) {
+        bus.clear();
+    } else {
+        Serial.printf("[WIFI] coex-hold keep ring pending=%u (session active)\n",
+                      (unsigned)pendingBefore);
+    }
+    WiFi.setAutoReconnect(false);
+    // Soft reconnect() is not enough after OTG RF death — full MAC stop/start.
+    WiFi.disconnect(false, false);
+    delay(20);
+    esp_wifi_stop();
+    delay(200);
+    esp_wifi_start();
+    esp_wifi_set_ps(WIFI_PS_NONE);
+    WiFi.begin();  // NVS creds (WiFiManager)
+    WiFi.setSleep(false);
+    if (wifiDownSinceMs_ == 0) wifiDownSinceMs_ = millis();
+    lastWifiReconnectMs_ = millis();
+    wifiReconnectAttempts_++;
+    Serial.printf(
+        "[WIFI] coex-hold (%s) pending_was=%u heap=%u psram_free=%u soft=%d\n",
+        reason ? reason : "?", (unsigned)pendingBefore, (unsigned)ESP.getFreeHeap(),
+        (unsigned)ESP.getFreePsram(), msc_.usbSoftAttached() ? 1 : 0);
+}
+
 void App::superviseWifi() {
     unsigned long now = millis();
     EventBus& bus = EventBus::instance();
     bool assoc = (WiFi.status() == WL_CONNECTED);
+    const bool dataAlive = tcpDataAlive(now);
+    const bool sockOk = tcp_.connected();
 
-    // TCP backlog with assoc up: log only — WiFi.disconnect() here wedged lab recovery.
-    if (assoc && config_.enableCollector && bus.pending() >= WIFI_TCP_STALL_PENDING) {
-        unsigned long lastOk = bus.lastTcpTxOkMs();
-        unsigned long idle = (lastOk == 0) ? now : (now - lastOk);
-        if (idle >= WIFI_TCP_STALL_MS && now - lastWifiReconnectMs_ >= WIFI_RECONNECT_EVERY_MS) {
+    // Stall only after real TX progress — lastOk==0 must NOT mean "idle since boot".
+    const size_t stallPending =
+        msc_.plugged() ? (size_t)16 : (size_t)WIFI_TCP_STALL_PENDING;
+    const unsigned long stallMs = msc_.plugged() ? 2500UL : (unsigned long)WIFI_TCP_STALL_MS;
+    if (assoc && config_.enableCollector && bus.pending() >= stallPending) {
+        const unsigned long lastOk = bus.lastTcpTxOkMs();
+        const bool tcpEverWorked = (lastOk != 0);
+        const bool pastGrace =
+            (wifiConnectedAtMs_ != 0) && (now - wifiConnectedAtMs_ >= WIFI_STALL_GRACE_MS);
+        const bool tcpStalled = tcpEverWorked && (now - lastOk >= stallMs);
+        if (tcpStalled && pastGrace &&
+            now - lastWifiReconnectMs_ >= WIFI_RECONNECT_EVERY_MS) {
             lastWifiReconnectMs_ = now;
-            Serial.printf("[WIFI] tcp-stall pending=%u idle=%lums (no assoc bounce)\n",
-                          (unsigned)bus.pending(), idle);
+            Serial.printf(
+                "[WIFI] tcp-stall pending=%u idle=%lums lastOk=%lu sock=%d heap=%u plugged=%d\n",
+                (unsigned)bus.pending(), (unsigned long)(now - lastOk), lastOk, sockOk ? 1 : 0,
+                (unsigned)ESP.getFreeHeap(), msc_.plugged() ? 1 : 0);
+            enterCoexHold(msc_.usbSoftAttached() ? "stall+usb" : "stall+soft");
+            return;
         }
     }
 
     if (assoc) {
-        if (wifiDownSinceMs_ != 0) {
-            Serial.printf("[WIFI] recovered after %lu ms (attempts=%u coex=%d)\n",
-                          (unsigned long)(now - wifiDownSinceMs_), wifiReconnectAttempts_,
-                          coexDetachedForWifi_ ? 1 : 0);
-            if (coexDetachedForWifi_) coexRecoveredAtMs_ = now;
-        }
-        wifiDownSinceMs_ = 0;
-        wifiReconnectAttempts_ = 0;
+        if (wifiConnectedAtMs_ == 0) wifiConnectedAtMs_ = now;
 
-        // Lab unattended OTG: USB was soft-detached so WiFi could breathe — flush, then reattach.
+        // Real recovery = recent collector TX, not WL_CONNECTED / socket alone.
+        const bool linkOk =
+            !coexDetachedForWifi_ || dataAlive || !config_.enableCollector;
+
+        if (linkOk) {
+            if (wifiDownSinceMs_ != 0) {
+                Serial.printf(
+                    "[WIFI] recovered after %lu ms (attempts=%u coex=%d heap=%u "
+                    "data=%d sock=%d)\n",
+                    (unsigned long)(now - wifiDownSinceMs_), wifiReconnectAttempts_,
+                    coexDetachedForWifi_ ? 1 : 0, (unsigned)ESP.getFreeHeap(), dataAlive ? 1 : 0,
+                    sockOk ? 1 : 0);
+            }
+            // Watchdog reset only on real data progress (not tcp_.connected() flicker).
+            if (dataAlive || !config_.enableCollector) {
+                wifiDownSinceMs_ = 0;
+                wifiReconnectAttempts_ = 0;
+                coexZombieSinceMs_ = 0;
+            }
+            if (coexDetachedForWifi_ && dataAlive && coexRecoveredAtMs_ == 0)
+                coexRecoveredAtMs_ = now;
+        } else {
+            if (wifiDownSinceMs_ == 0) {
+                wifiDownSinceMs_ = now;
+                Serial.printf(
+                    "[WIFI] zombie assoc (coex hold, no data) heap=%u sock=%d pending=%u\n",
+                    (unsigned)ESP.getFreeHeap(), sockOk ? 1 : 0, (unsigned)bus.pending());
+            }
+            if (coexZombieSinceMs_ == 0) coexZombieSinceMs_ = now;
+        }
+
         if (coexDetachedForWifi_) {
             unsigned long flushedFor =
                 (coexRecoveredAtMs_ == 0) ? 0 : (now - coexRecoveredAtMs_);
-            bool ringQuiet = bus.pending() < 16;
-            if (flushedFor >= WIFI_COEX_FLUSH_MS || (ringQuiet && flushedFor >= 2000)) {
-                Serial.printf("[WIFI] coex reattach after flush pending=%u\n",
-                              (unsigned)bus.pending());
+            unsigned long zombieFor =
+                (coexZombieSinceMs_ == 0) ? 0 : (now - coexZombieSinceMs_);
+
+            // Own zombie clock — independent of coexRecoveredAtMs_ / tcpOk.
+            if (!dataAlive && zombieFor >= WIFI_COEX_ZOMBIE_RESTART_MS &&
+                now - lastWifiReconnectMs_ >= WIFI_RECONNECT_EVERY_MS) {
+                lastWifiReconnectMs_ = now;
+                Serial.printf("[WIFI] coex zombie — STA restart zombie=%lums\n", zombieFor);
+                enterCoexHold("zombie-assoc");
+                return;
+            }
+
+            bool ringQuiet = bus.pending() < WIFI_COEX_REATTACH_PENDING;
+            // Lab default-detach: never auto-reattach (needs explicit MSC arm).
+            const bool mayReattach = !labMscDetachedDefault_;
+            if (mayReattach && ringQuiet && dataAlive && flushedFor >= WIFI_COEX_FLUSH_MS) {
+                Serial.printf("[WIFI] coex reattach pending=%u hold=%lums heap=%u\n",
+                              (unsigned)bus.pending(), flushedFor, (unsigned)ESP.getFreeHeap());
                 msc_.softAttach();
                 coexDetachedForWifi_ = false;
                 coexRecoveredAtMs_ = 0;
+                coexZombieSinceMs_ = 0;
+            } else if (now - lastWifiReconnectMs_ >= WIFI_RECONNECT_EVERY_MS) {
+                lastWifiReconnectMs_ = now;
+                Serial.printf(
+                    "[WIFI] coex waiting pending=%u data=%d sock=%d hold=%lums zombie=%lums "
+                    "labDetach=%d\n",
+                    (unsigned)bus.pending(), dataAlive ? 1 : 0, sockOk ? 1 : 0, flushedFor,
+                    zombieFor, labMscDetachedDefault_ ? 1 : 0);
             }
         }
-        return;
+        if (linkOk) return;
+        // Fall through while zombie assoc (watchdog / reconnect).
+    } else {
+        wifiConnectedAtMs_ = 0;
+        coexZombieSinceMs_ = 0;
     }
 
     if (wifiDownSinceMs_ == 0) {
         wifiDownSinceMs_ = now;
-        Serial.println("[WIFI] lost — supervising reconnect");
-        // Drop D+ so host stops Bulk/SOF — physical OTG can stay plugged (lab overnight).
-        if (msc_.usbSoftAttached()) {
-            Serial.println("[WIFI] soft-detach USB for coex (no chip reset)");
-            msc_.softDetach(0);
-            coexDetachedForWifi_ = true;
-            coexRecoveredAtMs_ = 0;
+        Serial.printf("[WIFI] lost — supervising reconnect heap=%u\n",
+                      (unsigned)ESP.getFreeHeap());
+        if (msc_.usbSoftAttached() || !coexDetachedForWifi_) {
+            enterCoexHold("assoc-lost");
         }
     }
     unsigned long downFor = now - wifiDownSinceMs_;
     if (now - lastWifiReconnectMs_ >= WIFI_RECONNECT_EVERY_MS) {
         lastWifiReconnectMs_ = now;
         wifiReconnectAttempts_++;
-        Serial.printf("[WIFI] reconnect #%u (down %lu ms coex=%d)\n", wifiReconnectAttempts_,
-                      downFor, coexDetachedForWifi_ ? 1 : 0);
+        Serial.printf("[WIFI] reconnect #%u (down %lu ms coex=%d heap=%u data=%d)\n",
+                      wifiReconnectAttempts_, downFor, coexDetachedForWifi_ ? 1 : 0,
+                      (unsigned)ESP.getFreeHeap(), dataAlive ? 1 : 0);
+        WiFi.setAutoReconnect(false);
         WiFi.disconnect(false, false);
-        delay(50);
-        WiFi.reconnect();
+        delay(30);
+        WiFi.begin();
     }
-    // Prefer soft-detach recovery; chip reset only if WiFi still dead after long coex window
-    // (OTG left in + ESP.restart() caused yellow/RST loops).
     unsigned long restartAfter =
         coexDetachedForWifi_ ? WIFI_RESTART_AFTER_COEX_MS : WIFI_RESTART_AFTER_MS;
     if (downFor >= restartAfter && wifiReconnectAttempts_ >= 3) {
@@ -327,15 +459,19 @@ void App::loop() {
     led_.tick(session_, msc_, instrument_, tcp_, EventBus::instance());
 
     unsigned long now = millis();
-    unsigned long statusEvery = usbHost ? (STATUS_INTERVAL_MS * 2) : STATUS_INTERVAL_MS;
-    unsigned long healthEvery = usbHost ? (CAPTURE_HEALTH_INTERVAL_MS * 2) : CAPTURE_HEALTH_INTERVAL_MS;
-    if (now - lastStatusMs_ >= statusEvery) {
-        lastStatusMs_ = now;
-        emitStatus();
-    }
-    if (now - lastCaptureHealthMs_ >= healthEvery) {
-        lastCaptureHealthMs_ = now;
-        emitCaptureHealth();
+    // During coex hold: no status/health publish — refill was keeping the stall latch set.
+    if (!coexDetachedForWifi_) {
+        unsigned long statusEvery = usbHost ? (STATUS_INTERVAL_MS * 2) : STATUS_INTERVAL_MS;
+        unsigned long healthEvery =
+            usbHost ? (CAPTURE_HEALTH_INTERVAL_MS * 2) : CAPTURE_HEALTH_INTERVAL_MS;
+        if (now - lastStatusMs_ >= statusEvery) {
+            lastStatusMs_ = now;
+            emitStatus();
+        }
+        if (now - lastCaptureHealthMs_ >= healthEvery) {
+            lastCaptureHealthMs_ = now;
+            emitCaptureHealth();
+        }
     }
     if (usbHost) yield();
 }

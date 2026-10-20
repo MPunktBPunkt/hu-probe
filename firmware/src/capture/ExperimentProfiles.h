@@ -56,7 +56,9 @@ static const ExperimentProfile kTable[] = {
      kMarkersGeneric, 5},
     {"s7_lifecycle", "S7 Lifecycle", "s7_lifecycle", 120000, true, "media_hide",
      kMarkersGeneric, 5},
-    {"free", "Freie Aufnahme (bis 10 min, BOOT 2x = Steckzyklus)", "free", 60000, true,
+    // Car default: already plugged into HU — no soft re-enum (umount would kill a short window).
+    // keepOnUnmount=true → WebUI end_on_unmount unchecked; stop via timer / BOOT lang.
+    {"free", "Freie Aufnahme (1 min, bis 10 min · BOOT 2x = Steckzyklus)", "free", 60000, false,
      "media_hide", nullptr, 0, true, true},
 };
 }  // namespace ExperimentProfilesDetail

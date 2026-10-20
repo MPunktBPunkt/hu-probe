@@ -18,12 +18,15 @@
     "pidrive_profile_geometry": "tools/profiles/nbt_evo_2026-10-06.json",
     "pidrive_profile_transport": "tools/profiles/nbt_evo_lab_2026-10-19.json",
     "analysis_2026_10_19": "docs/feld/2026-10-19-unabhaengige-auswertung.md",
+    "feld_2026_10_20_free": "docs/feld/2026-10-20-bmw-free-offline-0.2.40.md",
+    "multi_review_2026_10_20": "docs/reports/2026-10-20_Multi-Review",
     "pidrive_matrix": "docs/fahrzeug/HU-PARAMETER-MATRIX-2026-10-16.md",
     "p1c": "2026-10-17",
     "notes": [
       "Device-stack CBW/CSW/read events — not Wire.",
       "Never transfer BMW expectations to Mazda as assumption.",
-      "Lab Debian fingerprints must not be mixed into this profile."
+      "Lab Debian fingerprints must not be mixed into this profile.",
+      "2026-10-20 free offline: demo_v1 medium; full 240+69 atom on track change; no file prefetch in idle; TUR idle 2238-2239 ms."
     ]
   },
   "expectations": {
@@ -122,8 +125,59 @@
       "n": 382,
       "class": "FACT",
       "origin": "hu_probe_field",
-      "evidence": "EVID-HUPROBE-2026-10-19-001",
-      "caveats": ["phase_locked_independent_of_reads", "outside_mount_bursts"]
+      "fw": ["0.2.39", "0.2.40"],
+      "evidence": ["EVID-HUPROBE-2026-10-19-001", "20261020-075616", "20261020-075935", "20261020-080508"],
+      "caveats": ["phase_locked_independent_of_reads", "outside_mount_bursts", "free_sessions_p10_p50_p90_exact_2238"]
+    },
+    "demo_v1_track_atom_bytes": {
+      "value": 158208,
+      "blocks": 309,
+      "cbw_split": [240, 69],
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.40",
+      "evidence": ["20261020-075616", "20261020-075935", "20261020-080508"],
+      "caveats": ["medium_demo_v1_only", "14_of_14_atoms_full", "240_is_max_cbw_plus_rest_not_special_grammar"]
+    },
+    "demo_v1_atom_timing_ms": {
+      "value": {
+        "head_cbw_dur": [113.6, 114.0],
+        "continuation_gap": [4.0, 4.1],
+        "head_start_to_tail_start": [117.7, 118.1],
+        "tail_cbw_dur": [31.3, 31.7],
+        "atom_total_approx": 149,
+        "mib_per_s_approx": 1.04
+      },
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.40",
+      "evidence": ["20261020-075616", "20261020-075935", "20261020-080508"],
+      "caveats": ["pace_may_be_fs_usb_bus_limit", "do_not_label_4ms_as_head_to_tail_cbw_gap"]
+    },
+    "mount_done_to_first_read_ms": {
+      "value": [70, 86],
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.40",
+      "evidence": ["20261020-075935", "20261020-080508"],
+      "caveats": ["n_2"]
+    },
+    "demo_v1_idle_file_reads": {
+      "value": 0,
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.40",
+      "evidence": ["20261020-075616", "20261020-075935", "20261020-080508"],
+      "caveats": ["between_atoms_only_tur", "medium_demo_v1_158kib"]
+    },
+    "demo_v1_track_change_interval_s": {
+      "value": 26.473,
+      "samples_s": [26.474635, 26.474673, 26.471674],
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.40",
+      "evidence": ["20261020-075616", "20261020-075935", "20261020-080508"],
+      "caveats": ["media_track_duration_not_generic_nbt_timer", "demo_v1_only"]
     },
     "mount_signature": {
       "value": {
@@ -156,8 +210,13 @@
       "value": {"after_start": [9, 16], "before_end": [11, 18], "track_dur_s": 26.5},
       "class": "MEASURED",
       "origin": "hu_probe_field",
-      "evidence": "EVID-HUPROBE-2026-10-19-004",
-      "caveats": ["rule_lead_vs_delay_INFERRED_until_SEQ-DUR", "n_approx_10", "cyclic_T3_to_T1"]
+      "evidence": ["EVID-HUPROBE-2026-10-19-004", "20261020-free"],
+      "caveats": [
+        "free_2026_10_20_atom_at_track_change_not_early_prefetch",
+        "track_dur_s_is_demo_v1_media_duration",
+        "prefetch_lead_demo_v1_approx_0",
+        "cyclic_T3_to_T1"
+      ]
     },
     "selection_latency_s": {
       "value": {"manual": [1.7, 1.9], "autoplay": 0.2},
@@ -167,11 +226,19 @@
       "caveats": ["markers_partly_retrofitted"]
     },
     "tail_then_head": {
-      "value": "T1 as next track 8/9 tail first (249/69 then 9/240)",
-      "class": "MEASURED",
+      "value": "Re-Entry morphology: tail (249/69) then head (9/240); free replug 080508 gap ~34.3 ms",
+      "class": "INFERENCE",
       "origin": "hu_probe_field",
-      "evidence": "EVID-HUPROBE-2026-10-19-006",
-      "caveats": ["cause_unknown", "test_with_tail_probe_and_hdr_variants"]
+      "evidence": ["EVID-HUPROBE-2026-10-19-006", "20261020-080508"],
+      "caveats": ["strong_inference_n_ge_2_contexts", "pause_play_without_remount_open", "not_hold_only_artifact"]
+    },
+    "replug_addresses_prior_then_t1": {
+      "value": "080508: remount → short T3 atom → ~1.46 s → T1 tail_then_head → T2 normal",
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.40",
+      "evidence": "20261020-080508",
+      "caveats": ["n_1", "semantics_resume_vs_restart_vs_ui_open", "not_playlist_restart_at_t1_fact"]
     },
     "media_loss_grammar": {
       "value": ["tur_status_1", "request_sense", "prevent_allow_status_1"],
@@ -200,10 +267,23 @@
     },
     "prefetch_lead_s_approx": {
       "value": 15,
-      "class": "HYPOTHESIS",
+      "class": "SUPERSEDED",
       "origin": "pidrive_field",
       "evidence": "EVID-HUPROBE-2026-10-15-010",
-      "caveats": ["needs_lba_plus_marker_formal", "state_dependent", "cache_history_unknown"]
+      "caveats": [
+        "rejected_for_demo_v1_158kib_see_rejected.prefetch_lead_15s_demo_v1",
+        "unknown_for_large_files",
+        "state_dependent",
+        "cache_history_unknown"
+      ]
+    },
+    "prefetch_lead_demo_v1_s": {
+      "value": 0,
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.40",
+      "evidence": ["20261020-075616", "20261020-075935", "20261020-080508"],
+      "caveats": ["no_file_read_of_next_track_during_idle", "gate01_rest_is_read_to_audible", "large_files_unknown"]
     },
     "busy_tone_s_approx": {
       "value": 65,
@@ -231,15 +311,17 @@
     },
     "cache_hit_no_reads_on_replay": {
       "value": true,
-      "class": "HYPOTHESIS",
+      "class": "FACT",
       "origin": "pidrive_field",
-      "caveats": ["needs_field_s3"]
+      "confirmed_by": "hu_probe_series_multi_review_2026_10_20",
+      "caveats": ["a_b_a_without_remount", "cache_key_unknown", "size_lifetime_unknown"]
     },
     "remount_full_reread": {
       "value": true,
-      "class": "HYPOTHESIS",
+      "class": "FACT",
       "origin": "pidrive_field",
-      "caveats": ["needs_field_s4", "hu_a9_lifecycle_method_exists"]
+      "confirmed_by": "hu_probe_series_multi_review_2026_10_20",
+      "caveats": ["remount_invalidates_or_bypasses_cache_hit", "hu_a9_lifecycle_method_exists"]
     },
     "full_file_512kib_block_seq": {
       "value": [240, 240, 32, 240, 240, 32],
@@ -288,6 +370,21 @@
       "class": "REJECTED",
       "evidence": "EVID-HUPROBE-2026-10-19-007",
       "note": "TUR(1)/REQUEST_SENSE/PREVENT(1) after hideMedia is the media-loss reaction"
+    },
+    "prefetch_lead_15s_demo_v1": {
+      "class": "REJECTED",
+      "evidence": ["20261020-075616", "20261020-075935", "20261020-080508"],
+      "note": "R21 ~15 s early prefetch not observed on 158 KiB demo_v1; idle windows file-read free. Large-file prefetch remains UNKNOWN."
+    },
+    "head_only_prefetch_on_track_change": {
+      "class": "REJECTED",
+      "evidence": ["20261020-075616", "20261020-075935", "20261020-080508"],
+      "note": "Normal track change always full 240+69 atom (14/14); head-only was a report mislabel (B34)."
+    },
+    "remount_playlist_restart_at_t1": {
+      "class": "REJECTED",
+      "evidence": "20261020-080508",
+      "note": "080508 addresses T3 briefly after remount before T1; playlist-restart-at-T1 is too strong (B43)."
     }
   },
   "fingerprint_template": {

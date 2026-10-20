@@ -62,14 +62,22 @@ void StatusLed::tick(const Session& session, const MscGadget& msc, const ReadIns
         next = Mode::Unhealthy;
     } else if (MscBotTap::needResetLatched()) {
         next = Mode::NeedReset;
-    } else if (msc.plugged() && !tcp.connected()) {
-        next = Mode::TcpDown;
-    } else if (msc.plugged() && recentRead) {
-        next = Mode::Measuring;
-    } else if (msc.plugged()) {
-        next = Mode::UsbQuiet;
     } else {
-        next = Mode::IdleWifi;
+        // Assoc alone is not IdleWifi — zombie WL_CONNECTED (no recent tcp_tx_ok).
+        const unsigned long lastOk = bus.lastTcpTxOkMs();
+        const bool dataAlive = (lastOk != 0) && (now - lastOk < 8000UL);
+        const bool bootGrace = (lastOk == 0) && (now < 30000UL);
+        if (!dataAlive && !bootGrace) {
+            next = Mode::TcpDown;
+        } else if (msc.plugged() && !tcp.connected()) {
+            next = Mode::TcpDown;
+        } else if (msc.plugged() && recentRead) {
+            next = Mode::Measuring;
+        } else if (msc.plugged()) {
+            next = Mode::UsbQuiet;
+        } else {
+            next = Mode::IdleWifi;
+        }
     }
     (void)session;
     apply(next, now);

@@ -38,8 +38,8 @@ static const char* PAGE =
     "<h2>Messlauf</h2>"
     "<div class=row>"
     "<label>Fahrzeug <select id=v>"
+    "<option value=bmw selected>bmw (NBT Evo)</option>"
     "<option value=lab_debian>lab_debian</option>"
-    "<option value=bmw>bmw (NBT Evo)</option>"
     "<option value=mazda_cx30>mazda_cx30</option>"
     "</select></label>"
     "<label>Experiment <select id=exp></select></label>"
@@ -50,9 +50,9 @@ static const char* PAGE =
     "<select id=end><option value=media_hide>Media-Hide</option>"
     "<option value=soft_detach>Soft-Detach</option></select></label>"
     "<label style='flex-direction:row;align-items:center;gap:.4rem;margin-top:1.1rem'>"
-    "<input id=soft type=checkbox checked> Soft-USB Re-Enum</label>"
+    "<input id=soft type=checkbox> Soft-USB Re-Enum</label>"
     "<label style='flex-direction:row;align-items:center;gap:.4rem;margin-top:1.1rem'>"
-    "<input id=endUm type=checkbox checked> Unmount/Remount der HU beendet Aufnahme</label>"
+    "<input id=endUm type=checkbox> Unmount/Remount der HU beendet Aufnahme</label>"
     "</div>"
     "<p class=muted id=markHint>BOOT kurz = nächster Marker · BOOT lang (≥1,5 s) = Stop</p>"
     "<div class=row>"
@@ -174,7 +174,7 @@ static const char* PAGE =
     "  const sel=exp;sel.innerHTML='';"
     "  (experiments.experiments||[]).forEach(e=>{"
     "    const o=document.createElement('option');o.value=e.id;o.textContent=e.label+' ('+e.id+')';"
-    "    if(e.id==='s2_prefetch')o.selected=true;sel.appendChild(o)});"
+    "    if(e.id==='free')o.selected=true;sel.appendChild(o)});"
     "  applyExp();"
     "}"
     "function curExp(){return (experiments.experiments||[]).find(e=>e.id===exp.value)}"
@@ -932,10 +932,10 @@ void WebUi::handleExperimentStart() {
         server_.send(409, "application/json", "{\"ok\":false,\"err\":\"already_active\"}");
         return;
     }
-    String vehicle = cfg_ ? cfg_->vehicleId : "lab_debian";
-    String experimentId = "s2_prefetch";
-    String profile = cfg_ ? cfg_->profileId : "lab_debian";
-    bool softUsb = true;
+    String vehicle = cfg_ ? cfg_->vehicleId : "bmw";
+    String experimentId = "free";
+    String profile = cfg_ ? cfg_->profileId : "bmw_nbt_evo";
+    bool softUsb = false;
     uint32_t measureMs = 0;
     String endStrategy = "media_hide";
     bool softExplicit = false;
