@@ -5,14 +5,15 @@
 #include <cstring>
 
 namespace {
-constexpr uint32_t kMagic = 0x48555054;  // HUPT
-constexpr uint8_t kCapacity = 8;
+constexpr uint32_t kMagic = 0x48555055;  // HUPU (layout v2: 32 crumbs, restart cause)
+constexpr uint8_t kCapacity = 32;
 
 struct Breadcrumb {
     uint32_t ms;
     uint32_t arg;
     uint8_t code;
-    uint8_t reserved[3];
+    uint8_t reserved;
+    uint16_t repeat;  // extra identical crumbs folded into this one
 };
 
 struct Tail {
@@ -21,7 +22,8 @@ struct Tail {
     char sid[64];
     uint8_t next;
     uint8_t count;
-    uint8_t reserved[2];
+    uint8_t restartCause;
+    uint8_t reserved;
     Breadcrumb crumbs[kCapacity];
 };
 
@@ -45,11 +47,30 @@ const char* reasonName(esp_reset_reason_t reason) {
         default: return "unknown";
     }
 }
+
+const char* causeName(uint8_t cause) {
+    switch (cause) {
+        case PanicTail::RestartWifiUnrecoverable: return "wifi_unrecoverable";
+        case PanicTail::RestartPortalTimeout: return "wifi_portal_timeout";
+        case PanicTail::RestartHubOta: return "hub_ota";
+        case PanicTail::RestartWebUi: return "webui";
+        case PanicTail::RestartGithubOta: return "github_ota";
+        case PanicTail::RestartOtaRollback: return "ota_rollback";
+        default: return "none";
+    }
+}
+
+/** USB chatter repeats in bursts; folding keeps the lifecycle crumbs in the window. */
+bool foldable(uint8_t code) {
+    return code == PanicTail::UsbMount || code == PanicTail::UsbUmount ||
+           code == PanicTail::EpStall || code == PanicTail::BotReset ||
+           code == PanicTail::NeedReset;
+}
 }  // namespace
 
 void PanicTail::begin() {
     bootResetReason = esp_reset_reason();
-    previousValid = retained.magic == kMagic;
+    previousValid = retained.magic == kMagic && retained.count <= kCapacity;
     if (previousValid) memcpy(&previous, &retained, sizeof(previous));
 
     memset(&retained, 0, sizeof(retained));
@@ -64,17 +85,31 @@ void PanicTail::setSession(const char* sid) {
 }
 
 void PanicTail::breadcrumb(Code code, uint32_t arg) {
+    if (retained.count > 0 && foldable(code)) {
+        Breadcrumb& last = retained.crumbs[(retained.next + kCapacity - 1) % kCapacity];
+        if (last.code == code && last.arg == arg) {
+            if (last.repeat < 0xFFFF) last.repeat++;
+            last.ms = millis();
+            return;
+        }
+    }
     const uint8_t slot = retained.next % kCapacity;
     Breadcrumb& crumb = retained.crumbs[slot];
     crumb.ms = millis();
     crumb.arg = arg;
     crumb.code = static_cast<uint8_t>(code);
+    crumb.repeat = 0;
     retained.next = (slot + 1) % kCapacity;
     if (retained.count < kCapacity) retained.count++;
 }
 
+void PanicTail::noteRestart(RestartCause cause) {
+    retained.restartCause = static_cast<uint8_t>(cause);
+    breadcrumb(RestartRequested, cause);
+}
+
 void PanicTail::appendPrevious(JsonObject obj) {
-    obj["reset_reason"] = resetReason();
+    appendBootInfo(obj);
     if (!previousValid || previous.count == 0) return;
 
     JsonObject tail = obj["panic_tail"].to<JsonObject>();
@@ -89,9 +124,25 @@ void PanicTail::appendPrevious(JsonObject obj) {
         item["code"] = crumb.code;
         item["t_ms"] = crumb.ms;
         item["arg"] = crumb.arg;
+        if (crumb.repeat) item["repeat"] = crumb.repeat;
     }
+}
+
+void PanicTail::appendBootInfo(JsonObject obj) {
+    obj["reset_reason"] = resetReason();
+    obj["restart_cause"] = restartCause();
+    obj["boot_generation"] = bootGeneration();
+    obj["uptime_ms"] = (uint32_t)millis();
 }
 
 const char* PanicTail::resetReason() {
     return reasonName(bootResetReason);
+}
+
+const char* PanicTail::restartCause() {
+    return previousValid ? causeName(previous.restartCause) : "none";
+}
+
+uint32_t PanicTail::bootGeneration() {
+    return retained.generation;
 }

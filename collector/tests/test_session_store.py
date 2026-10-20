@@ -56,6 +56,17 @@ def test_append_session_events(tmp_path: Path) -> None:
             "stream_lost": 0,
             "msc_sample_overflow": 0,
             "reset_reason": "power_on",
+            "restart_cause": "none",
+            "boot_generation": 1,
+            "uptime_ms": 123456,
+            "fine_data": True,
+            "trip_id": 7,
+            "persisted": True,
+            "checkpoints": 9,
+            "persist_full": False,
+            "stored_replay": True,
+            "capture_fw": "0.3.0",
+            "media_variant": "drive_mix",
             "transport_epoch_start": 2,
             "transport_epoch_end": 2,
             "end_reason": "auto_media_hide",
@@ -69,6 +80,17 @@ def test_append_session_events(tmp_path: Path) -> None:
     assert meta["capture"]["queue_highwater"] == 4
     assert meta["capture"]["recv_events"] == 3
     assert meta["capture"]["reset_reason"] == "power_on"
+    assert meta["capture"]["restart_cause"] == "none"
+    assert meta["capture"]["boot_generation"] == 1
+    assert meta["capture"]["uptime_ms"] == 123456
+    assert meta["capture"]["fine_data"] is True
+    assert meta["capture"]["trip_id"] == 7
+    assert meta["capture"]["persisted"] is True
+    assert meta["capture"]["checkpoints"] == 9
+    assert meta["capture"]["persist_full"] is False
+    assert meta["capture"]["stored_replay"] is True
+    assert meta["capture"]["capture_fw"] == "0.3.0"
+    assert meta["capture"]["media_variant"] == "drive_mix"
     assert meta["capture"]["transport_epoch_start"] == 2
     assert meta["capture"]["end_reason"] == "auto_media_hide"
     assert meta["capture"]["end_strategy"] == "media_hide"
@@ -171,6 +193,25 @@ def test_offline_health_integrity_pass(tmp_path: Path) -> None:
     assert meta["capture"]["integrity_pass"] is True
     assert meta["capture"]["record_size"] == 99
     assert meta["capture"]["capacity_bytes"] == 65536
+
+def test_parse_errors_are_per_session(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    store.note_parse_error(None, 47)
+    sid_a = "20261020-075616_bmw_free"
+    sid_b = "20261020-075935_bmw_free"
+    store.note_parse_error(sid_b, 2)
+    for sid in (sid_a, sid_b):
+        store.append_event({"v": 2, "sid": sid, "seq": 1, "t_us": 0, "ev": "session",
+                            "action": "start", "vehicle": "bmw", "scenario": "free"})
+        store.append_event({"v": 2, "sid": sid, "seq": 2, "t_us": 1, "ev": "capture_health",
+                            "dropped": 0, "offline_overflow": 0})
+    meta_a = json.loads((tmp_path / sid_a / "session.json").read_text(encoding="utf-8"))
+    meta_b = json.loads((tmp_path / sid_b / "session.json").read_text(encoding="utf-8"))
+    assert meta_a["capture"]["parse_errors"] == 0
+    assert meta_b["capture"]["parse_errors"] == 2
+    assert meta_a["capture"]["collector_parse_errors_total"] == 49
+    assert store.parse_errors == 49
+
 
 def test_media_metadata_and_tur_stats(tmp_path: Path) -> None:
     store = SessionStore(tmp_path)

@@ -14,13 +14,26 @@ class SessionStore:
         self._last_seq: dict[str, int] = {}
         self._recv_events: dict[str, int] = {}
         self._parse_errors = 0
+        self._parse_errors_by_sid: dict[str, int] = {}
 
     @property
     def parse_errors(self) -> int:
         return self._parse_errors
 
-    def note_parse_error(self) -> None:
-        self._parse_errors += 1
+    def note_parse_error(self, sid: str | None = None, count: int = 1) -> None:
+        """Count bad lines; `sid` is the session the line belonged to (None = unknown)."""
+        if count <= 0:
+            return
+        self._parse_errors += count
+        if sid is not None:
+            self._parse_errors_by_sid[sid] = self._parse_errors_by_sid.get(sid, 0) + count
+
+    def session_parse_errors(self, sid: str) -> int:
+        return self._parse_errors_by_sid.get(sid, 0)
+
+    def _stamp_parse_errors(self, cap: dict[str, Any], sid: str) -> None:
+        cap["parse_errors"] = self.session_parse_errors(sid)
+        cap["collector_parse_errors_total"] = self._parse_errors
 
     def ensure_session(self, sid: str, meta: dict[str, Any] | None = None) -> Path:
         if sid in self._active:
@@ -185,6 +198,18 @@ class SessionStore:
                     "msc_sample_overflow",
                     "bot_pending_overflow",
                     "reset_reason",
+                    "restart_cause",
+                    "boot_generation",
+                    "uptime_ms",
+                    "diag_tail",
+                    "fine_data",
+                    "trip_id",
+                    "persisted",
+                    "checkpoints",
+                    "persist_full",
+                    "stored_replay",
+                    "capture_fw",
+                    "media_variant",
                     "transport",
                     "transport_epoch",
                     "transport_epoch_start",
@@ -228,7 +253,7 @@ class SessionStore:
                     int(event.get("queue_highwater") or 0),
                 )
                 cap["recv_events"] = self._recv_events.get(sid_s, 0)
-                cap["parse_errors"] = self._parse_errors
+                self._stamp_parse_errors(cap, sid_s)
                 dropped = int(cap.get("dropped") or 0)
                 disc = int(cap.get("tcp_disconnects") or 0)
                 stream_lost = int(cap.get("stream_lost") or 0)
@@ -250,7 +275,7 @@ class SessionStore:
             data["ended_at"] = datetime.now(timezone.utc).astimezone().isoformat()
             cap = data.setdefault("capture", {})
             cap["recv_events"] = self._recv_events.get(sid_s, 0)
-            cap["parse_errors"] = self._parse_errors
+            self._stamp_parse_errors(cap, sid_s)
             dirty_meta = True
 
         if dirty_meta and data is not None:

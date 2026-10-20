@@ -200,6 +200,7 @@ bool SynthFat::parseSpec(JsonVariantConst j, Spec& out, String* err) {
         if (!setTag(fs.tags.title, f["title"], err) || !setTag(fs.tags.artist, f["artist"], err) ||
             !setTag(fs.tags.album, f["album"], err))
             return false;
+        fs.track = f["track"] | (uint8_t)0;
         fs.gapClusters = f["gap_clusters"] | (uint16_t)0;
         fs.frag = f["frag"] | false;
         out.fileCount++;
@@ -393,6 +394,7 @@ bool SynthFat::build(const Spec& spec, MediaLayout& L, String* err) {
                 n.size = fs.sizeBytes;
                 n.apicBytes = fs.apicBytes;
                 n.cover = fs.cover;
+                n.track = fs.track;
                 L.tags[L.nodeCount - 1] = fs.tags;
                 Mp3Gen::finalizeNode(n);
                 break;

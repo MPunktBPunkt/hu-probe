@@ -1,9 +1,14 @@
 #include "WebUi.h"
 #include "BuildFlags.h"
+#include "app/DriveMode.h"
 #include "capture/OfflineCapture.h"
 #include "capture/ExperimentProfiles.h"
 #include "capture/SequenceRunner.h"
+#include "capture/TripStore.h"
+#include "core/DiagLog.h"
+#include "core/GithubOta.h"
 #include "core/HwInfo.h"
+#include "core/PanicTail.h"
 #include "media/ProbeMedia.h"
 #include "msc/MscBotTap.h"
 #include "msc/MscGadget.h"
@@ -43,7 +48,7 @@ static const char* PAGE =
     "<option value=mazda_cx30>mazda_cx30</option>"
     "</select></label>"
     "<label>Experiment <select id=exp></select></label>"
-    "<label>Dauer (s) <input id=dur type=number min=5 max=600 value=60 style='width:5rem'></label>"
+    "<label>Dauer (s) <input id=dur type=number min=5 max=1800 value=60 style='width:5rem'></label>"
     "</div>"
     "<div class=row>"
     "<label><span>Ende</span>"
@@ -53,6 +58,8 @@ static const char* PAGE =
     "<input id=soft type=checkbox> Soft-USB Re-Enum</label>"
     "<label style='flex-direction:row;align-items:center;gap:.4rem;margin-top:1.1rem'>"
     "<input id=endUm type=checkbox> Unmount/Remount der HU beendet Aufnahme</label>"
+    "<label style='flex-direction:row;align-items:center;gap:.4rem;margin-top:1.1rem'>"
+    "<input id=fine type=checkbox> DATA je 4 KiB (Fein-Modus)</label>"
     "</div>"
     "<p class=muted id=markHint>BOOT kurz = nächster Marker · BOOT lang (≥1,5 s) = Stop</p>"
     "<div class=row>"
@@ -64,6 +71,37 @@ static const char* PAGE =
     "<p class=muted id=budget></p>"
     "<p id=integrity></p>"
     "<pre id=lastRun class=muted>noch kein Lauf</pre>"
+    "</div>"
+
+    "<div class=card>"
+    "<h2>Heimfahrt-Modus</h2>"
+    "<p class=muted id=driveNow>…</p>"
+    "<div class=row>"
+    "<label style='flex-direction:row;align-items:center;gap:.4rem'>"
+    "<input id=aCap type=checkbox> beim Start automatisch messen</label>"
+    "<label style='flex-direction:row;align-items:center;gap:.4rem'>"
+    "<input id=aFine type=checkbox> Fein-Modus</label>"
+    "<label style='flex-direction:row;align-items:center;gap:.4rem'>"
+    "<input id=aUpd type=checkbox> Auto-Update (GitHub)</label>"
+    "</div>"
+    "<div class=row>"
+    "<label>Medium <select id=aMedia></select></label>"
+    "<label>Hotspot-SSID <input id=w2s maxlength=32></label>"
+    "<label>Hotspot-Passwort <input id=w2p type=password maxlength=64></label>"
+    "</div>"
+    "<div class=row><label style='flex:1'>Update-Manifest <input id=aUrl style='width:100%'></label></div>"
+    "<div class=row><button onclick=saveDrive()>Speichern</button></div>"
+    "<p class=muted>Gilt ab dem nächsten Start. Ablauf: WLAN (Heimnetz oder Hotspot, 15 s) → "
+    "gespeicherte Fahrten hochladen → Update prüfen → Messung (bis 30 min) startet mit dem "
+    "Einstecken. BOOT beim Einstecken gedrückt halten = WLAN-Portal.</p>"
+    "<h2>Gespeicherte Fahrten (Flash)</h2>"
+    "<p class=muted id=tripsNow></p>"
+    "<div class=row>"
+    "<button class=sec onclick=tripsUpload()>Ausstehende hochladen</button>"
+    "<button class=sec onclick=tripsErase(false)>Hochgeladene löschen</button>"
+    "<button class=sec onclick=tripsErase(true)>Alle löschen</button>"
+    "</div>"
+    "<pre id=tripList class=muted></pre>"
     "</div>"
 
     "<div class=card>"
@@ -183,6 +221,7 @@ static const char* PAGE =
     "  end.value=e.end_strategy||'media_hide';"
     "  soft.checked=!!e.soft_usb;"
     "  endUm.checked=e.end_on_unmount!==false;"
+    "  fine.checked=!!e.fine_data;"
     "  markHint.textContent=e.free_markers?"
     "    'BOOT kurz = Marker mark_01, mark_02 … · BOOT 2× schnell = Soft-Steckzyklus (2 s, Strom bleibt) · BOOT lang (≥1,5 s) = Stop':"
     "    'Marker (BOOT kurz): '+(e.markers||[]).join(' → ')+' · BOOT lang (≥1,5 s) = Stop';"
@@ -206,9 +245,11 @@ static const char* PAGE =
     "    pbar.style.width=pct+'%';"
     "  } else if(!o||!o.active){pbar.style.width='0%'}"
     "  if(b.record_size){"
-    "    budget.textContent='Budget: ≈'+b.estimated_max_records+' Rec (≈'+b.record_size+"
-    "      ' B/Rec, kompakt) ≤ '+(b.capacity_bytes/1024).toFixed(0)+' KiB · max '+(b.max_duration_ms/1000)+'s'"
-    "      +(o.records!=null?(' · now '+o.records+' Rec / '+((o.bytes||0)/1024).toFixed(1)+' KiB'):'');"
+    "    const mm=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');"
+    "    budget.textContent='Puffer '+(b.capacity_bytes/1024).toFixed(0)+' KiB'+(b.capacity_allocated?'':' (erwartet)')+"
+    "      ' · ≈'+b.est_bytes_per_s+' B/s '+(b.fine_data?'fein':'kompakt')+"
+    "      ' · reicht ≈'+mm(b.est_duration_s||0)+' min (max '+mm(Math.round(b.max_duration_ms/1000))+')'"
+    "      +(o.records!=null?(' · jetzt '+o.records+' Rec / '+((o.bytes||0)/1024).toFixed(1)+' KiB'):'');"
     "  }"
     "}"
     "async function refresh(){"
@@ -236,6 +277,10 @@ static const char* PAGE =
     "    const s=j.stall||{};stallNow.textContent=(s.enabled?(s.active?'AKTIV':'wartet auf Start'):'aus')+"
     "      ' · gehalten '+(s.held||0)+' · abgebrochen '+(s.abandoned||0)+' · max '+(s.max_wait_ms||0)+' ms'+"
     "      (s.last_off?(' · zuletzt aus: '+s.last_off):'');"
+    "    const d=j.drive||{},g=j.ota||{};"
+    "    driveNow.textContent='Zustand '+(d.state||'off')+(d.wlan?(' · WLAN '+d.wlan):'')+"
+    "      ' · ausstehend '+(d.trips_pending||0)+(d.error?(' · '+d.error):'')+"
+    "      ' · Update: '+(g.result||'–')+(g.rolled_back_from?(' · ROLLBACK von '+g.rolled_back_from):'');"
     "    const q=j.sequence||{};"
     "    seqPrompt.textContent=q.active?('['+q.state+'] Schritt '+q.step+'/'+q.steps+' · '+q.media+"
     "      ' · '+(q.prompt||'')):(q.state&&q.state!=='idle'?('Sequenz '+q.state+(q.error?(' · '+q.error):'')):'');"
@@ -246,7 +291,8 @@ static const char* PAGE =
     "}"
     "async function runExperiment(){"
     "  const body={vehicle:v.value,experiment:exp.value,profile_id:PROFILE[v.value]||v.value,"
-    "    measure_ms:Math.round(+dur.value*1000),end_strategy:end.value,soft_usb:!!soft.checked,end_on_unmount:!!endUm.checked};"
+    "    measure_ms:Math.round(+dur.value*1000),end_strategy:end.value,soft_usb:!!soft.checked,end_on_unmount:!!endUm.checked,"
+    "    fine_data:!!fine.checked};"
     "  setPhase('ARMING…','warn');go.disabled=true;"
     "  try{"
     "    const r=await fetch('/api/experiment/start',{method:'POST',headers:{'Content-Type':'application/json'},"
@@ -325,7 +371,34 @@ static const char* PAGE =
     "    auto_arm:!!autoArm.checked})});st.textContent=await r.text();refresh()}"
     "async function seqCmd(c){const r=await fetch('/api/sequence/'+c,{method:'POST'});"
     "  st.textContent=await r.text();refresh()}"
-    "loadExperiments().then(loadMedia).then(loadSeq).then(refresh);setInterval(refresh,1000);"
+    "async function loadDrive(){"
+    "  const c=await (await fetch('/api/config')).json();"
+    "  aCap.checked=!!c.autoCapture;aFine.checked=c.autoFine!==false;aUpd.checked=c.autoUpdate!==false;"
+    "  w2s.value=c.wifi2Ssid||'';w2p.value='';w2p.placeholder=c.wifi2PassSet?'(gespeichert)':'';"
+    "  aUrl.value=c.otaManifestUrl||'';aMedia.innerHTML=mpre.innerHTML;aMedia.value=c.autoMedia||'drive_mix';"
+    "}"
+    "async function saveDrive(){"
+    "  const b={autoCapture:aCap.checked,autoFine:aFine.checked,autoUpdate:aUpd.checked,"
+    "    autoMedia:aMedia.value,wifi2Ssid:w2s.value,otaManifestUrl:aUrl.value};"
+    "  if(w2p.value)b.wifi2Pass=w2p.value;"
+    "  const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},"
+    "    body:JSON.stringify(b)});st.textContent=await r.text();loadDrive()}"
+    "async function loadTrips(){"
+    "  const j=await (await fetch('/api/trips')).json();"
+    "  if(!j.available){tripsNow.textContent='keine trips-Partition (einmal per Kabel flashen)';tripList.textContent='';return}"
+    "  tripsNow.textContent=(j.trips||[]).length+' Fahrten · ausstehend '+(j.pending||0)+' · frei '+"
+    "    Math.round((j.free_bytes||0)/1024)+' KiB'+(j.upload_all?' · Upload läuft':'')+(j.upload_error?(' · '+j.upload_error):'');"
+    "  tripList.textContent=(j.trips||[]).map(t=>'#'+t.trip_id+' '+(t.bytes/1024).toFixed(1)+' KiB · '+"
+    "    t.commits+' Commits · '+t.end_reason+(t.uploaded?' · hochgeladen':' · AUSSTEHEND')+"
+    "    (t.writing?' · schreibt':'')+' · '+t.media+' · '+t.wallclock+' · fw '+t.fw).join('\\n')||'keine';"
+    "}"
+    "async function tripsUpload(){const r=await fetch('/api/trips/upload',{method:'POST'});"
+    "  st.textContent=await r.text();loadTrips()}"
+    "async function tripsErase(all){if(all&&!confirm('Alle Fahrten löschen, auch nicht hochgeladene?'))return;"
+    "  const r=await fetch('/api/trips/erase',{method:'POST',headers:{'Content-Type':'application/json'},"
+    "    body:JSON.stringify({all:all})});st.textContent=await r.text();loadTrips()}"
+    "loadExperiments().then(loadMedia).then(loadSeq).then(loadDrive).then(loadTrips).then(refresh);"
+    "setInterval(refresh,1000);setInterval(loadTrips,5000);"
     "</script></body></html>";
 
 void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
@@ -363,6 +436,10 @@ void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
     server_.on("/api/sequence/next", HTTP_POST, [this]() { handleSequenceCmd("next"); });
     server_.on("/api/sequence/skip", HTTP_POST, [this]() { handleSequenceCmd("skip"); });
     server_.on("/api/sequence/abort", HTTP_POST, [this]() { handleSequenceCmd("abort"); });
+    server_.on("/api/diag/log", HTTP_GET, [this]() { handleDiagLog(); });
+    server_.on("/api/trips", HTTP_GET, [this]() { handleTrips(); });
+    server_.on("/api/trips/upload", HTTP_POST, [this]() { handleTripsUpload(); });
+    server_.on("/api/trips/erase", HTTP_POST, [this]() { handleTripsErase(); });
     server_.on(
         "/ota-upload", HTTP_POST,
         [this]() { handleOtaDone(); },
@@ -373,10 +450,113 @@ void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
 
 void WebUi::loop() {
     server_.handleClient();
+    if (tripUploadAll_) pumpTripUpload();
+}
+
+void WebUi::pumpTripUpload() {
+    OfflineCapture& oc = OfflineCapture::instance();
+    if (oc.active()) return;
+    const TripStore::Trip* t = TripStore::instance().firstPending();
+    bool done = !t;
+    if (t && t->meta.tripId == tripUploadLastId_) {
+        tripUploadErr_ = "trip_upload_incomplete";
+        done = true;
+    }
+    if (!done) {
+        tripUploadLastId_ = t->meta.tripId;
+        if (!oc.replayStored(session_, msc_, inst_, tcp_)) {
+            tripUploadErr_ = "replay_failed";
+            done = true;
+        }
+    }
+    if (!done) return;
+    tripUploadAll_ = false;
+    if (tripUploadRestoreLive_ && session_ && !session_->active() && cfg_) {
+        session_->start(cfg_->vehicleId, cfg_->scenarioId, cfg_->profileId,
+                        msc_ ? msc_->identitySerial() : nullptr,
+                        msc_ ? msc_->volumeLabel() : nullptr);
+    }
+}
+
+void WebUi::handleTrips() {
+    JsonDocument doc;
+    TripStore::instance().toJson(doc.to<JsonObject>());
+    doc["upload_all"] = tripUploadAll_;
+    if (tripUploadErr_.length()) doc["upload_error"] = tripUploadErr_;
+    sendJson(200, doc);
+}
+
+void WebUi::handleTripsUpload() {
+    JsonDocument out;
+    TripStore& ts = TripStore::instance();
+    const char* err = nullptr;
+    if (!ts.available()) err = "no_trips_partition";
+    else if (OfflineCapture::instance().active() || tripUploadAll_) err = "busy";
+    else if (WiFi.status() != WL_CONNECTED) err = "no_wifi";
+    else if (!cfg_ || !cfg_->enableCollector) err = "collector_disabled";
+    out["ok"] = err == nullptr;
+    if (err) {
+        out["err"] = err;
+        sendJson(409, out);
+        return;
+    }
+    out["pending"] = ts.pendingCount();
+    tripUploadErr_ = "";
+    tripUploadLastId_ = 0;
+    tripUploadRestoreLive_ = session_ && session_->active();
+    tripUploadAll_ = ts.pendingCount() > 0;
+    sendJson(200, out);
+}
+
+void WebUi::handleTripsErase() {
+    JsonDocument in;
+    if (server_.hasArg("plain")) deserializeJson(in, server_.arg("plain"));
+    const bool all = in["all"] | false;
+    TripStore& ts = TripStore::instance();
+    JsonDocument out;
+    if (!ts.available() || ts.writing() || OfflineCapture::instance().active() || tripUploadAll_) {
+        out["ok"] = false;
+        out["err"] = ts.available() ? "busy" : "no_trips_partition";
+        sendJson(409, out);
+        return;
+    }
+    const uint8_t pendingBefore = ts.pendingCount();
+    // The journal is append-only: "uploaded only" can erase only when nothing is pending.
+    const bool ok = all ? ts.eraseAll() : ts.resetIfDone();
+    out["ok"] = ok;
+    if (!ok && !all && pendingBefore) out["err"] = "pending_trips_left";
+    out["trips"] = ts.tripCount();
+    sendJson(ok ? 200 : 409, out);
 }
 
 void WebUi::handleRoot() {
     server_.send(200, "text/html", PAGE);
+}
+
+void WebUi::handleDiagLog() {
+    server_.setContentLength(CONTENT_LENGTH_UNKNOWN);
+    server_.send(200, "text/plain; charset=utf-8", "");
+    char hdr[96];
+    snprintf(hdr, sizeof(hdr), "# reset=%s restart_cause=%s boot_generation=%u uptime_ms=%lu\n",
+             PanicTail::resetReason(), PanicTail::restartCause(),
+             (unsigned)PanicTail::bootGeneration(), (unsigned long)millis());
+    server_.sendContent(hdr);
+    const char* prev = DiagLog::previousTail();
+    if (prev[0]) {
+        server_.sendContent("# --- previous boot (RTC tail) ---\n");
+        server_.sendContent(prev);
+    }
+    server_.sendContent("# --- this boot ---\n");
+    char buf[512];
+    const size_t total = DiagLog::size();
+    for (size_t off = 0; off < total;) {
+        const size_t n = DiagLog::copyOut(off, buf, sizeof(buf));
+        if (n == 0) break;
+        server_.sendContent(buf, n);
+        off += n;
+        yield();
+    }
+    server_.sendContent("");
 }
 
 void WebUi::handleStatus() {
@@ -399,6 +579,7 @@ void WebUi::handleStatus() {
         hw["sketch_free"] = ESP.getFreeSketchSpace();
         HwInfo::toJson(hw);
     }
+    PanicTail::appendPrevious(doc.as<JsonObject>());
     doc["ip"] = WiFi.localIP().toString();
     doc["hub_ok"] = hub_ ? hub_->lastOk() : false;
     doc["tcp_ok"] = tcp_ ? tcp_->connected() : false;
@@ -432,6 +613,8 @@ void WebUi::handleStatus() {
     ProbeMedia::instance().toJson(doc["media"].to<JsonObject>(), false);
     SequenceRunner::instance().toJson(doc["sequence"].to<JsonObject>());
     ReadStall::instance().toJson(doc["stall"].to<JsonObject>());
+    DriveMode::instance().toJson(doc["drive"].to<JsonObject>());
+    GithubOta::toJson(doc["ota"].to<JsonObject>());
     if (inst_) inst_->turStatsJson(doc["tur"].to<JsonObject>());
     String out;
     serializeJson(doc, out);
@@ -802,7 +985,7 @@ void WebUi::armOfflineCapture(const String& vehicle, const String& scenario,
                               const String& profile, bool softUsb, uint32_t measureMs,
                               const String& endStrategy, const char* const* markers,
                               uint8_t markerCount, const char* experimentId,
-                              bool endOnUnmount, bool freeMarkers) {
+                              bool endOnUnmount, bool freeMarkers, bool fineData) {
     OfflineCapture& oc = OfflineCapture::instance();
     if (oc.active()) {
         server_.send(409, "application/json", "{\"ok\":false,\"err\":\"already_active\"}");
@@ -833,6 +1016,7 @@ void WebUi::armOfflineCapture(const String& vehicle, const String& scenario,
     out["end_strategy"] = endStrategy;
     out["end_on_unmount"] = endOnUnmount;
     out["free_markers"] = freeMarkers;
+    out["fine_data"] = fineData;
     out["note"] = "wifi_off_then_capture";
     {
         JsonArray m = out["markers"].to<JsonArray>();
@@ -843,12 +1027,16 @@ void WebUi::armOfflineCapture(const String& vehicle, const String& scenario,
     {
         JsonObject budget = out["capture_budget"].to<JsonObject>();
         // Theoretical budget before alloc (actual appears in /api/status after arm).
-        budget["capacity_bytes"] = (uint32_t)OfflineCapture::defaultCapBytes();
-        budget["capacity_target_bytes"] = (uint32_t)OfflineCapture::defaultCapBytes();
+        const size_t cap = OfflineCapture::expectedCapBytes();
+        budget["capacity_bytes"] = (uint32_t)cap;
+        budget["capacity_target_bytes"] = (uint32_t)cap;
         budget["capacity_fallback_bytes"] = (uint32_t)OfflineCapture::fallbackCapBytes();
+        budget["capacity_allocated"] = false;
         budget["record_size"] = (uint32_t)OfflineCapture::recordSize();
-        budget["estimated_max_records"] =
-            (uint32_t)OfflineCapture::maxRecordsForCap(OfflineCapture::defaultCapBytes());
+        budget["estimated_max_records"] = (uint32_t)OfflineCapture::maxRecordsForCap(cap);
+        budget["fine_data"] = fineData;
+        budget["est_bytes_per_s"] = OfflineCapture::estBytesPerS(fineData);
+        budget["est_duration_s"] = OfflineCapture::estDurationS(cap, fineData);
         budget["max_duration_ms"] = OfflineCapture::maxCaptureMs();
         budget["measure_ms"] = measureMs;
     }
@@ -864,7 +1052,7 @@ void WebUi::armOfflineCapture(const String& vehicle, const String& scenario,
         return;
     }
     if (!oc.beginCapture(vehicle, scenario, profile, softUsb, measureMs, endStrategy, markers,
-                         markerCount, endOnUnmount, freeMarkers)) {
+                         markerCount, endOnUnmount, freeMarkers, fineData)) {
         Serial.println("[OFFLINE] beginCapture failed");
         oc.requestStop("begin_failed");
     }
@@ -886,11 +1074,13 @@ void WebUi::handleOfflineStart() {
     bool softExplicit = false;
     bool measureExplicit = false;
     bool endExplicit = false;
+    bool fineData = false;
     if (server_.hasArg("plain")) {
         JsonDocument doc;
         if (!deserializeJson(doc, server_.arg("plain"))) {
             if (doc["vehicle"].is<const char*>()) vehicle = doc["vehicle"].as<String>();
             if (doc["scenario"].is<const char*>()) scenario = doc["scenario"].as<String>();
+            if (!doc["fine_data"].isNull()) fineData = doc["fine_data"].as<bool>();
             if (doc["profile_id"].is<const char*>()) profile = doc["profile_id"].as<String>();
             if (!doc["soft_usb"].isNull()) {
                 softUsb = doc["soft_usb"].as<bool>();
@@ -923,7 +1113,7 @@ void WebUi::handleOfflineStart() {
     }
     armOfflineCapture(vehicle, scenario, profile, softUsb, autoDetachMs, endStrategy, markers,
                       markerCount, exp ? exp->id : nullptr, exp ? !exp->keepOnUnmount : true,
-                      exp ? exp->freeMarkers : false);
+                      exp ? exp->freeMarkers : false, fineData);
 }
 
 void WebUi::handleExperimentStart() {
@@ -943,11 +1133,13 @@ void WebUi::handleExperimentStart() {
     bool measureExplicit = false;
     bool endOnUnmount = true;
     bool unmountExplicit = false;
+    bool fineData = false;
 
     if (server_.hasArg("plain")) {
         JsonDocument doc;
         if (!deserializeJson(doc, server_.arg("plain"))) {
             if (doc["vehicle"].is<const char*>()) vehicle = doc["vehicle"].as<String>();
+            if (!doc["fine_data"].isNull()) fineData = doc["fine_data"].as<bool>();
             if (doc["experiment"].is<const char*>()) experimentId = doc["experiment"].as<String>();
             else if (doc["scenario"].is<const char*>()) experimentId = doc["scenario"].as<String>();
             if (doc["profile_id"].is<const char*>()) profile = doc["profile_id"].as<String>();
@@ -993,7 +1185,8 @@ void WebUi::handleExperimentStart() {
     }
 
     armOfflineCapture(vehicle, exp->scenario, profile, softUsb, measureMs, endStrategy,
-                      exp->markers, exp->markerCount, exp->id, endOnUnmount, exp->freeMarkers);
+                      exp->markers, exp->markerCount, exp->id, endOnUnmount, exp->freeMarkers,
+                      fineData);
 }
 
 void WebUi::handleOfflineStop() {
@@ -1035,6 +1228,7 @@ void WebUi::handleOtaDone() {
         return;
     }
     server_.send(200, F("text/plain"), F("OK"));
+    PanicTail::noteRestart(PanicTail::RestartWebUi);
     delay(400);
     ESP.restart();
 }

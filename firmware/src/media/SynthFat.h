@@ -17,7 +17,8 @@
  *     "fs_label","volume_id","usb_serial",
  *     "files":[{"path":"DIR/NAME.MP3","dur_s","size_kib","kbps","vbr","xing",
  *               "id3v1","apic_kib","no_id3v2","seed","gap_clusters","frag","stamp",
- *               "title","artist","album","cover","cover_slot"}] }
+ *               "title","artist","album","cover","cover_slot","track"}] }
+ * track 1..255 adds a TRCK frame (ID3v2) and the ID3v1.1 track byte; omitted = unchanged.
  * cover 1..4 embeds a real JPEG; cover or cover_slot reserves an APIC slot large enough
  * for every cover (apic_kib may enlarge it), so covers can be swapped live.
  */
@@ -34,6 +35,7 @@ public:
         uint8_t seed = 0;
         uint32_t apicBytes = 0;
         uint8_t cover = 0;
+        uint8_t track = 0;
         uint16_t gapClusters = 0;
         bool frag = false;
         MediaLayout::Tags tags;

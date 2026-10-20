@@ -22,7 +22,8 @@ public:
 
 private:
     App() = default;
-    void setupWifi();
+    /** forcePortal: open the WiFiManager portal even with stored credentials (BOOT at boot). */
+    void setupWifi(bool forcePortal = false);
     void setupMdns();
     static void buildHeartbeat(JsonDocument& doc);
     void emitStatus();
@@ -32,6 +33,12 @@ private:
     void enterCoexHold(const char* reason);
     /** True if collector TX progressed recently (real IP path). */
     bool tcpDataAlive(unsigned long now) const;
+    /**
+     * tcpDataAlive, or nothing queued. Without a session nothing is sent, so a stale
+     * tcp_tx_ok alone must not count as a zombie link (post-upload restart loop). A socket
+     * is not required: a stopped collector is no reason to restart the chip.
+     */
+    bool linkAlive(unsigned long now) const;
     bool isLabDebian() const;
     /** Runs off Arduino loop — USB load was starving coex soft-detach (0.2.16). */
     static void wifiCoexTask(void* arg);

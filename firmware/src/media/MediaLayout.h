@@ -38,6 +38,7 @@ public:
         uint32_t frames = 0;   // MP3 frames (synth)
         uint32_t apicBytes = 0;  // APIC picture slot (real cover + zero padding, or placeholder)
         uint8_t cover = 0;       // 0 = placeholder bytes, 1..CoverJpegs::kCount = real JPEG
+        uint8_t track = 0;       // 0 = no TRCK frame / plain ID3v1; else track number
         uint16_t firstCluster = 0;
         int16_t firstExtent = kNoExtent;
         uint16_t extentCount = 0;

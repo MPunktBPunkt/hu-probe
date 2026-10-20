@@ -57,6 +57,11 @@
 #define NTP_SERVER_DEFAULT "pool.ntp.org"
 #endif
 
+#ifndef OTA_MANIFEST_URL_DEFAULT
+#define OTA_MANIFEST_URL_DEFAULT \
+    "https://raw.githubusercontent.com/MPunktBPunkt/hu-probe/main/ota/manifest.json"
+#endif
+
 #ifndef TZ_DEFAULT
 #define TZ_DEFAULT "CET-1CEST,M3.5.0,M10.5.0/3"
 #endif

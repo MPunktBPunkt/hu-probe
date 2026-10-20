@@ -1,5 +1,6 @@
 #include "HubClient.h"
 #include "capture/OfflineCapture.h"
+#include "core/PanicTail.h"
 #include <HTTPClient.h>
 #include <Update.h>
 #include <WiFi.h>
@@ -131,6 +132,7 @@ void HubClient::performOta(const String& url) {
     }
     http.end();
     Serial.println("[OTA] OK — Reboot");
+    PanicTail::noteRestart(PanicTail::RestartHubOta);
     delay(500);
     ESP.restart();
 }

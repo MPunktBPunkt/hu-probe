@@ -39,6 +39,13 @@ private:
     void handleSequences();
     void handleSequenceStart();
     void handleSequenceCmd(const char* cmd);
+    /** Plain text: RTC tail of the previous boot, then the PSRAM ring of this boot. */
+    void handleDiagLog();
+    void handleTrips();
+    void handleTripsUpload();
+    void handleTripsErase();
+    /** One stored trip after the other via OfflineCapture::replayStored. */
+    void pumpTripUpload();
     void sendJson(int code, JsonDocument& doc);
     void handleOtaUpload();
     void handleOtaDone();
@@ -48,7 +55,8 @@ private:
                            const String& profile, bool softUsb, uint32_t measureMs,
                            const String& endStrategy, const char* const* markers,
                            uint8_t markerCount, const char* experimentId,
-                           bool endOnUnmount = true, bool freeMarkers = false);
+                           bool endOnUnmount = true, bool freeMarkers = false,
+                           bool fineData = false);
 
     WebServer server_{80};
     ConfigStore* cfg_ = nullptr;
@@ -57,4 +65,8 @@ private:
     MscGadget* msc_ = nullptr;
     HubClient* hub_ = nullptr;
     TcpStreamer* tcp_ = nullptr;
+    bool tripUploadAll_ = false;
+    bool tripUploadRestoreLive_ = false;
+    uint32_t tripUploadLastId_ = 0;
+    String tripUploadErr_;
 };

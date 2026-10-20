@@ -11,7 +11,8 @@
  */
 class MscGadget {
 public:
-    void begin(Session* session, ReadInstrument* instrument);
+    /** startDetached: D+ off right after USB.begin (drive mode: attach after the boot check). */
+    void begin(Session* session, ReadInstrument* instrument, bool startDetached = false);
     void loop();
 
     bool ready() const { return ready_; }

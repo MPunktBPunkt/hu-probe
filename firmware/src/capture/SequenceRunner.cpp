@@ -148,7 +148,7 @@ bool SequenceRunner::arm() {
         return false;
     }
     if (!oc.beginCapture(vehicle_, scenario_, profileId_, true, measure, exp->endStrategy,
-                         exp->markers, exp->markerCount)) {
+                         exp->markers, exp->markerCount, true, false, st->fineData)) {
         oc.requestStop("begin_failed");
         lastError_ = "begin_failed";
         return false;

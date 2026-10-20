@@ -66,6 +66,17 @@ class TcpCollector:
 
     def _client_loop(self, conn: socket.socket, addr: tuple) -> None:
         buf = b""
+        conn_sid: str | None = None
+        # Bad lines before the first sid on this connection are attributed to that sid.
+        pending_errors = 0
+
+        def bad_line() -> None:
+            nonlocal pending_errors
+            if conn_sid is None:
+                pending_errors += 1
+            else:
+                self.store.note_parse_error(conn_sid)
+
         with conn:
             conn.settimeout(1.0)
             while not self._stop.is_set():
@@ -87,7 +98,7 @@ class TcpCollector:
                         text = line.decode("utf-8")
                     except UnicodeDecodeError as e:
                         log.warning("bad line from %s: %s", addr, e)
-                        self.store.note_parse_error()
+                        bad_line()
                         continue
                     # Tolerate glued JSON objects on one TCP line (partial-write retry).
                     decoder = json.JSONDecoder()
@@ -103,14 +114,22 @@ class TcpCollector:
                         except json.JSONDecodeError as e:
                             if not parsed_any:
                                 log.warning("bad line from %s: %s", addr, e)
-                                self.store.note_parse_error()
+                                bad_line()
                             break
                         idx = end
                         parsed_any = True
                         if not isinstance(event, dict):
                             continue
+                        sid = event.get("sid")
+                        if sid:
+                            conn_sid = str(sid)
+                            if pending_errors:
+                                self.store.note_parse_error(conn_sid, pending_errors)
+                                pending_errors = 0
                         self.store.append_event(event)
                         self.events += 1
                         if self.on_event:
                             self.on_event(event)
+        if pending_errors:
+            self.store.note_parse_error(None, pending_errors)
         log.info("client closed %s", addr)

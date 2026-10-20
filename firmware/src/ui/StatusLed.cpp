@@ -29,6 +29,16 @@ void StatusLed::setWifiPortal(bool on) {
     }
 }
 
+void StatusLed::showDrivePhase(DrivePhase p) {
+    switch (p) {
+        case DrivePhase::Check: write(18, 18, 18); break;
+        case DrivePhase::Upload: write(0, 0, 50); break;
+        case DrivePhase::Ota: write(50, 50, 50); break;
+        default: write(0, 0, 0); break;
+    }
+    mode_ = Mode::Boot;
+}
+
 void StatusLed::write(uint8_t r, uint8_t g, uint8_t b) {
 #if defined(RGB_BUILTIN)
     neopixelWrite(RGB_BUILTIN, r, g, b);
@@ -53,9 +63,15 @@ void StatusLed::tick(const Session& session, const MscGadget& msc, const ReadIns
     Mode next = Mode::IdleWifi;
     if (OfflineCapture::instance().active()) {
         // Offline: green while host reads, purple otherwise (WiFi intentionally off).
-        next = (msc.plugged() && recentRead) ? Mode::Measuring : Mode::OfflineCapture;
+        next = (msc.plugged() && recentRead) ? Mode::Measuring
+               : driveCapture_                ? Mode::DriveCapture
+                                              : Mode::OfflineCapture;
     } else if (SequenceRunner::instance().waitingForDriver()) {
         next = Mode::SeqPrompt;
+    } else if (tripsFull_) {
+        next = Mode::TripsFull;
+    } else if (coexHold_ && !wifiPortal_) {
+        next = Mode::CoexHold;
     } else if (wifiPortal_ || WiFi.status() != WL_CONNECTED) {
         next = Mode::WifiPortal;
     } else if (bus.dropped() > 0 || msc.sampleOverflow() > 0) {
@@ -63,11 +79,12 @@ void StatusLed::tick(const Session& session, const MscGadget& msc, const ReadIns
     } else if (MscBotTap::needResetLatched()) {
         next = Mode::NeedReset;
     } else {
-        // Assoc alone is not IdleWifi — zombie WL_CONNECTED (no recent tcp_tx_ok).
+        // Assoc alone is not IdleWifi — zombie WL_CONNECTED (no recent tcp_tx_ok while data
+        // waits). Nothing queued (no session after upload) is idle, same as App::linkAlive.
         const unsigned long lastOk = bus.lastTcpTxOkMs();
         const bool dataAlive = (lastOk != 0) && (now - lastOk < 8000UL);
         const bool bootGrace = (lastOk == 0) && (now < 30000UL);
-        if (!dataAlive && !bootGrace) {
+        if (!dataAlive && !bootGrace && bus.pending() > 0) {
             next = Mode::TcpDown;
         } else if (msc.plugged() && !tcp.connected()) {
             next = Mode::TcpDown;
@@ -124,6 +141,18 @@ void StatusLed::apply(Mode mode, unsigned long now) {
             break;
         case Mode::OfflineCapture:
             write(28, 0, 40);  // purple — WiFi OFF, RAM capture
+            break;
+        case Mode::DriveCapture:
+            if (now % 2000 < 120) write(40, 40, 40);
+            else write(28, 0, 40);
+            break;
+        case Mode::TripsFull:
+            if (blinkOn_) write(55, 0, 0);
+            else write(28, 0, 40);
+            break;
+        case Mode::CoexHold:
+            if (blinkOn_) write(50, 35, 0);  // yellow
+            else write(0, 28, 32);           // cyan
             break;
         case Mode::SeqPrompt:
             write(blinkOn_ ? 45 : 0, blinkOn_ ? 45 : 0, blinkOn_ ? 45 : 0);  // white — driver

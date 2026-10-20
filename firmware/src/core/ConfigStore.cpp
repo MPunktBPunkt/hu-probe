@@ -21,6 +21,14 @@ void ConfigStore::applyDefaults() {
     enableNtp = true;
     ntpServer = NTP_SERVER_DEFAULT;
     tz = TZ_DEFAULT;
+    autoCapture = false;
+    autoExperiment = "drive_home";
+    autoMedia = "drive_mix";
+    autoFine = true;
+    wifi2Ssid = "";
+    wifi2Pass = "";
+    autoUpdate = true;
+    otaManifestUrl = OTA_MANIFEST_URL_DEFAULT;
 }
 
 void ConfigStore::begin() {
@@ -52,6 +60,14 @@ void ConfigStore::load() {
         enableNtp = prefs.getBool("ntp", enableNtp);
         ntpServer = prefs.getString("ntp_srv", ntpServer);
         tz = prefs.getString("tz", tz);
+        autoCapture = prefs.getBool("auto_cap", autoCapture);
+        autoExperiment = prefs.getString("auto_exp", autoExperiment);
+        autoMedia = prefs.getString("auto_media", autoMedia);
+        autoFine = prefs.getBool("auto_fine", autoFine);
+        wifi2Ssid = prefs.getString("wifi2_ssid", wifi2Ssid);
+        wifi2Pass = prefs.getString("wifi2_pass", wifi2Pass);
+        autoUpdate = prefs.getBool("auto_upd", autoUpdate);
+        otaManifestUrl = prefs.getString("ota_url", otaManifestUrl);
         prefs.end();
     }
 }
@@ -79,6 +95,14 @@ void ConfigStore::save() {
         prefs.putBool("ntp", enableNtp);
         prefs.putString("ntp_srv", ntpServer);
         prefs.putString("tz", tz);
+        prefs.putBool("auto_cap", autoCapture);
+        prefs.putString("auto_exp", autoExperiment);
+        prefs.putString("auto_media", autoMedia);
+        prefs.putBool("auto_fine", autoFine);
+        prefs.putString("wifi2_ssid", wifi2Ssid);
+        prefs.putString("wifi2_pass", wifi2Pass);
+        prefs.putBool("auto_upd", autoUpdate);
+        prefs.putString("ota_url", otaManifestUrl);
         prefs.end();
     }
 }
@@ -112,6 +136,14 @@ void ConfigStore::toJson(JsonObject obj) const {
     obj["enableNtp"] = enableNtp;
     obj["ntpServer"] = ntpServer;
     obj["tz"] = tz;
+    obj["autoCapture"] = autoCapture;
+    obj["autoExperiment"] = autoExperiment;
+    obj["autoMedia"] = autoMedia;
+    obj["autoFine"] = autoFine;
+    obj["wifi2Ssid"] = wifi2Ssid;
+    obj["wifi2PassSet"] = wifi2Pass.length() > 0;
+    obj["autoUpdate"] = autoUpdate;
+    obj["otaManifestUrl"] = otaManifestUrl;
     obj["fwVersion"] = FW_VERSION;
     obj["fwType"] = FW_TYPE;
     obj["board"] = HUPROBE_BOARD_LABEL;
@@ -139,5 +171,15 @@ bool ConfigStore::fromJson(JsonVariantConst obj) {
     if (!obj["enableNtp"].isNull()) enableNtp = obj["enableNtp"].as<bool>();
     if (obj["ntpServer"].is<const char*>()) ntpServer = obj["ntpServer"].as<String>();
     if (obj["tz"].is<const char*>()) tz = obj["tz"].as<String>();
+    if (!obj["autoCapture"].isNull()) autoCapture = obj["autoCapture"].as<bool>();
+    if (obj["autoExperiment"].is<const char*>()) autoExperiment = obj["autoExperiment"].as<String>();
+    if (obj["autoMedia"].is<const char*>()) autoMedia = obj["autoMedia"].as<String>();
+    if (!obj["autoFine"].isNull()) autoFine = obj["autoFine"].as<bool>();
+    if (obj["wifi2Ssid"].is<const char*>()) wifi2Ssid = obj["wifi2Ssid"].as<String>();
+    // Empty or missing keeps the stored password (it is never sent back to the UI).
+    if (obj["wifi2Pass"].is<const char*>() && obj["wifi2Pass"].as<String>().length())
+        wifi2Pass = obj["wifi2Pass"].as<String>();
+    if (!obj["autoUpdate"].isNull()) autoUpdate = obj["autoUpdate"].as<bool>();
+    if (obj["otaManifestUrl"].is<const char*>()) otaManifestUrl = obj["otaManifestUrl"].as<String>();
     return true;
 }

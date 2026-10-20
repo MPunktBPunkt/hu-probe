@@ -1,4 +1,5 @@
 #include "MscGadget.h"
+#include "core/DiagLog.h"
 #include "MscBotTap.h"
 #include "ReadStall.h"
 #include "BuildFlags.h"
@@ -79,7 +80,7 @@ static void usb_event_cb(void* arg, esp_event_base_t event_base, int32_t event_i
     }
 }
 
-void MscGadget::begin(Session* session, ReadInstrument* instrument) {
+void MscGadget::begin(Session* session, ReadInstrument* instrument, bool startDetached) {
     session_ = session;
     instrument_ = instrument;
     g_msc = this;
@@ -102,14 +103,15 @@ void MscGadget::begin(Session* session, ReadInstrument* instrument) {
     // Active medium (demo image or SynthFat variant) is the whole LUN.
     MSC.mediaPresent(false);
     if (!MSC.begin(media.sectorCount(), 512)) {
-        Serial.println("[MSC] begin failed");
+        DiagLog::printf("[MSC] begin failed");
         return;
     }
     USB.begin();
     ready_ = true;
     softAttached_ = true;
+    if (startDetached && tud_disconnect()) softAttached_ = false;
     presentMedia("boot");
-    Serial.printf("[MSC] ready media=%s sectors=%u serial=%s (soft USB cycle OK)\n",
+    DiagLog::printf("[MSC] ready media=%s sectors=%u serial=%s (soft USB cycle OK)\n",
                   media.variantId(), (unsigned)media.sectorCount(), serial_);
 }
 
@@ -170,7 +172,7 @@ bool MscGadget::switchMedia(const char* presetId, const String* specJson, bool u
         const String transport = session_->transport();
         session_->start(vehicle, scenario, profile, serial_, label_, transport.c_str());
     }
-    Serial.printf("[MSC] media switch -> %s sectors=%u cycle=%d\n", media.variantId(),
+    DiagLog::printf("[MSC] media switch -> %s sectors=%u cycle=%d\n", media.variantId(),
                   (unsigned)media.sectorCount(), usbCycle ? 1 : 0);
     if (usbCycle) {
         presentMedia("media_switch");
@@ -197,7 +199,7 @@ void MscGadget::loop() {
         mutPending_ = false;
         String err;
         if (!applyMutationNow(pendingMut_, pendingNotify_, &err)) {
-            Serial.printf("[MSC] scheduled media mutate failed: %s\n", err.c_str());
+            DiagLog::printf("[MSC] scheduled media mutate failed: %s\n", err.c_str());
         }
     }
     MscBotTap::poll();
@@ -223,7 +225,7 @@ bool MscGadget::mutateMedia(const ProbeMedia::Mutation& m, MediaNotify notify, u
     mutPending_ = true;
     char d[48];
     ProbeMedia::describeMutation(m, d, sizeof(d));
-    Serial.printf("[MSC] media mutate in %ums (%s notify=%s)\n", (unsigned)delayMs, d,
+    DiagLog::printf("[MSC] media mutate in %ums (%s notify=%s)\n", (unsigned)delayMs, d,
                   notifyName(notify));
     return true;
 }
@@ -237,7 +239,7 @@ bool MscGadget::applyMutationNow(const ProbeMedia::Mutation& m, MediaNotify noti
     snprintf(note, sizeof(note), "%s notify=%s gen=%u", d, notifyName(notify),
              (unsigned)media.mutationGen());
     mark("media_mutate", note);
-    Serial.printf("[MSC] media mutate %s\n", note);
+    DiagLog::printf("[MSC] media mutate %s\n", note);
     return notifyMedia(notify);
 }
 
@@ -265,7 +267,7 @@ void MscGadget::pollUnitAttention() {
     char note[24];
     snprintf(note, sizeof(note), "n=%u", (unsigned)sent);
     mark("ua_sent", note, MscBotTap::lastUnitAttentionUs());
-    Serial.printf("[MSC] UNIT ATTENTION 06/28/00 sent (%s)\n", note);
+    DiagLog::printf("[MSC] UNIT ATTENTION 06/28/00 sent (%s)\n", note);
 }
 
 void MscGadget::presentMedia(const char* reason) {
@@ -273,7 +275,7 @@ void MscGadget::presentMedia(const char* reason) {
     MSC.mediaPresent(true);
     mediaPresented_ = true;
     AutoMarker::onMediaPresent(ProbeClock::nowUs());
-    Serial.printf("[MSC] mediaPresent=true (%s)\n", reason ? reason : "");
+    DiagLog::printf("[MSC] mediaPresent=true (%s)\n", reason ? reason : "");
 }
 
 void MscGadget::bumpSerial() {
@@ -312,7 +314,7 @@ bool MscGadget::softDetach(uint16_t holdMs) {
         if (instrument_ && session_ && session_->active()) {
             instrument_->onUsb("detach", 0, "out", 0, "soft");
         }
-        Serial.printf("[MSC] soft detach hold=%ums\n", (unsigned)holdMs);
+        DiagLog::printf("[MSC] soft detach hold=%ums\n", (unsigned)holdMs);
     }
     return ok;
 }
@@ -327,7 +329,7 @@ bool MscGadget::softAttach() {
         if (instrument_ && session_ && session_->active()) {
             instrument_->onUsb("attach", 0, "out", 0, "soft");
         }
-        Serial.println("[MSC] soft attach");
+        DiagLog::printf("[MSC] soft attach");
     }
     return ok;
 }
@@ -343,7 +345,7 @@ bool MscGadget::hideMedia() {
     mediaPresented_ = false;
     remountHoldUntilMs_ = 0;
     AutoMarker::onMediaHide(ProbeClock::nowUs());
-    Serial.println("[MSC] media hidden");
+    DiagLog::printf("[MSC] media hidden");
     return true;
 }
 
@@ -364,7 +366,7 @@ void MscGadget::remountMedia(bool bumpIdentity) {
     if (session_ && session_->active()) {
         session_->setPhase("remount", bumpIdentity ? serial_ : "keepId");
     }
-    Serial.printf("[MSC] media remount ser=%s\n", serial_);
+    DiagLog::printf("[MSC] media remount ser=%s\n", serial_);
 }
 
 void MscGadget::onUsbPlugged(bool on) {
@@ -376,7 +378,7 @@ void MscGadget::onUsbPlugged(bool on) {
         plugCount_++;
         transportEpoch_++;
         // mount/identity/phase come from MscBotTap::drain(Kind::Mount) — same Capture-tUs.
-        Serial.println("[MSC] USB plugged (host started / mount)");
+        DiagLog::printf("[MSC] USB plugged (host started / mount)");
     } else {
         unplugCount_++;
         // Next attach looks like a new stick — unless the media variant pins the serial.
@@ -386,7 +388,7 @@ void MscGadget::onUsbPlugged(bool on) {
             bumpSerial();
         }
         // umount/phase from MscBotTap::drain(Kind::Umount).
-        Serial.printf("[MSC] USB unplugged — next serial %s\n", serial_);
+        DiagLog::printf("[MSC] USB unplugged — next serial %s\n", serial_);
     }
 }
 
@@ -485,8 +487,8 @@ void MscGadget::drainSamples() {
 
 #else  // ARDUINO_USB_MODE
 
-void MscGadget::begin(Session*, ReadInstrument*) {
-    Serial.println("[MSC] disabled (ARDUINO_USB_MODE=1)");
+void MscGadget::begin(Session*, ReadInstrument*, bool) {
+    DiagLog::printf("[MSC] disabled (ARDUINO_USB_MODE=1)");
 }
 void MscGadget::loop() {}
 void MscGadget::setIdentity(const char* serial, const char* label) {

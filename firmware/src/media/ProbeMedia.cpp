@@ -339,6 +339,7 @@ void ProbeMedia::toJson(JsonObject o, bool withFiles) const {
             f["apic_bytes"] = n.apicBytes;
             f["cover"] = n.cover;
         }
+        if (n.track) f["track"] = n.track;
         if (!(n.flags & MediaLayout::kNoId3v2) || (n.flags & MediaLayout::kId3v1)) {
             Mp3Gen::Texts x;
             Mp3Gen::resolveTexts(n, &layout_.tags[i], x);
@@ -387,6 +388,7 @@ void ProbeMedia::publishLayout(Session* s) const {
             doc["apic_bytes"] = n.apicBytes;
             doc["cover"] = n.cover;
         }
+        if (n.track) doc["track"] = n.track;
         if (synthetic_ && !(n.flags & MediaLayout::kDir)) {
             Mp3Gen::Texts x;
             Mp3Gen::resolveTexts(n, &layout_.tags[i], x);

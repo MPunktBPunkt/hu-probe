@@ -26,7 +26,10 @@
       "Device-stack CBW/CSW/read events — not Wire.",
       "Never transfer BMW expectations to Mazda as assumption.",
       "Lab Debian fingerprints must not be mixed into this profile.",
-      "2026-10-20 free offline: demo_v1 medium; full 240+69 atom on track change; no file prefetch in idle; TUR idle 2238-2239 ms."
+      "2026-10-20 free offline: demo_v1 medium; full 240+69 atom on track change; no file prefetch in idle; TUR idle 2238-2239 ms.",
+      "demo_v1 tracks: MPEG-1 L3 48 kbit/s 44.1 kHz joint stereo, ID3v2 34 B, no Xing/Info, 1014 frames (last cut by 20 B), 1013 complete = 26.462 s.",
+      "Sessions before collector fix carry a global parse_errors (B44); since the fix parse_errors is per session, total in collector_parse_errors_total.",
+      "2026-10-20 re-analysis: docs/feld/2026-10-20-bmw-free-offline-0.2.40.md section 7."
     ]
   },
   "expectations": {
@@ -129,6 +132,72 @@
       "evidence": ["EVID-HUPROBE-2026-10-19-001", "20261020-075616", "20261020-075935", "20261020-080508"],
       "caveats": ["phase_locked_independent_of_reads", "outside_mount_bursts", "free_sessions_p10_p50_p90_exact_2238"]
     },
+    "tur_period_ms_precise": {
+      "value": 2238.79,
+      "tolerance_ms": 0.01,
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.40",
+      "evidence": ["20261020-075616", "20261020-075935", "20261020-080508"],
+      "caveats": ["free_running_timer_phase_not_shifted_by_atoms_or_media_loss_burst", "single_tur_jitter_approx_10_ms", "analyzer_tur_phase"]
+    },
+    "media_loss_detect_latency_s": {
+      "value": [1.239, 0.394, 2.182],
+      "max_s": 2.24,
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.40",
+      "evidence": ["20261020-075616", "20261020-075935", "20261020-080508"],
+      "caveats": ["first_failing_tur_lies_on_idle_grid", "blind_window_up_to_one_tur_period_without_reads", "pidrive_lever_and_stale_cache_risk"]
+    },
+    "media_loss_burst": {
+      "value": {"tur_request_sense_pairs": [11, 12], "prevent_allow": 1, "duration_ms": [180, 220], "intervals_ms": [9, 1, 8, 32, "12-17"]},
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.40",
+      "evidence": ["20261020-075616", "20261020-075935", "20261020-080508"],
+      "caveats": ["n_3", "grid_resumes_on_phase_of_first_burst_tur", "analyzer_media_loss"]
+    },
+    "plug_to_first_audio_read_s": {
+      "value": [1.513, 1.518],
+      "chain_ms": {
+        "set_address_to_set_config": [22.5, 23.4],
+        "set_config_to_get_max_lun": [996.0, 996.9],
+        "get_max_lun_to_mount_done": [407.9, 429.0],
+        "mount_done_to_first_read": [70.1, 85.7]
+      },
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.40",
+      "evidence": ["20261020-075935", "20261020-080508"],
+      "caveats": ["n_2", "measured_from_set_address", "analyzer_plug_timeline"]
+    },
+    "atom_end_to_next_read_s": {
+      "value": [26.32355, 26.32526],
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.40",
+      "evidence": ["20261020-075616", "20261020-075935", "20261020-080508"],
+      "caveats": [
+        "demo_v1_only_track_dur_26_462_s",
+        "start_to_start_equals_audio_duration_plus_approx_12_ms",
+        "tail_then_head_case_matches_atom_end_not_head_start_inference_play_starts_after_full_read_n_1"
+      ]
+    },
+    "read_window_blocks": {
+      "value": 512,
+      "cbw_max_blocks": 240,
+      "class": "HYPOTHESIS",
+      "origin": "hu_probe_field",
+      "evidence": ["20261020-075616", "messcapture_2026-10-16_feld-512kib-predict-01"],
+      "prediction": "files >= 256 KiB read as 240,240,32 per window; next window approx every 16.4 s at 128 kbit/s",
+      "caveats": [
+        "fits_pidrive_a7_2x_240_240_32_and_demo_v1_240_69",
+        "r21_15_s_may_be_window_refill_not_prefetch",
+        "test_with_size_1_4_8",
+        "analyzer_read_windows"
+      ]
+    },
     "demo_v1_track_atom_bytes": {
       "value": 158208,
       "blocks": 309,
@@ -199,7 +268,12 @@
       "class": "MEASURED",
       "origin": "hu_probe_field",
       "evidence": "EVID-HUPROBE-2026-10-19-003",
-      "caveats": ["purpose_unknown", "test_with_media_tail_probe"]
+      "caveats": [
+        "purpose_likely_fs_probe_inference",
+        "linux_lab_host_libblkid_reads_0_24_8_32_64_128_256_512",
+        "lba24_absolute_byte_12288_not_track1_relative",
+        "test_with_media_tail_probe"
+      ]
     },
     "resume_read_after_mount_s": {
       "value": [0.2, 0.3],
@@ -208,14 +282,16 @@
     },
     "next_track_read_s": {
       "value": {"after_start": [9, 16], "before_end": [11, 18], "track_dur_s": 26.5},
-      "class": "MEASURED",
+      "class": "SUPERSEDED",
       "origin": "hu_probe_field",
       "evidence": ["EVID-HUPROBE-2026-10-19-004", "20261020-free"],
+      "superseded_by": "remount_resume_position",
       "caveats": [
+        "resume_artifact_first_read_after_mount_is_mid_track_resume",
+        "second_read_9_21_s_after_first_is_remaining_track_time",
+        "lead_computation_assumed_play_from_track_start",
         "free_2026_10_20_atom_at_track_change_not_early_prefetch",
-        "track_dur_s_is_demo_v1_media_duration",
-        "prefetch_lead_demo_v1_approx_0",
-        "cyclic_T3_to_T1"
+        "prefetch_lead_demo_v1_approx_0"
       ]
     },
     "selection_latency_s": {
@@ -226,19 +302,42 @@
       "caveats": ["markers_partly_retrofitted"]
     },
     "tail_then_head": {
-      "value": "Re-Entry morphology: tail (249/69) then head (9/240); free replug 080508 gap ~34.3 ms",
+      "value": "Nearest-LBA-first: both CBWs of a file queued, the one closest to the last read LBA is served first; after T3 (last LBA 935) T1 tail (249/69) precedes head (9/240)",
+      "observed": "5_of_5_at_T3_to_T1 (195417, 200319, 2276, 212136, 080508); every other change and every first read after mount head-first",
       "class": "INFERENCE",
       "origin": "hu_probe_field",
       "evidence": ["EVID-HUPROBE-2026-10-19-006", "20261020-080508"],
-      "caveats": ["strong_inference_n_ge_2_contexts", "pause_play_without_remount_open", "not_hold_only_artifact"]
+      "prediction": "backward_jump_T2_to_T1_or_T3_to_T2_reads_tail_first; forward_jump_head_first",
+      "caveats": [
+        "supersedes_re_entry_morphology_reading",
+        "gap_us_2_7_ms_vs_4_1_ms_fits_already_queued_cbw",
+        "not_a_state_or_re_entry_detector",
+        "untested_on_backward_jump_without_wrap"
+      ]
     },
     "replug_addresses_prior_then_t1": {
-      "value": "080508: remount → short T3 atom → ~1.46 s → T1 tail_then_head → T2 normal",
+      "value": "080508: remount → T3 resumed at unplug position (full atom read) → ~1.43 s after atom end → autoplay wrap to T1 (tail_then_head) → T2 normal",
       "class": "FACT",
       "origin": "hu_probe_field",
       "fw": "0.2.40",
       "evidence": "20261020-080508",
-      "caveats": ["n_1", "semantics_resume_vs_restart_vs_ui_open", "not_playlist_restart_at_t1_fact"]
+      "operator": "2026-10-20: playback continued in T3 where unplugged, then T1 via autoplay",
+      "caveats": ["n_1", "same_serial_HP0002_across_replug", "not_playlist_restart_at_t1_fact"]
+    },
+    "remount_resume_position": {
+      "value": "resume_in_track_at_unplug_position",
+      "derived_position_s_approx": 24.9,
+      "class": "FACT",
+      "origin": "hu_probe_field",
+      "fw": "0.2.40",
+      "evidence": ["20261020-080508", "EVID-HUPROBE-2026-10-19-004"],
+      "caveats": [
+        "operator_observation_n_1_today",
+        "s2_sessions_first_read_after_mount_is_last_played_track",
+        "position_derived_assuming_pause_while_unplugged",
+        "full_atom_read_from_block_0_position_not_visible_in_lbas_below_one_window",
+        "identity_change_untested_see_ident_b"
+      ]
     },
     "media_loss_grammar": {
       "value": ["tur_status_1", "request_sense", "prevent_allow_status_1"],
@@ -385,6 +484,16 @@
       "class": "REJECTED",
       "evidence": "20261020-080508",
       "note": "080508 addresses T3 briefly after remount before T1; playlist-restart-at-T1 is too strong (B43)."
+    },
+    "next_track_prefetch_9_18_s": {
+      "class": "REJECTED",
+      "evidence": ["EVID-HUPROBE-2026-10-19-004", "20261020-080508"],
+      "note": "S2 'next track read 9-16 s after start / 11-18 s before end' is remaining time after a mid-track resume, not prefetch lead."
+    },
+    "tail_then_head_re_entry_grammar": {
+      "class": "REJECTED",
+      "evidence": ["EVID-HUPROBE-2026-10-19-006", "20261020-080508"],
+      "note": "All 5 cases are T3->T1 LBA backward jumps; nearest-LBA-first explains them without a re-entry state (INFERENCE, backward-jump test pending)."
     }
   },
   "fingerprint_template": {

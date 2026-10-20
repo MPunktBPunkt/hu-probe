@@ -9,7 +9,8 @@
 /**
  * RAM Offline-Capture (Messkonzept).
  * WiFi OFF during measure → compact Pending records in heap → WiFi ON → replay JSONL.
- * No flash writes in the measure window (avoids cache stalls).
+ * No flash writes in the measure window (avoids cache stalls) — except drive mode
+ * (setPersist), which checkpoints to TripStore in USB idle gaps and marks each one.
  *
  * 0.2.25: experiment marker sequence (BOOT short), capture budget, last-run integrity.
  */
@@ -49,6 +50,12 @@ public:
     static size_t maxRecordsForCap(size_t capBytes) {
         return capBytes / kTypicalRecBytes;
     }
+    /** Buffer size allocBuffer() would get now (largest PSRAM step that fits, else default). */
+    static size_t expectedCapBytes();
+    /** Rough fill rate; fine mode assumes ~64 KiB/s average reads (16 DATA records/s). */
+    static uint32_t estBytesPerS(bool fine);
+    /** capBytes / estBytesPerS, capped by maxCaptureMs. */
+    static uint32_t estDurationS(size_t capBytes, bool fine);
 
     /** UI/API: stop live session, grab wallclock, WiFi OFF, alloc buffer. */
     bool arm(Session* session, MscGadget* msc, ReadInstrument* inst, TcpStreamer* tcp);
@@ -56,12 +63,26 @@ public:
      * After arm: enter Capturing. If softUsb, D+ re-enum after WiFi stop.
      * If autoDetachMs>0, end using endStrategy (media_hide default, soft_detach legacy).
      * markers/markerCount: BOOT-short cycles these names offline (experiment profile).
+     * fineData: one DATA record per 4 KiB callback instead of one per CBW (chunk timing).
      */
     bool beginCapture(const String& vehicle, const String& scenario, const String& profileId,
                       bool softUsb = true, uint32_t autoDetachMs = 0,
                       const String& endStrategy = "media_hide",
                       const char* const* markers = nullptr, uint8_t markerCount = 0,
-                      bool endOnUnmount = true, bool freeMarkers = false);
+                      bool endOnUnmount = true, bool freeMarkers = false,
+                      bool fineData = false);
+    /**
+     * Drive mode: the next beginCapture also writes the run to the TripStore flash journal
+     * (checkpoints in USB idle gaps), so it survives power loss. Cleared after each run.
+     */
+    void setPersist(bool on, const char* media = nullptr);
+    bool persisting() const { return persist_; }
+    /** Optional WiFi connect used by the upload (drive mode: home WLAN or hotspot). */
+    void setWifiConnector(bool (*connect)(uint32_t timeoutMs)) { wifiConnect_ = connect; }
+    /** Upload the oldest stored trip (WiFi must be up). False if none or busy. */
+    bool replayStored(Session* session, MscGadget* msc, ReadInstrument* inst, TcpStreamer* tcp);
+    /** Capture started but no host enumerated: drop the run and the trip, back to Idle. */
+    void abortNoHost();
     /** End capture (button / unplug+idle / max duration / auto soft-detach). */
     void requestStop(const char* reason);
     /** App loop: auto-stop, BOOT marker/stop, upload when requested. */
@@ -73,7 +94,7 @@ public:
      * media_hide (e.g. tags 123–130 in 075344) are not lost before replay starts.
      */
     bool acceptsPending() const {
-        if (!buf_) return false;
+        if (!buf_ || replayingStored_) return false;
         if (state_ == State::Capturing) return true;
         return (state_ == State::Finalizing || state_ == State::Uploading) && !sessionStarted_;
     }
@@ -126,15 +147,26 @@ private:
     void queueFreeMarker(int64_t tUs);
     void softReplug();
     void saveLastRun(bool complete, uint32_t dropped);
+    /** Write [persistedLen_, end) to the TripStore; true when caught up. */
+    bool persistUpTo(size_t end, size_t maxBytes);
+    void checkpointStep();
+    void finalPersist();
+    /** Leave Uploading: free buffer, restore USB, mark the trip uploaded if delivered. */
+    void finishRun(bool delivered);
 
     static constexpr size_t kDefaultCap = 64 * 1024;
-    static constexpr uint32_t kMaxCaptureMs = 600000;   // 10 min; int32 time base allows ±35 min
+    static constexpr uint32_t kMaxCaptureMs = 1800000;  // 30 min; int32 time base allows ±35 min
     static constexpr uint32_t kDoubleTapMs = 500;
     static constexpr uint16_t kSoftReplugHoldMs = 2000;
     static constexpr uint32_t kUnplugIdleMs = 1500;
     static constexpr uint32_t kUploadStallMs = 120000;
     static constexpr uint32_t kWifiReconnectEveryMs = 10000;
     static constexpr size_t kReplayMaxPending = 48;
+    static constexpr uint32_t kCheckpointEveryMs = 60000;
+    static constexpr uint32_t kCheckpointForceMs = 90000;  // no idle gap for this long
+    static constexpr uint32_t kCheckpointIdleMs = 500;     // no CBW for this long
+    static constexpr size_t kCheckpointChunk = 8192;       // per poll pass, bounds one stall
+    static constexpr uint32_t kStoredTcpWaitMs = 20000;
     static constexpr uint8_t kKindMarker = 100;
     static constexpr uint8_t kKindUmount = 8;
     static constexpr uint8_t kKindData = 2;
@@ -157,6 +189,8 @@ private:
     static constexpr size_t kRecHdr = 7;
     static constexpr size_t kRecMax = 64;
     static constexpr size_t kTypicalRecBytes = 22;  // TUR pair 19+16, READ10 28+30+16
+    static constexpr uint32_t kEstBytesPerS = 80;       // field runs 2026-10-20: 26..75 B/s
+    static constexpr uint32_t kEstFineBytesPerS = 480;  // 16 DATA records/s × 30 B
     static constexpr uint8_t kRegionInline = 0xFF;
     static constexpr size_t kNoRec = SIZE_MAX;
 
@@ -221,10 +255,27 @@ private:
     bool bootWasDown_ = false;
     bool endOnUnmount_ = true;
     bool freeMarkers_ = false;
+    bool fineData_ = false;
     uint16_t freeMarkIdx_ = 0;
     uint16_t softReplugs_ = 0;
     unsigned long pendingTapMs_ = 0;  // first short press waiting for a possible second
     int64_t pendingTapUs_ = 0;
+
+    bool persist_ = false;
+    bool persistFull_ = false;
+    bool replayingStored_ = false;
+    char persistMedia_[16] = {0};
+    char captureFw_[16] = {0};
+    uint32_t tripId_ = 0;
+    size_t persistedLen_ = 0;
+    uint16_t checkpoints_ = 0;
+    unsigned long lastCbwMs_ = 0;
+    unsigned long lastCheckpointMs_ = 0;
+    bool ckptRunning_ = false;
+    int64_t ckptStartUs_ = 0;
+    uint32_t ckptMs_ = 0;
+    uint32_t ckptBytes_ = 0;
+    bool (*wifiConnect_)(uint32_t timeoutMs) = nullptr;
 
     char markerSeq_[kMaxMarkers][kMarkerNameLen] = {};
     uint8_t markerCount_ = 0;

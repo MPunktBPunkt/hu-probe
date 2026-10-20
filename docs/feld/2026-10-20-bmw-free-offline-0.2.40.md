@@ -126,3 +126,61 @@ Nach `media_hide`: oft **Magenta** (TinyUSB `NEED_RESET`), dann **Gelb/Orange-Bl
 **Kernmodell (`demo_v1`):** Trackwechsel → volles 158.208-B-Atom (~149 ms) → Idle nur TUR (~2239 ms) → nächster Wechsel (~Trackdauer). Kein beobachteter File-Prefetch während der Wiedergabe.  
 
 **Nächster sinnvoller Lauf:** Größenleiter (1/4/16 MiB) + audible als Beifang; Cache-Key-Diskriminierung; nicht weitere reine Prefetch-Geometrie auf 158 KiB.
+
+---
+
+## 7. Nachauswertung (Rohdaten nachgerechnet, 2026-10-20 nachmittags)
+
+Grundlage: die drei `events.jsonl` (Zeitachse `capture_t_us`), `demo_fat.bin` (MP3-Frames gezählt), die S2-Sessions vom 15.10. und 18./19.10. und die Lab-Sessions `lab_debian`. Labels wie in der Serie: FACT = direkt gemessen, INFERENCE = abgeleitet, HYPOTHESIS = ungeprüft.
+
+### 7.1 Auflösung offener Review-Punkte
+
+| Punkt | Ergebnis |
+|---|---|
+| B41/B42 | Beide Zahlen stimmen. `gap_us` (Ende CBW n → Beginn CBW n+1) = 4,0–4,1 ms normal, 2,7 ms bei tail_then_head. CBW-Start → CBW-Start = 117,7–118,1 ms bzw. 34,3 ms. Nur die Benennung muss sauber sein. |
+| B43 | Operator: Nach dem Replug lief T3 **an der Aussteckstelle weiter**, danach kam per Autoplay T1. Rechnung: Atom-Ende T3 → nächster Read 1,427 s statt 26,325 s → Resume-Position ≈ 24,9 s (falls während des Aussteckens pausiert). |
+| B44 `parse_errors=47` | **Ursache gefunden:** Der Collector zählte global über die ganze Prozesslaufzeit und schrieb diesen Wert in jede Session. Die drei Sessions haben 0 nicht parsebare Zeilen. Fix: Zähler pro Session, Gesamtwert getrennt als `collector_parse_errors_total`. |
+| Profil `next_track_read_s` (9–16 s nach Start / 11–18 s vor Ende, S2 15.10.) | **Kein Prefetch, sondern Resume.** In allen S2-Sessions ist der erste Read nach dem Mount der zuletzt gespielte Track (Resume mitten im Track); der nächste Track folgt nach der Restlaufzeit (9–21 s). Die Vorlauf-Rechnung hatte Wiedergabe ab Trackanfang angenommen. |
+
+### 7.2 Neue Muster
+
+1. **tail_then_head = Rückwärtssprung in den LBAs (5/5).** Alle bekannten Fälle (`195417`, `200319`, `2276`, `212136`, `080508`) sind T3 → T1. Bei jedem anderen Wechsel (T1→T2, T2→T3, erster Read nach Mount) liest die HU head-first.
+   - Erklärung (INFERENCE): Die HU stellt beide CBWs der Datei gleichzeitig in eine Warteschlange und bedient zuerst den, der näher an der zuletzt gelesenen LBA liegt (Elevator). Nach T3 (Ende LBA 935) liegt der Tail (249) näher als der Head (9). Der kürzere `gap_us` (2,7 ms statt 4,1 ms) passt zu einer schon wartenden Anforderung.
+   - Damit ist die Deutung "Re-Entry-Grammatik" überholt.
+   - Vorhersage: Jeder manuelle Rückwärtssprung (T2→T1, T3→T2) liest tail-first; jeder Vorwärtssprung head-first.
+2. **256-KiB-Lesefenster (HYPOTHESIS).** PiDrive A7 (512-KiB-Slot = `240,240,32,240,240,32`) sind 2 × 512 Blöcke; `demo_v1` mit 309 Blöcken ist ein am Dateiende abgeschnittenes Fenster (`240,69`). Modell: Die HU fordert Fenster bis 512 Blöcke an und teilt sie in CBWs bis 240 Blöcke. "Volles Atom" und "kein Prefetch" auf `demo_v1` folgen daraus, weil die Datei kleiner als ein Fenster ist. Bei 128 kbit/s entsprechen 256 KiB 16,4 s Audio; R21 ("~15 s") könnte das Nachladen des nächsten Fensters sein.
+3. **Wiedergabetakt.**
+   - `demo_v1`-Tracks: MPEG-1 Layer 3, 48 kbit/s, 44,1 kHz, joint stereo, ohne Xing/Info-Tag. Sie haben 1014 Frames, der letzte ist um 20 B abgeschnitten; 1013 vollständige Frames ergeben 26,462 s.
+   - Read-zu-Read (Start→Start) = 26,4746 / 26,4747 / 26,4717 s, also Audiodauer + ~12 ms (FACT für dieses Medium).
+   - Atom-Ende → nächster Read = 26,32526 / 26,32510 / 26,32355 s.
+   - Beim tail_then_head-Wechsel passt der Takt zum Atom-Ende (1,6 ms Abweichung), nicht zum Head-Start (37 ms). Vermutung (INFERENCE, n=1): Die Wiedergabe startet erst, wenn die ganze Datei gelesen ist.
+4. **TUR-Timer läuft frei (FACT).**
+   - Periode 2238,79 ms ± 0,01 ms.
+   - Weder Atome noch der Media-Loss-Burst verschieben die Phase: TURs nach einem Atom liegen auf dem vor dem Atom extrapolierten Raster (z. B. 169,8155 s in 075616). Einzelne TURs weichen um ~10 ms ab, ohne das Raster zu verschieben.
+5. **Media-Loss-Erkennung nur am TUR-Tick (FACT).**
+   - Vom `media_hide` bis zur ersten fehlschlagenden TUR vergehen 1,239 / 0,394 / 2,182 s; die TUR liegt jeweils auf dem alten Raster.
+   - Daraus folgt ein Blindfenster bis 2,24 s, in dem die HU eine Medienänderung nicht bemerkt, solange sie nicht liest.
+6. **Media-Loss-Burst deterministisch (FACT, n=3).**
+   - Ablauf: 11–12 TUR/REQUEST_SENSE-Paare plus 1× PREVENT_ALLOW in ~180–220 ms, Abstände ≈ 9 / 1 / 8 / 32 / 12–17 ms.
+   - Danach wieder TUR im alten 2,24-s-Raster: Die erste TUR nach dem Burst liegt auf dem Raster der ersten Burst-TUR.
+7. **Plug-Zeitkette (FACT, n=2):**
+
+| Schritt | 075935 | 080508 |
+|---|---:|---:|
+| set_address → SET_CONFIG | 22,5 ms | 23,4 ms |
+| SET_CONFIG → GET_MAX_LUN | 996,9 ms | 996,0 ms |
+| GET_MAX_LUN → mount_done | 407,9 ms | 429,0 ms |
+| mount_done → erster Datei-Read | 85,7 ms | 70,1 ms |
+| **set_address → erster Datei-Read** | **1,513 s** | **1,518 s** |
+
+8. **Resume nach Remount (FACT Operator + Rechnung, n=1 heute; S2: erster Read nach Mount = zuletzt gespielter Track in allen Sessions).** Beim Resume liest die HU das volle Atom ab Block 0; die Resume-Position ist bei Dateien unter einem Fenster in den LBAs nicht sichtbar. Serial vor und nach dem Replug gleich (HP0002).
+9. **LBA 24/8 ist sehr wahrscheinlich ein Dateisystem-Probe (INFERENCE).** Der Linux-Labhost (`lab_debian`) liest beim Mount 0, 24, 8, 32, 64, 128, 256, 512 (libblkid-Muster). LBA 24 = Byte 12288 = 4-KiB-Seite 3, absolut und nicht TRACK1-bezogen. Probe: Preset `tail_probe` (40 reservierte Sektoren, LBA 24 liegt dann im Reserved-Bereich).
+10. **Lesetempo ist Bus-Grenze (INFERENCE).** 3,79 ms je 4 KiB ≈ 1,08 MB/s ≈ 89 % des theoretischen Full-Speed-Bulk-Maximums (~1,2 MB/s). Kein HU-Parameter, aber Obergrenze für PiDrive-Bursts.
+
+### 7.3 Folgen für das Modell
+
+- Die NBT-Lesegeometrie ist für Dateien unter 256 KiB erklärt (ein Fenster, Elevator-Reihenfolge, Bus-Tempo). Offen ist, **wann** bei größeren Dateien das nächste Fenster kommt. Das ist die eigentliche PiDrive-Frage.
+- tail_then_head ist kein Zustandsmerkmal und taugt nicht als Re-Entry-Detektor.
+- Das TUR-Blindfenster ist ein Hebel für PiDrive (Medienwechsel ohne Neu-Mount) und zugleich ein Risiko (veralteter HU-Cache).
+
+Feldplan für die Prüfung: [`2026-10-21-feldplan-groessenleiter.md`](2026-10-21-feldplan-groessenleiter.md). Analyzer: `tools/analyze_session.py` gibt diese Kennzahlen jetzt als `tur_phase`, `media_loss`, `plug_timeline`, `atoms` und `read_windows` aus.

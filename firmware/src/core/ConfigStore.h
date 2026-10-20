@@ -30,6 +30,17 @@ public:
     String ntpServer = NTP_SERVER_DEFAULT;
     String tz = TZ_DEFAULT;
 
+    // Drive mode (0.3.0): capture on every boot, flash journal, upload at home.
+    bool autoCapture = false;
+    String autoExperiment = "drive_home";
+    String autoMedia = "drive_mix";
+    bool autoFine = true;
+    /** Second WLAN (phone hotspot); the home WLAN stays in the WiFiManager store. */
+    String wifi2Ssid;
+    String wifi2Pass;
+    bool autoUpdate = true;
+    String otaManifestUrl = OTA_MANIFEST_URL_DEFAULT;
+
     void begin();
     void load();
     void save();

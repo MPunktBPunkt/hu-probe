@@ -58,8 +58,12 @@ static const ExperimentProfile kTable[] = {
      kMarkersGeneric, 5},
     // Car default: already plugged into HU — no soft re-enum (umount would kill a short window).
     // keepOnUnmount=true → WebUI end_on_unmount unchecked; stop via timer / BOOT lang.
-    {"free", "Freie Aufnahme (1 min, bis 10 min · BOOT 2x = Steckzyklus)", "free", 60000, false,
+    {"free", "Freie Aufnahme (1 min, bis 30 min · BOOT 2x = Steckzyklus)", "free", 60000, false,
      "media_hide", nullptr, 0, true, true},
+    // Drive mode (0.3.0): armed at boot with MSC still detached, so softUsb is the HU's
+    // first enumeration. Ends at max duration, BOOT long or power loss (flash checkpoints).
+    {"drive_home", "Heimfahrt automatisch (bis 30 min, Flash-Checkpoints)", "drive_home",
+     1800000, true, "media_hide", nullptr, 0, true, true},
 };
 }  // namespace ExperimentProfilesDetail
 
@@ -98,6 +102,7 @@ struct SequenceStep {
     SeqSerial serial;
     const char* prompt;      // driver instruction (UI/status)
     const char* stall;       // ReadStall JSON armed with the capture (arm_delay_s from capture start), or nullptr
+    bool fineData;           // one DATA record per 4 KiB callback (chunk timing)
 };
 
 struct ExperimentSequence {
@@ -118,13 +123,13 @@ static const SequenceStep kSeqDur[] = {
 };
 static const SequenceStep kSeqSize[] = {
     {"size_1_4_8", "s1_eager_eof", 90000, 1, SeqSerial::Policy,
-     "S1M waehlen, bis zum Wechsel auf S4M laufen lassen"},
+     "S1M waehlen, bis zum Wechsel auf S4M laufen lassen", nullptr, true},
     {"size_1_4_8", "s1_eager_eof", 180000, 1, SeqSerial::Policy,
-     "S4M waehlen, durchlaufen lassen (3 min)"},
+     "S4M waehlen, durchlaufen lassen (3 min)", nullptr, true},
     {"size_1_4_8", "s1_eager_eof", 180000, 1, SeqSerial::Policy,
-     "S8M waehlen, durchlaufen lassen (3 min)"},
+     "S8M waehlen, durchlaufen lassen (3 min)", nullptr, true},
     {"pidrive_l3", "s1_eager_eof", 180000, 1, SeqSerial::Policy,
-     "FAVORITE/01ROCK waehlen, durchlaufen lassen (3 min)"},
+     "FAVORITE/01ROCK waehlen, durchlaufen lassen (3 min)", nullptr, true},
 };
 static const SequenceStep kSeqCache[] = {
     {"cache_a", "s3_cache_hit", 90000, 1, SeqSerial::Policy,

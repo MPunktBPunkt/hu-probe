@@ -8,7 +8,7 @@
 /**
  * Random-access MP3 silence generator for SynthFat (0.2.31).
  *
- * File = [ID3v2 (TIT2/TPE1/TALB in fixed 30-byte slots + optional APIC)]
+ * File = [ID3v2 (TIT2/TPE1/TALB in fixed 30-byte slots + optional TRCK + optional APIC)]
  *        [optional Xing/Info frame]
  *        [MPEG-1 L3 44.1 kHz joint-stereo frames, zero side info = silence]
  *        [optional ID3v1].
@@ -56,8 +56,10 @@ struct Layout {
 };
 
 static constexpr uint32_t kTextFrameLen = 10u + 1u + MediaLayout::kTagLen;
+static constexpr uint32_t kTrckSlot = 8;  // "255/255" + NUL padding
+static constexpr uint32_t kTrckFrameLen = 10u + 1u + kTrckSlot;
 static constexpr uint32_t kApicHeadLen = 24;
-static constexpr uint32_t kId3FixedMax = 10u + 3u * kTextFrameLen + kApicHeadLen;
+static constexpr uint32_t kId3FixedMax = 10u + 3u * kTextFrameLen + kTrckFrameLen + kApicHeadLen;
 
 struct Texts {
     char title[MediaLayout::kTagLen + 1];
@@ -113,7 +115,8 @@ inline void headLayout(const MediaLayout::Node& n, Layout& L) {
     if (n.flags & MediaLayout::kNoId3v2) {
         L.id3Fixed = L.id3Total = 0;
     } else {
-        L.id3Fixed = 10u + 3u * kTextFrameLen + (n.apicBytes ? kApicHeadLen : 0u);
+        L.id3Fixed = 10u + 3u * kTextFrameLen + (n.track ? kTrckFrameLen : 0u) +
+                     (n.apicBytes ? kApicHeadLen : 0u);
         L.id3Total = L.id3Fixed + n.apicBytes;
     }
     L.xingLen = (n.flags & (MediaLayout::kXing | MediaLayout::kVbr)) ? frameLen(L.pat[0]) : 0;
@@ -183,6 +186,15 @@ inline void buildId3Fixed(const MediaLayout::Node& n, const MediaLayout::Tags* t
     uint8_t* p = textFrame(b + 10, "TIT2", x.title);
     p = textFrame(p, "TPE1", x.artist);
     p = textFrame(p, "TALB", x.album);
+    if (n.track) {
+        memcpy(p, "TRCK", 4);
+        be32(p + 4, 1u + kTrckSlot);
+        p[8] = p[9] = 0;
+        p[10] = 0;
+        memset(p + 11, 0, kTrckSlot);
+        snprintf((char*)p + 11, kTrckSlot, "%u", (unsigned)n.track);
+        p += kTrckFrameLen;
+    }
     if (n.apicBytes) {
         memcpy(p, "APIC", 4);
         be32(p + 4, 1u + 11u + 1u + 1u + n.apicBytes);
@@ -231,7 +243,14 @@ inline void buildId3v1(const MediaLayout::Node& n, const MediaLayout::Tags* tags
     memcpy(t + 33, x.artist, strnlen(x.artist, 30));
     memcpy(t + 63, x.album, strnlen(x.album, 30));
     memcpy(t + 93, "2026", 4);
-    snprintf((char*)t + 97, 30, "seed %u", (unsigned)n.seed);
+    if (n.track) {
+        // ID3v1.1: 28-byte comment, NUL, track byte.
+        snprintf((char*)t + 97, 28, "seed %u", (unsigned)n.seed);
+        t[125] = 0;
+        t[126] = n.track;
+    } else {
+        snprintf((char*)t + 97, 30, "seed %u", (unsigned)n.seed);
+    }
     t[127] = 12;  // Other
 }
 

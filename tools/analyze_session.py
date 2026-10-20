@@ -9,6 +9,9 @@ Per session it writes ``<session>/derived/analysis.json`` and ``analysis.md``:
   when replayed offline events were clamped to one timestamp (B7, FW <= 0.2.30);
 * lead/lag of every next-track read, selection latency (marker -> READ10),
   ``tail_then_head`` (file read end-first);
+* with real timestamps only: TUR phase (free-running grid), media-loss detection
+  latency and burst, plug timeline (set_address -> first file read), file atoms
+  (CBW start-to-start vs. gap_us, atom end -> next read) and 512-block read windows;
 * cross-session comparison with ``--compare`` (JSON + Markdown).
 
 ``analysis.json`` is also the exchange format for PiDrive
@@ -40,12 +43,18 @@ AUTO_MARKERS = ("mount_done", "first_read", "next_track_read", "media_hide", "ua
 MUTATE_MARKERS = ("media_mutate", "ua_request", "ua_sent")
 REACT_WINDOW_S = 30.0
 STALL_MIN_HOLD_US = 500_000
+TUR_GRID_TOL_S = 0.03                  # residual allowed for a TUR to count as on-grid
+CBW_MAX_BLOCKS = 240
+WINDOW_BLOCKS = 512                    # hypothesis: 256 KiB read window (PiDrive A7 + demo_v1)
+WINDOW_GAP_S = 1.0
+CHUNK_PAUSE_US = 10_000                # gap between 4 KiB chunks of one CBW reported as pause
 
 # demo_v1 (FAT12, spc 1): boot 0, FAT 1-6, root 7-8, data 9..; 3 x 309 sectors.
+# Tracks: MPEG-1 L3 48 kbit/s 44.1 kHz, 1013 complete frames (+1 cut by 20 B) = 26.462 s.
 DEMO_V1_FILES = [
-    {"node": 0, "path": "/TRACK1.MP3", "size": 158208, "dur_ms": 26500, "extents": [[9, 309]]},
-    {"node": 1, "path": "/TRACK2.MP3", "size": 158208, "dur_ms": 26500, "extents": [[318, 309]]},
-    {"node": 2, "path": "/TRACK3.MP3", "size": 158208, "dur_ms": 26500, "extents": [[627, 309]]},
+    {"node": 0, "path": "/TRACK1.MP3", "size": 158208, "dur_ms": 26462, "kbps": 48, "extents": [[9, 309]]},
+    {"node": 1, "path": "/TRACK2.MP3", "size": 158208, "dur_ms": 26462, "kbps": 48, "extents": [[318, 309]]},
+    {"node": 2, "path": "/TRACK3.MP3", "size": 158208, "dur_ms": 26462, "kbps": 48, "extents": [[627, 309]]},
 ]
 DEMO_V1_REGIONS = [(0, 0, "BOOT"), (1, 6, "FAT"), (7, 8, "ROOT")]
 
@@ -149,7 +158,15 @@ def media_map(meta: dict, events: list[dict]) -> MediaMap:
                                    "title", "cover", "apic_bytes")}
             for e in layout
         ]
-        m = media_map_from(files, variant or layout[0].get("variant") or "unknown", "media_layout")
+        variant = variant or layout[0].get("variant") or "unknown"
+        if variant == "demo_v1":
+            ref = {f["path"].lstrip("/"): f for f in DEMO_V1_FILES}
+            for f in files:
+                r = ref.get(str(f.get("path") or "").lstrip("/"))
+                if r:
+                    f["dur_ms"] = f.get("dur_ms") or r["dur_ms"]
+                    f["kbps"] = f.get("kbps") or r["kbps"]
+        m = media_map_from(files, variant, "media_layout")
         media = (meta.get("media") or {})
         if media.get("data_lba"):
             m.regions = [(0, 0, "BOOT"), (1, int(media["root_lba"]) - 1, "FAT"),
@@ -507,24 +524,381 @@ def operator_latency(cmds: list[dict], times: list[float], start: str, end: str)
     return out
 
 
+def is_checkpoint(name: Any) -> bool:
+    return isinstance(name, str) and name.startswith("ckpt:")
+
+
 def marker_times(cmds: list[dict], times: list[float]) -> list[dict]:
     return [{"name": c.get("name"), "note": c.get("note"), "t_s": round(times[i], 3),
-             "auto": c.get("name") in AUTO_MARKERS, "origin": c.get("origin")}
+             "auto": c.get("name") in AUTO_MARKERS or is_checkpoint(c.get("name")),
+             "origin": c.get("origin")}
             for i, c in enumerate(cmds) if c["kind"] == "marker"]
 
 
-def media_loss(cmds: list[dict]) -> dict:
+def flash_checkpoints(cmds: list[dict], times: list[float], health: dict) -> dict:
+    """Drive mode: `ckpt:<ms>:<KiB>` markers = flash journal commits (FW 0.3.0)."""
+    rows = []
+    for i, c in enumerate(cmds):
+        if c["kind"] != "marker" or not is_checkpoint(c.get("name")):
+            continue
+        parts = c["name"].split(":")
+        try:
+            ms, kib = int(parts[1]), int(parts[2])
+        except (IndexError, ValueError):
+            ms, kib = None, None
+        rows.append({"t_s": round(times[i], 3), "write_ms": ms, "persisted_kib": kib})
+    trip = {k: health.get(k) for k in
+            ("trip_id", "persisted", "checkpoints", "persist_full", "stored_replay", "capture_fw",
+             "media_variant", "end_reason") if k in health}
+    if not rows and not trip.get("persisted"):
+        return {"available": False}
+    gaps = [round(b["t_s"] - a["t_s"], 3) for a, b in zip(rows, rows[1:])]
+    writes = [r["write_ms"] for r in rows if r["write_ms"] is not None]
+    return {"available": True, "trip": trip, "count": len(rows), "rows": rows,
+            "gap_s": {"max": max(gaps) if gaps else None,
+                      "p50": pctl(gaps, 0.5) if gaps else None},
+            "write_ms_max": max(writes) if writes else None,
+            # Power loss keeps everything up to the last checkpoint; the tail after it is lost.
+            "power_loss": health.get("end_reason") == "power_loss"}
+
+
+def media_loss(cmds: list[dict], times: list[float], time_source: str,
+               period_s: float | None) -> dict:
+    """Host reaction after `media_hide`: detection latency (next TUR tick) and burst shape."""
     post = [c for c in cmds if c.get("origin") in ("post_finalize", "post_finalize_buffered")]
-    return {
+    res: dict[str, Any] = {
         "post_finalize_cmds": sum(1 for c in post if c["kind"] == "cbw"),
         "ops": [c["op"] for c in post if c["kind"] == "cbw"][:24],
     }
+    if time_source not in ("t_us", "capture_t_us"):
+        return res
+    hide = next((i for i, c in enumerate(cmds) if c["kind"] == "marker" and c.get("name") == "media_hide"), None)
+    if hide is None:
+        return res
+    t_hide = times[hide]
+    after = [(times[j], cmds[j]) for j in range(hide + 1, len(cmds)) if cmds[j]["kind"] == "cbw"]
+    turs = [t for t, c in after if c["op"] == "tur"]
+    if not turs:
+        return res
+    last_before = max((times[j] for j in range(hide) if cmds[j]["op"] == "tur"), default=None)
+    burst = [turs[0]]
+    for t in turs[1:]:
+        if t - burst[-1] > 0.5:
+            break
+        burst.append(t)
+    t_end = burst[-1]
+    in_burst = [c["op"] for t, c in after if t <= t_end + 0.01]
+    res.update({
+        "detect_latency_s": round(turs[0] - t_hide, 4),
+        "first_tur_on_grid": (period_s is not None and last_before is not None
+                              and abs(turs[0] - last_before - period_s) <= TUR_GRID_TOL_S),
+        "burst_tur": len(burst),
+        "burst_request_sense": in_burst.count("request_sense"),
+        "burst_prevent_allow": in_burst.count("prevent_allow"),
+        "burst_duration_ms": round((t_end - burst[0]) * 1000, 1),
+        "burst_tur_intervals_ms": [round((b - a) * 1000, 1) for a, b in zip(burst, burst[1:])],
+    })
+    nxt = next((t for t in turs if t > t_end + 0.5), None)
+    if nxt is not None and period_s:
+        res["next_tur_after_first_burst_tur_s"] = round(nxt - burst[0], 4)
+        res["grid_survives_burst"] = abs(nxt - burst[0] - period_s) <= TUR_GRID_TOL_S
+    return res
+
+
+def tur_phase(cmds: list[dict], times: list[float], time_source: str, period_hint_s: float) -> dict:
+    """Free-running TUR timer: precise period and whether reads/bursts shift its phase.
+
+    A TUR is on-grid when it lands k periods (k >= 1) after the previous on-grid TUR within
+    TUR_GRID_TOL_S. Spans containing other commands report their residual: ~0 means the
+    timer kept running independently of those commands.
+    """
+    if time_source not in ("t_us", "capture_t_us"):
+        return {"available": False, "reason": f"time_base={time_source}"}
+    tt = [(times[i], i) for i, c in enumerate(cmds) if c["op"] == "tur"]
+    single = [b[0] - a[0] for a, b in zip(tt, tt[1:])
+              if abs((b[0] - a[0]) - period_hint_s) <= 0.05]
+    if len(single) < 3:
+        return {"available": False, "reason": "too_few_idle_turs"}
+    period = statistics.median(single)
+    grid: list[tuple[float, int]] = []
+    for t, i in tt:
+        if not grid:
+            grid.append((t, i))
+            continue
+        dt = t - grid[-1][0]
+        k = round(dt / period)
+        if k >= 1 and abs(dt - k * period) <= TUR_GRID_TOL_S:
+            grid.append((t, i))
+        elif dt > period * 1.5:
+            grid.append((t, i))  # new grid segment (e.g. after re-enumeration)
+    chains, spans = [], []
+    for (ta, ia), (tb, ib) in zip(grid, grid[1:]):
+        dt = tb - ta
+        k = round(dt / period)
+        resid = dt - k * period
+        if k < 1 or abs(resid) > TUR_GRID_TOL_S:
+            continue
+        chains.append((dt, k))
+        between = [cmds[j]["op"] for j in range(ia + 1, ib) if cmds[j]["kind"] == "cbw"]
+        if any(op != "tur" for op in between):
+            spans.append({"t_s": round(ta, 3), "k": k, "residual_ms": round(resid * 1000, 2),
+                          "ops": sorted(set(op for op in between if op != "tur"))})
+    if chains:
+        period = sum(dt for dt, _ in chains) / sum(k for _, k in chains)
+    resid_all = [abs(s["residual_ms"]) for s in spans]
+    return {
+        "available": True,
+        "period_ms": round(period * 1000, 2),
+        "grid_turs": len(grid),
+        "spans_with_other_cmds": spans,
+        "max_abs_residual_ms_across_cmds": round(max(resid_all), 2) if resid_all else None,
+        "label": "MEASURED",
+    }
+
+
+def _usb_events(events: list[dict]) -> list[tuple[int, dict]]:
+    out = []
+    for e in events:
+        if e.get("ev") not in ("usb", "marker", "bot_cbw"):
+            continue
+        t = e.get("capture_t_us")
+        if isinstance(t, (int, float)):
+            out.append((int(t), e))
+    out.sort(key=lambda x: x[0])
+    return out
+
+
+def plug_timeline(events: list[dict], mm: MediaMap) -> list[dict]:
+    """Per enumeration: set_address -> SET_CONFIG -> GET_MAX_LUN -> mount_done -> first file read."""
+    ev = _usb_events(events)
+    rows = []
+    for idx, (t_mount, e) in enumerate(ev):
+        if not (e.get("ev") == "usb" and e.get("usb_ev") == "mount"):
+            continue
+        t_addr = next((t for t, x in reversed(ev[:idx])
+                       if x.get("usb_ev") == "set_address" and t_mount - t <= 1_000_000), None)
+        later = ev[idx + 1:]
+        nxt_mount = next((t for t, x in later if x.get("ev") == "usb" and x.get("usb_ev") == "mount"), None)
+        later = [(t, x) for t, x in later if nxt_mount is None or t < nxt_mount]
+        t_lun = next((t for t, x in later if x.get("ev") == "usb" and x.get("usb_ev") == "control"
+                      and (x.get("bRequest") == 254 or x.get("note") == "msc_get_max_lun")), None)
+        t_done = next((t for t, x in later if x.get("ev") == "marker" and x.get("name") == "mount_done"), None)
+        t_read = None
+        for t, x in later:
+            scsi = x.get("scsi") or {}
+            if x.get("ev") == "bot_cbw" and scsi.get("opcode") == "read10" \
+                    and int(scsi.get("blocks") or 0) >= FILE_READ_MIN_BLOCKS \
+                    and mm.locate(int(scsi.get("lba") or 0))[0] is not None:
+                t_read = t
+                break
+
+        def ms(a: int | None, b: int | None) -> float | None:
+            return round((b - a) / 1000, 1) if a is not None and b is not None else None
+
+        rows.append({
+            "t_mount_s": round(t_mount / 1e6, 3),
+            "set_address_to_config_ms": ms(t_addr, t_mount),
+            "config_to_max_lun_ms": ms(t_mount, t_lun),
+            "max_lun_to_mount_done_ms": ms(t_lun, t_done),
+            "mount_done_to_first_read_ms": ms(t_done, t_read),
+            "set_address_to_first_read_s": round((t_read - t_addr) / 1e6, 4)
+            if t_addr is not None and t_read is not None else None,
+        })
+    return rows
+
+
+def cbw_data(events: list[dict]) -> list[tuple[dict, list[tuple[int, dict]]]]:
+    """Each timed bot_cbw with all bot_data records of its tag up to the next CBW of that tag.
+
+    One record per CBW (coalesced) or one per 4 KiB chunk (fine_data) both land here.
+    """
+    # bot_tag restarts after every enumeration, so the next CBW with the same tag bounds the window.
+    data: dict[Any, list[tuple[int, dict]]] = {}
+    cbw_t: dict[Any, list[int]] = {}
+    for e in events:
+        t = e.get("capture_t_us")
+        if e.get("bot_tag") is None or not isinstance(t, (int, float)):
+            continue
+        if e.get("ev") == "bot_data":
+            data.setdefault(e["bot_tag"], []).append((int(t), e))
+        elif e.get("ev") == "bot_cbw":
+            cbw_t.setdefault(e["bot_tag"], []).append(int(t))
+    for lst in data.values():
+        lst.sort(key=lambda x: x[0])
+    for lst in cbw_t.values():
+        lst.sort()
+    out = []
+    for e in events:
+        t = e.get("capture_t_us")
+        if e.get("ev") != "bot_cbw" or e.get("bot_tag") is None or not isinstance(t, (int, float)):
+            continue
+        tag, t = e["bot_tag"], int(t)
+        starts = cbw_t[tag]
+        i = bisect_right(starts, t)
+        until = starts[i] if i < len(starts) else None
+        out.append((e, [(td, d) for td, d in data.get(tag, [])
+                        if td >= t and (until is None or td < until)]))
+    out.sort(key=lambda x: int(x[0]["capture_t_us"]))
+    return out
+
+
+def _chunk_end(td: int, d: dict) -> int | None:
+    dur = d.get("dur_us")
+    return td + int(dur) if isinstance(dur, (int, float)) else None
+
+
+def file_cbws(cd: list[tuple[dict, list[tuple[int, dict]]]], mm: MediaMap) -> list[dict]:
+    """File READ10 CBWs (>= FILE_READ_MIN_BLOCKS): start = first DATA, end = last DATA + dur_us."""
+    out = []
+    for e, chunks in cd:
+        scsi = e.get("scsi") or {}
+        blocks = int(scsi.get("blocks") or 0)
+        if scsi.get("opcode") != "read10" or blocks < FILE_READ_MIN_BLOCKS:
+            continue
+        lba = int(scsi.get("lba") or 0)
+        node, blk = mm.locate(lba)
+        if node is None:
+            continue
+        first = chunks[0] if chunks else None
+        end = _chunk_end(*chunks[-1]) if chunks else None
+        out.append({"t_us": int(e["capture_t_us"]), "lba": lba, "blocks": blocks, "node": node,
+                    "file_blk": blk, "gap_us": first[1].get("gap_us") if first else None,
+                    "dur_us": end - first[0] if first and end is not None else None,
+                    "end_us": end, "data_records": len(chunks)})
+    return out
+
+
+def chunk_pacing(cd: list[tuple[dict, list[tuple[int, dict]]]], mm: MediaMap,
+                 fine: bool | None) -> dict:
+    """Per-chunk timing inside READ10 data phases; needs one record per chunk (fine_data)."""
+    multi = [(e, ch) for e, ch in cd
+             if len(ch) >= 2 and (e.get("scsi") or {}).get("opcode") == "read10"]
+    if not multi:
+        return {"available": False, "fine_data": fine,
+                "reason": "no CBW with more than one DATA record (coalesced capture)"}
+    per_cbw, starts, pauses = [], [], []
+    for e, ch in multi:
+        per_cbw.append(len(ch))
+        for (ta, da), (tb, db) in zip(ch, ch[1:]):
+            starts.append((tb - ta) / 1000)
+            end_a = _chunk_end(ta, da)
+            if end_a is not None and tb - end_a > CHUNK_PAUSE_US:
+                scsi = e.get("scsi") or {}
+                lba = db.get("lba") if db.get("lba") is not None else scsi.get("lba")
+                pauses.append({"t_s": round(tb / 1e6, 6), "pause_ms": round((tb - end_a) / 1000, 2),
+                               "cbw_lba": scsi.get("lba"), "cbw_blocks": scsi.get("blocks"),
+                               "region": mm.region(int(lba)) if lba is not None else None})
+    pauses.sort(key=lambda p: -p["pause_ms"])
+
+    def r(v: float | None) -> float | None:
+        return round(v, 3) if v is not None else None
+
+    return {"available": True, "fine_data": fine, "cbws": len(multi),
+            "chunks_per_cbw": {"p50": r(pctl(per_cbw, 0.5)), "max": max(per_cbw)},
+            "interval_ms": {"n": len(starts), "p50": r(pctl(starts, 0.5)),
+                            "p95": r(pctl(starts, 0.95)), "max": r(max(starts))},
+            "pause_threshold_ms": CHUNK_PAUSE_US / 1000, "pauses": len(pauses),
+            "longest_pauses": pauses[:20]}
+
+
+def atoms(fc: list[dict], mm: MediaMap, track_dur_s: float | None) -> dict:
+    """Group file CBWs into per-file atoms; timing between CBWs and between atoms."""
+    groups: list[list[dict]] = []
+    for r in fc:
+        g = groups[-1] if groups else None
+        if g and g[-1]["node"] == r["node"] and g[-1]["end_us"] is not None \
+                and r["t_us"] - g[-1]["end_us"] <= EPISODE_GAP_S * 1e6:
+            g.append(r)
+        else:
+            groups.append([r])
+    rows = []
+    for g in groups:
+        f = mm.file(g[0]["node"]) or {}
+        blocks = sum(r["blocks"] for r in g)
+        ends = [r["end_us"] for r in g if r["end_us"] is not None]
+        rows.append({
+            "file": f.get("path"),
+            "t_start_s": round(g[0]["t_us"] / 1e6, 6),
+            "order": "tail_then_head" if g[0]["file_blk"] > 0 and any(r["file_blk"] == 0 for r in g)
+            else "head_first" if g[0]["file_blk"] == 0 else "partial_offset",
+            "cbws": [f"{r['file_blk']}/{r['blocks']}" for r in g],
+            "complete": blocks >= (mm.file_blocks(g[0]["node"]) or blocks + 1),
+            "start_to_start_ms": [round((b["t_us"] - a["t_us"]) / 1000, 2) for a, b in zip(g, g[1:])],
+            "gap_us": [r["gap_us"] for r in g[1:]],
+            "dur_ms": [round(r["dur_us"] / 1000, 2) for r in g if r["dur_us"] is not None],
+            "total_ms": round((max(ends) - g[0]["t_us"]) / 1000, 2) if ends else None,
+            "_start_us": g[0]["t_us"], "_end_us": max(ends) if ends else None,
+        })
+    pairs = []
+    for a, b in zip(rows, rows[1:]):
+        if a["file"] == b["file"]:
+            continue
+        s2s = (b["_start_us"] - a["_start_us"]) / 1e6
+        p = {"from": a["file"], "to": b["file"], "to_order": b["order"],
+             "start_to_start_s": round(s2s, 6),
+             "atom_end_to_next_read_s": round((b["_start_us"] - a["_end_us"]) / 1e6, 6)
+             if a["_end_us"] is not None else None}
+        if track_dur_s:
+            p["start_to_start_minus_dur_ms"] = round((s2s - track_dur_s) * 1000, 1)
+        pairs.append(p)
+    for r in rows:
+        r.pop("_start_us")
+        r.pop("_end_us")
+    return {"atoms": rows, "transitions": pairs, "track_dur_s": track_dur_s}
+
+
+def greedy_split(total: int) -> list[int]:
+    """CBW sequence predicted by the 512-block window model for a read of `total` blocks."""
+    seq = []
+    while total > 0:
+        win = min(WINDOW_BLOCKS, total)
+        total -= win
+        while win > 0:
+            seq.append(min(CBW_MAX_BLOCKS, win))
+            win -= seq[-1]
+    return seq
+
+
+def read_windows(fc: list[dict], mm: MediaMap, kbps: float | None) -> list[dict]:
+    """Per file: contiguous read runs, their CBW sequence vs. the window model, refill cadence."""
+    out = []
+    for node in sorted({r["node"] for r in fc}):
+        rs = [r for r in fc if r["node"] == node]
+        runs: list[list[dict]] = []
+        for r in rs:
+            g = runs[-1] if runs else None
+            if g and g[-1]["end_us"] is not None and r["t_us"] - g[-1]["end_us"] <= WINDOW_GAP_S * 1e6:
+                g.append(r)
+            else:
+                runs.append([r])
+        f = mm.file(node) or {}
+        file_kbps = f.get("kbps") or kbps
+        windows = []
+        for g in runs:
+            seq = [r["blocks"] for r in sorted(g, key=lambda r: r["file_blk"])]
+            first = min(r["file_blk"] for r in g)
+            w = {"t_start_s": round(g[0]["t_us"] / 1e6, 3), "first_blk": first, "cbw_blocks": seq,
+                 "sum_blocks": sum(seq), "matches_window_model": seq == greedy_split(sum(seq))}
+            windows.append(w)
+        if file_kbps and windows:
+            t0 = windows[0]["t_start_s"]
+            bytes_per_s = float(file_kbps) * 125.0
+            for w in windows:
+                read_to = (w["first_blk"] + w["sum_blocks"]) * 512
+                w["read_ahead_s_if_playing_from_first"] = round(read_to / bytes_per_s - (w["t_start_s"] - t0), 2)
+        out.append({
+            "file": f.get("path"), "file_blocks": mm.file_blocks(node), "kbps": file_kbps,
+            "windows": windows,
+            "refill_intervals_s": [round(b["t_start_s"] - a["t_start_s"], 3) for a, b in zip(windows, windows[1:])],
+        })
+    return out
 
 
 # ---------------------------------------------------------------- analysis
 
 
-def analyze(path: Path, tur_period_s: float) -> dict:
+def analyze(path: Path, tur_period_s: float, track_dur_s: float | None = None,
+            kbps: float | None = None) -> dict:
     folder, meta, events = load_session(path)
     mm = media_map(meta, events)
     cmds = extract_cmds(events)
@@ -539,6 +913,15 @@ def analyze(path: Path, tur_period_s: float) -> dict:
     last_health = health[-1] if health else {}
     tail_cases = [e for e in eps if not e["probe_only"] and e["order"] == "tail_then_head"]
     real_eps = [e for e in eps if not e["probe_only"]]
+    real_time = time_source in ("t_us", "capture_t_us") and any(
+        isinstance(e.get("capture_t_us"), (int, float)) for e in events)
+    phase = tur_phase(cmds, times, time_source, tur_period_s)
+    period_s = phase["period_ms"] / 1000 if phase.get("available") else None
+    if track_dur_s is None and mm.variant == "demo_v1":
+        track_dur_s = DEMO_V1_FILES[0]["dur_ms"] / 1000
+    cd = cbw_data(events) if real_time else []
+    fc = file_cbws(cd, mm)
+    fine = last_health.get("fine_data", meta.get("fine_data"))
     return {
         "schema": SCHEMA,
         "session": folder.name,
@@ -569,7 +952,14 @@ def analyze(path: Path, tur_period_s: float) -> dict:
         "tail_then_head": {"cases": len(tail_cases), "of": len(real_eps),
                            "files": [e["file"] for e in tail_cases]},
         "markers": marker_times(cmds, times),
-        "media_loss": media_loss(cmds),
+        "flash_checkpoints": flash_checkpoints(cmds, times, last_health),
+        "media_loss": media_loss(cmds, times, time_source, period_s),
+        "tur_phase": phase,
+        "plug_timeline": plug_timeline(events, mm) if real_time else [],
+        "atoms": atoms(fc, mm, track_dur_s) if real_time else {"available": False},
+        "read_windows": read_windows(fc, mm, kbps) if real_time else [],
+        "chunk_pacing": chunk_pacing(cd, mm, fine) if real_time
+        else {"available": False, "fine_data": fine, "reason": "no capture time base"},
         "integrity": {k: last_health.get(k) for k in
                       ("complete", "integrity_pass", "offline_overflow", "dropped",
                        "offline_post_finalize_records", "replay_clock") if k in last_health},
@@ -654,7 +1044,84 @@ def to_markdown(a: dict) -> str:
     ml = a["media_loss"]
     if ml["post_finalize_cmds"]:
         L.append(f"Media-Loss-Reaktion (post_finalize): {ml['post_finalize_cmds']} Kommandos, {ml['ops']}")
+    if "detect_latency_s" in ml:
+        L.append(f"Media-Loss: erkannt {ml['detect_latency_s']} s nach media_hide"
+                 f" (erste TUR auf Raster: {ml['first_tur_on_grid']}); Burst {ml['burst_tur']} TUR /"
+                 f" {ml['burst_request_sense']} REQUEST_SENSE / {ml['burst_prevent_allow']} PREVENT_ALLOW"
+                 f" in {ml['burst_duration_ms']} ms, Abstände {ml['burst_tur_intervals_ms']} ms"
+                 + (f"; Raster läuft weiter: {ml['grid_survives_burst']}" if "grid_survives_burst" in ml else ""))
     L.append("")
+    ph = a.get("tur_phase") or {}
+    if ph.get("available"):
+        L.append("## TUR-Phase")
+        L.append(f"- Periode {ph['period_ms']} ms aus {ph['grid_turs']} Raster-TURs; max. Abweichung über"
+                 f" Spannen mit anderen Kommandos: {ph['max_abs_residual_ms_across_cmds']} ms")
+        for s in ph["spans_with_other_cmds"]:
+            L.append(f"  - t={s['t_s']} s, k={s['k']}, Rest {s['residual_ms']} ms, Ops {s['ops']}")
+        L.append("")
+    if a.get("plug_timeline"):
+        L.append("## Plug-Zeitkette")
+        L.append("")
+        L.append("| Mount (s) | set_address→config (ms) | config→GET_MAX_LUN (ms) | MAX_LUN→mount_done (ms) | mount_done→1. Read (ms) | set_address→1. Read (s) |")
+        L.append("|---:|---:|---:|---:|---:|---:|")
+        for p in a["plug_timeline"]:
+            L.append(f"| {p['t_mount_s']} | {p['set_address_to_config_ms']} | {p['config_to_max_lun_ms']} | "
+                     f"{p['max_lun_to_mount_done_ms']} | {p['mount_done_to_first_read_ms']} | {p['set_address_to_first_read_s']} |")
+        L.append("")
+    at = a.get("atoms") or {}
+    if at.get("atoms"):
+        L.append("## Datei-Atome")
+        L.append("")
+        L.append("| t Start (s) | Datei | Reihenfolge | CBWs (Block/Anzahl) | Start→Start (ms) | gap_us | Gesamt (ms) | vollständig |")
+        L.append("|---:|---|---|---|---|---|---:|---|")
+        for r in at["atoms"]:
+            L.append(f"| {r['t_start_s']} | {r['file']} | {r['order']} | {' '.join(r['cbws'])} | "
+                     f"{r['start_to_start_ms']} | {r['gap_us']} | {r['total_ms']} | {r['complete']} |")
+        L.append("")
+        for p in at["transitions"]:
+            extra = (f", minus Dauer {at['track_dur_s']} s = {p['start_to_start_minus_dur_ms']} ms"
+                     if "start_to_start_minus_dur_ms" in p else "")
+            L.append(f"- {p['from']} → {p['to']} ({p['to_order']}): Start→Start {p['start_to_start_s']} s,"
+                     f" Atom-Ende→nächster Read {p['atom_end_to_next_read_s']} s{extra}")
+        L.append("")
+    if a.get("read_windows"):
+        L.append(f"## Lesefenster (Modell: {WINDOW_BLOCKS} Blöcke, CBW ≤ {CBW_MAX_BLOCKS})")
+        for w in a["read_windows"]:
+            seqs = "; ".join(f"t={x['t_start_s']} ab Block {x['first_blk']}: {x['cbw_blocks']}"
+                             f"{'' if x['matches_window_model'] else ' (weicht ab)'}"
+                             + (f", Vorlauf {x['read_ahead_s_if_playing_from_first']} s"
+                                if "read_ahead_s_if_playing_from_first" in x else "")
+                             for x in w["windows"])
+            L.append(f"- {w['file']} ({w['file_blocks']} Blöcke, {w['kbps']} kbit/s): {seqs};"
+                     f" Abstände {w['refill_intervals_s']} s")
+        L.append("")
+    cp = a.get("chunk_pacing") or {}
+    if cp.get("available"):
+        iv, pc = cp["interval_ms"], cp["chunks_per_cbw"]
+        L.append(f"## Chunk-Takt (4 KiB, fine_data={cp['fine_data']})")
+        L.append(f"- {cp['cbws']} READ10 mit ≥ 2 DATA-Records; Chunks pro CBW p50 {pc['p50']}, max {pc['max']}")
+        L.append(f"- Start→Start zwischen Chunks: p50 {iv['p50']} ms, p95 {iv['p95']} ms, max {iv['max']} ms (n={iv['n']})")
+        L.append(f"- Pausen > {cp['pause_threshold_ms']:.0f} ms: {cp['pauses']}")
+        for p in cp["longest_pauses"]:
+            L.append(f"  - t={p['t_s']} s: {p['pause_ms']} ms (CBW LBA {p['cbw_lba']}/{p['cbw_blocks']}, {p['region']})")
+        L.append("")
+    elif cp.get("fine_data"):
+        L.append(f"Chunk-Takt: nicht auswertbar ({cp.get('reason')}).")
+        L.append("")
+    fk = a.get("flash_checkpoints") or {}
+    if fk.get("available"):
+        tr = fk["trip"]
+        L.append("## Flash-Checkpoints (Heimfahrt)")
+        L.append(f"- Fahrt #{tr.get('trip_id')} · Ende {tr.get('end_reason')} · aus Flash nachgeladen: "
+                 f"{'ja' if tr.get('stored_replay') else 'nein'} · FW bei Aufnahme {tr.get('capture_fw')}"
+                 f" · Medium {tr.get('media_variant')}"
+                 + (" · Partition VOLL" if tr.get("persist_full") else ""))
+        g = fk["gap_s"]
+        L.append(f"- {fk['count']} Checkpoints, Abstand p50 {g['p50']} s, max {g['max']} s; "
+                 f"längster Schreibvorgang {fk['write_ms_max']} ms")
+        if fk["power_loss"]:
+            L.append("- Stromverlust: Daten nach dem letzten Checkpoint fehlen (Ende der Aufnahme ≠ Ende der Fahrt).")
+        L.append("")
     L.append("Kein Feld-PASS: Das Tool beschreibt nur, was in dieser Session gemessen wurde.")
     return "\n".join(L) + "\n"
 
@@ -676,6 +1143,12 @@ def compare(analyses: list[dict]) -> dict:
             "lead_before_end_s": [round(x, 2) for x in leads],
             "selection_latency_s": [round(x, 2) for x in lat],
             "tail_then_head": f"{a['tail_then_head']['cases']}/{a['tail_then_head']['of']}",
+            "tur_period_ms": (a.get("tur_phase") or {}).get("period_ms"),
+            "plug_to_first_read_s": [p["set_address_to_first_read_s"] for p in a.get("plug_timeline") or []
+                                     if p["set_address_to_first_read_s"] is not None],
+            "atom_end_to_next_read_s": [p["atom_end_to_next_read_s"]
+                                        for p in (a.get("atoms") or {}).get("transitions", [])],
+            "media_loss_detect_s": (a.get("media_loss") or {}).get("detect_latency_s"),
         })
     all_idle = [r["tur_idle_median_s"] for r in rows if r["tur_idle_median_s"]]
     all_lead = [x for r in rows for x in r["lead_before_end_s"]]
@@ -702,6 +1175,11 @@ def compare_markdown(c: dict) -> str:
         L.append(f"| {r['session']} | {r['media']} | {r['time_base']} | {r['tur_idle_median_s']} | "
                  f"{r['mount_ref_matches']}/{r['mounts']} | {r['lag_after_start_s']} | "
                  f"{r['lead_before_end_s']} | {r['selection_latency_s']} | {r['tail_then_head']} |")
+    L += ["", "| Session | TUR-Periode (ms) | Stecken→1. Read (s) | Atom-Ende→nächster Read (s) | Media-Loss erkannt (s) |",
+          "|---|---:|---|---|---:|"]
+    for r in c["sessions"]:
+        L.append(f"| {r['session']} | {r['tur_period_ms']} | {r['plug_to_first_read_s']} | "
+                 f"{r['atom_end_to_next_read_s']} | {r['media_loss_detect_s']} |")
     s = c["summary"]
     L += ["", f"- Streuung Lag nach Start: {s['lag_spread_s']} s, Streuung Vorlauf vor Ende: {s['lead_spread_s']} s.",
           "  Bei unterschiedlichen Trackdauern zeigt die kleinere Streuung die wahrscheinlichere Prefetch-Regel (INFERRED)."]
@@ -715,11 +1193,15 @@ def main() -> int:
     ap.add_argument("--compare", type=Path, default=None,
                     help="write cross-session comparison (JSON; .md next to it)")
     ap.add_argument("--no-write", action="store_true", help="print summary only")
+    ap.add_argument("--track-dur-s", type=float, default=None,
+                    help="audio duration of the tracks (start-to-start minus duration); demo_v1 default 26.462")
+    ap.add_argument("--kbps", type=float, default=None,
+                    help="bitrate for read-ahead estimate when media_layout has none")
     args = ap.parse_args()
 
     analyses = []
     for p in args.sessions:
-        a = analyze(p, args.tur_period)
+        a = analyze(p, args.tur_period, args.track_dur_s, args.kbps)
         analyses.append(a)
         folder = p.parent if p.is_file() else p
         if not args.no_write:
