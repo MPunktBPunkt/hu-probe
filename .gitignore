@@ -91,7 +91,14 @@ sessions/*
 !sessions/20261015-200722_bmw_s2_prefetch/**
 !sessions/20261019-075344_bmw_s2_prefetch/
 !sessions/20261019-075344_bmw_s2_prefetch/**
+!sessions/20261020-075616_bmw_free/
+!sessions/20261020-075616_bmw_free/**
+!sessions/20261020-075935_bmw_free/
+!sessions/20261020-075935_bmw_free/**
+!sessions/20261020-080508_bmw_free/
+!sessions/20261020-080508_bmw_free/**
 sessions/**/collector.*
+sessions/**/derived/
 
 # Firmware artifacts (release bins under firmware/dist/ are tracked)
 firmware/.pio/
