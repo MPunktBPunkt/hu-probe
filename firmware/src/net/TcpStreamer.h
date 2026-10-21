@@ -32,8 +32,8 @@ public:
     bool connected() const { return const_cast<WiFiClient&>(client_).connected(); }
 
     /**
-     * @brief Offline replay: smaller batches + TCP flush so WiFi TX completes.
-     * @param on true for offline drain (8 lines per flush, flush + 2 ms delay per line); false for live streaming (32 lines).
+     * @brief Offline / stored replay: one JSONL write per loop() (token-bucketed by OfflineCapture).
+     * @param on true → batch=1; false → live streaming (32 lines).
      */
     void setOfflineDrain(bool on) { offlineDrain_ = on; }
 

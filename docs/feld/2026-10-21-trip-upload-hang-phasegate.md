@@ -2,9 +2,9 @@
 
 **Gerät:** Auto-ESP `.89` (ESP32-S3 N8R2)  
 **Collector:** `192.168.178.187:9100`  
-**Firmware-Spanne:** 0.3.3 → **0.3.15**  
-**Aktuelles Bin:** `firmware/dist/hu-probe.0.3.15.esp32s3.bin`  
-**Status:** 0.3.15 erstmals `tcp_ok=true` während #17-Replay, dann wieder WLAN-Zombie; #17/#18 noch pending.
+**Firmware-Spanne:** 0.3.3 → **0.3.16**  
+**Aktuelles Bin:** `firmware/dist/hu-probe.0.3.16.esp32s3.bin`  
+**Status:** 0.3.16 = Token-Bucket (1 Event/Tick, 25 ms) + Progress-FSM + Abort ohne Lang-Drain.
 
 ---
 
@@ -96,6 +96,7 @@ Operator-RST erscheint oft als `reset_reason=power_on` → RTC-NOINIT weg. Ohne 
 | **0.3.13** | Stall auch bei wifi=1/tcp=1 ohne TX; skip Soft-Detach ohne Host; sanftere Batches; TX-Stack-Buf (zu klein → 0.3.15) |
 | **0.3.14** | `lastOkAge`: nie-TX ≠ uptime (kein Früh-Zombie-Bounce); Connect-Timeout 2 s |
 | **0.3.15** | TX-Buf 1536 + String-Fallback; kein `setTimeout(1)` beim Write (partial → tx_fail-Sturm) |
+| **0.3.16** | Token-Bucket 1 Event + 1 Write / 25 ms; Progress-FSM 3 s TCP / 12 s STA+5 s settle / 35 s abort; HB mit RSSI/USB/heap; Abort lässt Trip pending |
 
 ### Self-Heal (Feld 0.3.10 / 0.3.11)
 
@@ -155,13 +156,21 @@ Offen: TCP/WLAN-Pfad stirbt weiterhin früh im Replay; Web wird unreachable; Bat
 
 ## 8. Plan — wie es weitergeht
 
-1. **0.3.16 — TX drosseln + Atmung:** 1 Event/Tick, festes Yield/`web_.loop`-Fenster alle N ms; Write-Timeout moderat (z. B. 3 s), nicht 1 s und nicht unbegrenzt. Ziel: `tcp_tx_ok` steigt kontinuierlich, HTTP bleibt pollbar.
-2. **Soft-Detach mit Settle, ohne Früh-Kill:** Detach nur wenn nötig (Host am Bus **oder** RSSI/TX-Probe schlecht), immer ≥500 ms Settle **vor** erstem Collector-Connect; nie Zombie-STA-Bounce bevor `tcpEverOk`.
-3. **Upload-Watchdog:** Wenn `tripUploadActive` und (kein `tcp_tx_ok` **oder** Web tot) > N s → Ring clear, Phase PASS, Batch sauber beenden (nicht ewig blau / dimm-blau).
-4. **Feld-Gate auf `.89`:** OTA 0.3.16 → POST `/api/trips/upload` → Erfolg = `#17` dann `#18` `uploaded=true`, HTTP durchgängig erreichbar. Bei Fail: `/api/diag/saved` + LED-Notiz.
-5. **Optional später:** Mutex um `WiFiClient` (falls Coex wieder parallel darf); RSSI-Gate vor Batch; Collector-Keepalive.
+### Erledigt in 0.3.16 (GPT+Grok-Konsens)
 
-Nicht parallel: große Refactors am TripStore-Format oder Collectorschema — erst den TX/WLAN-Pfad stabilisieren.
+1. **Token-Bucket:** 1 Record + 1 TCP-Write alle 25 ms (kein dichter poll→write-Sturm).
+2. **Eine Progress-FSM:** 3 s → TCP reconnect; 12 s → einmal STA recover + 5 s settle; 35 s → `abortStoredReplay` (Trip bleibt pending, kein 180 s-Drain).
+3. **Telemetrie:** Replay-HB alle 3 s mit `tx_ok`/`tx_fail`, `progressAge`, RSSI, heap/psram, plugged/soft.
+
+### Nächster Feld-Gate
+
+1. OTA 0.3.16 auf `.89` → POST `/api/trips/upload`.
+2. Erfolg = `#17`/`#18` `uploaded=true`, HTTP durchgängig erreichbar.
+3. Fail = Diag (`replay hb`, `progressAge`, RSSI) + ggf. Belastungskurve 1→2→4 Events/Tick.
+
+### Später (nicht parallel)
+
+Mutex, Collector-Umbau, TripStore-Format, aggressivere Coex-Bounces — erst wenn 1/Tick stabil ist.
 
 ---
 

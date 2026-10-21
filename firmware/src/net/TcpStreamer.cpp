@@ -69,8 +69,8 @@ void TcpStreamer::flushPending() {
     // partially succeeds used to retry the whole line → collector "Extra data" / seq gaps.
     String line;
     int n = 0;
-    // Stored/offline: tiny batches — .89 died after ~478 lines when blasting 8/tick.
-    const int batch = offlineDrain_ ? 2 : 32;
+    // Stored/offline (0.3.16): exactly one write per loop — OfflineCapture paces ticks.
+    const int batch = offlineDrain_ ? 1 : 32;
     EventBus& bus = EventBus::instance();
     while (n < batch) {
         if (!client_.connected()) {
@@ -111,7 +111,7 @@ void TcpStreamer::flushPending() {
         bus.noteTcpTxOk();
         n++;
         if (offlineDrain_) {
-            delay(5);
+            // Brief yield only — inter-TX gap lives in OfflineCapture (token bucket).
             yield();
         } else if ((n & 3) == 0) {
             yield();

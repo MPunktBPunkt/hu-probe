@@ -741,11 +741,36 @@ bool OfflineCapture::replayStored(Session* session, MscGadget* msc, ReadInstrume
     healthPublished_ = false;
     lastWifiReconnectMs_ = 0;
     uploadDetachSettled_ = false;
+    lastStoredTxTickMs_ = 0;
+    lastStoredTcpForceMs_ = 0;
+    storedRecoverUntilMs_ = 0;
+    storedStaRecoverDone_ = false;
     uploadStatus_ = "stored_upload";
     DiagLog::printf("[OFFLINE] stored trip #%u: %u B, %u records, end=%s\n",
                     (unsigned)tripId_, (unsigned)used_, (unsigned)recordCount_,
                     stopReason_.c_str());
     return true;
+}
+
+void OfflineCapture::abortStoredReplay(const char* why) {
+    uploadStatus_ = why && why[0] ? why : "replay_stalled";
+    EventBus& bus = EventBus::instance();
+    DiagLog::printf(
+        "[TRIP] abort stored replay trip=#%u why=%s off=%u/%u pending=%u tx_ok=%u tx_fail=%u "
+        "heap=%u wifi=%d tcp=%d\n",
+        (unsigned)tripId_, uploadStatus_.c_str(), (unsigned)replayOff_, (unsigned)used_,
+        (unsigned)bus.pending(), (unsigned)bus.tcpTxOk(), (unsigned)bus.tcpTxFail(),
+        (unsigned)ESP.getFreeHeap(), WiFi.status() == WL_CONNECTED ? 1 : 0,
+        tcp_ && tcp_->connected() ? 1 : 0);
+    if (sessionStarted_ && session_) {
+        session_->stop();
+        sessionStarted_ = false;
+    }
+    // TX-ring orphans only — TripStore entry stays pending for a later retry.
+    if (bus.pending()) bus.clear();
+    DiagLog::persist("trip_upload", true);
+    saveLastRun(false, bus.dropped());
+    finishRun(false);
 }
 
 void OfflineCapture::abortNoHost() {
@@ -1302,69 +1327,106 @@ void OfflineCapture::pollUpload() {
             uploadStatus_ = "replaying";
             uploadPhase_ = UploadPhase::Replay;
             uploadPhaseSinceMs_ = millis();
+            lastStoredTxTickMs_ = 0;
+            lastStoredTcpForceMs_ = 0;
+            storedRecoverUntilMs_ = 0;
+            storedStaRecoverDone_ = false;
             break;
         }
         case UploadPhase::Replay: {
-            // Backpressure: every queued event is a heap String (~300 B, no PSRAM). Replaying
-            // while TCP/WiFi is stalled filled the heap until WiFi itself dropped.
-            // Progress = recent tcp_tx_ok (not enqueue) — otherwise a half-dead TCP never
-            // tripped the stall timer and starved HTTP until magenta/NeedReset.
-            const uint32_t stallMs = replayingStored_ ? kStoredUploadStallMs : kUploadStallMs;
             EventBus& bus = EventBus::instance();
             const unsigned long now = millis();
             const unsigned long lastOk = bus.lastTcpTxOkMs();
-            // lastOk==0 means "never TX'd" — must NOT look like age=uptime (0.3.13 killed a
-            // fresh tcp=1 socket at 20s via zombie-STA before the first write landed).
             const bool tcpEverOk = (lastOk != 0);
             const unsigned long lastOkAge = tcpEverOk ? (now - lastOk) : 0;
             const bool wifiUp = WiFi.status() == WL_CONNECTED;
             const bool tcpUp = tcp_ && tcp_->connected();
             const bool linkUp = wifiUp && tcpUp;
-            const unsigned long sinceReplay = now - uploadPhaseSinceMs_;
 
-            if (replayingStored_ && wifiUp) {
-                static unsigned long lastForceMs = 0;
-                const bool stallAfterOk =
-                    tcpEverOk && (!tcpUp || lastOkAge >= kStoredTcpForceMs);
-                // No TX yet: only bounce the socket if connect itself is stuck (not while
-                // connected and still trying the first flush).
-                const bool stallBeforeOk =
-                    !tcpEverOk && !tcpUp && sinceReplay >= kStoredTcpForceMs;
-                if ((stallAfterOk || stallBeforeOk) &&
-                    now - lastForceMs >= kStoredTcpForceMs) {
-                    lastForceMs = now;
-                    DiagLog::printf(
-                        "[TRIP] replay tcp force-reconnect trip=#%u pending=%u lastOkAge=%lums "
-                        "tcp=%d ever=%d since=%lums\n",
-                        (unsigned)tripId_, (unsigned)bus.pending(), lastOkAge, tcpUp ? 1 : 0,
-                        tcpEverOk ? 1 : 0, sinceReplay);
-                    tcp_->forceReconnect();
+            // ---- Stored path (0.3.16): token bucket + single progress watchdog ----
+            if (replayingStored_) {
+                // Progress age: time since last real tcp_tx_ok, or since Replay start.
+                if (tcpEverOk && lastOkAge < 2000UL) uploadPhaseSinceMs_ = now;
+                const unsigned long progressAge = now - uploadPhaseSinceMs_;
+
+                if (storedRecoverUntilMs_ != 0 && now < storedRecoverUntilMs_) {
+                    yield();
+                    break;
                 }
-            }
+                storedRecoverUntilMs_ = 0;
 
-            // Zombie STA only after real TX existed then died — never on cold start.
-            if (replayingStored_ && wifiUp && tcpEverOk && lastOkAge >= kStoredZombieStaMs &&
-                bus.pending() > 0) {
-                static unsigned long lastZombieMs = 0;
-                if (now - lastZombieMs >= kStoredZombieStaMs) {
-                    lastZombieMs = now;
+                if (progressAge >= kStoredAbortMs) {
+                    abortStoredReplay("replay_watchdog");
+                    break;
+                }
+                if (progressAge >= kStoredStaRecoverMs && !storedStaRecoverDone_) {
+                    storedStaRecoverDone_ = true;
                     DiagLog::printf(
-                        "[TRIP] replay zombie-STA bounce trip=#%u pending=%u lastOkAge=%lums\n",
-                        (unsigned)tripId_, (unsigned)bus.pending(), lastOkAge);
+                        "[TRIP] replay STA recover trip=#%u pending=%u progressAge=%lums "
+                        "rssi=%d soft=%d plugged=%d\n",
+                        (unsigned)tripId_, (unsigned)bus.pending(), progressAge, (int)WiFi.RSSI(),
+                        msc_ && msc_->usbSoftAttached() ? 1 : 0, msc_ && msc_->plugged() ? 1 : 0);
                     if (tcp_) tcp_->forceReconnect();
                     WiFi.setAutoReconnect(false);
                     WiFi.disconnect(false, false);
                     delay(30);
                     WiFi.begin();
                     lastWifiReconnectMs_ = now;
+                    storedRecoverUntilMs_ = now + kStoredStaSettleMs;
+                    break;
                 }
+                if (progressAge >= kStoredTcpStallMs &&
+                    now - lastStoredTcpForceMs_ >= kStoredTcpStallMs) {
+                    lastStoredTcpForceMs_ = now;
+                    DiagLog::printf(
+                        "[TRIP] replay tcp force trip=#%u pending=%u progressAge=%lums tcp=%d\n",
+                        (unsigned)tripId_, (unsigned)bus.pending(), progressAge, tcpUp ? 1 : 0);
+                    if (tcp_) tcp_->forceReconnect();
+                }
+
+                if (!wifiUp) reconnectWifiThrottled();
+
+                // Token bucket: at most 1 event + 1 write every kStoredInterTxMs.
+                if (now - lastStoredTxTickMs_ < kStoredInterTxMs) {
+                    yield();
+                    break;
+                }
+                lastStoredTxTickMs_ = now;
+
+                if (linkUp && bus.pending() < kReplayMaxPending) {
+                    if (!replayOneRec()) {
+                        uploadPhase_ = UploadPhase::Health;
+                        uploadPhaseSinceMs_ = now;
+                        break;
+                    }
+                }
+                if (tcp_) {
+                    tcp_->loop();
+                    yield();
+                }
+
+                static unsigned long lastHbMs = 0;
+                if (now - lastHbMs >= kStoredReplayHbMs) {
+                    lastHbMs = now;
+                    DiagLog::printf(
+                        "[TRIP] replay hb trip=#%u off=%u/%u pending=%u tx_ok=%u tx_fail=%u "
+                        "progressAge=%lums wifi=%d tcp=%d rssi=%d heap=%u psram=%u "
+                        "plugged=%d soft=%d\n",
+                        (unsigned)tripId_, (unsigned)replayOff_, (unsigned)used_,
+                        (unsigned)bus.pending(), (unsigned)bus.tcpTxOk(), (unsigned)bus.tcpTxFail(),
+                        progressAge, wifiUp ? 1 : 0, tcpUp ? 1 : 0, (int)WiFi.RSSI(),
+                        (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getFreePsram(),
+                        msc_ && msc_->plugged() ? 1 : 0, msc_ && msc_->usbSoftAttached() ? 1 : 0);
+                }
+                break;
             }
 
+            // ---- Live offline path (unchanged pacing semantics) ----
+            const uint32_t stallMs = kUploadStallMs;
             if (!linkUp) {
                 if (!wifiUp) reconnectWifiThrottled();
-                pumpTcp(replayingStored_ ? 100 : 200);
+                pumpTcp(200);
                 yield();
-                // Stall on no TX progress (uploadPhaseSinceMs_ advanced only on tcp_tx_ok).
                 if (now - uploadPhaseSinceMs_ > stallMs) {
                     uploadStatus_ = "replay_stalled";
                     uploadPhase_ = UploadPhase::Health;
@@ -1372,39 +1434,23 @@ void OfflineCapture::pollUpload() {
                 }
                 break;
             }
-            // Advance stall clock only when collector actually accepted bytes.
             if (tcpEverOk && lastOkAge < 2000UL) uploadPhaseSinceMs_ = now;
-            // No progress (never TX, or TX died): leave Replay after stallMs.
-            if (sinceReplay > stallMs) {
+            if (now - uploadPhaseSinceMs_ > stallMs) {
                 uploadStatus_ = "replay_stalled";
                 uploadPhase_ = UploadPhase::Health;
                 uploadPhaseSinceMs_ = now;
                 break;
             }
             if (bus.pending() < kReplayMaxPending) {
-                // Fewer records/tick → WiFi + WebServer keep breathing room.
-                const int burst = replayingStored_ ? 2 : 10;
-                for (int i = 0; i < burst; i++) {
+                for (int i = 0; i < 10; i++) {
                     if (!replayOneRec()) {
                         uploadPhase_ = UploadPhase::Health;
                         break;
                     }
                 }
             }
-            pumpTcpWhilePending(replayingStored_ ? 250 : 200, replayingStored_ ? 4 : 16);
+            pumpTcpWhilePending(200, 16);
             yield();
-            if (replayingStored_) {
-                static unsigned long lastHbMs = 0;
-                if (now - lastHbMs >= 15000UL) {
-                    lastHbMs = now;
-                    DiagLog::printf(
-                        "[TRIP] replay hb trip=#%u off=%u/%u pending=%u wifi=%d tcp=%d "
-                        "lastOkAge=%lums heap=%u\n",
-                        (unsigned)tripId_, (unsigned)replayOff_, (unsigned)used_,
-                        (unsigned)bus.pending(), wifiUp ? 1 : 0, tcpUp ? 1 : 0, lastOkAge,
-                        (unsigned)ESP.getFreeHeap());
-                }
-            }
             break;
         }
         case UploadPhase::Health: {

@@ -590,17 +590,24 @@ private:
     static constexpr uint16_t kSoftReplugHoldMs = 2000;
     static constexpr uint32_t kUnplugIdleMs = 1500;
     static constexpr uint32_t kUploadStallMs = 120000;
-    /** @brief Stored trip: leave Replay/Drain if no TCP progress for this long. */
+    /** @brief Live offline: leave Replay/Drain if no TCP progress for this long. */
     static constexpr uint32_t kStoredUploadStallMs = 60000;
-    /** @brief Stored trip: hard cap before accepting status=queued with leftover ring lines. */
+    /** @brief Live offline hard cap (stored abort uses kStoredAbortMs in Replay). */
     static constexpr uint32_t kStoredUploadHardMs = 180000;
-    /** @brief Bounce collector socket if no tcp_tx_ok while WiFi is up. */
-    static constexpr uint32_t kStoredTcpForceMs = 12000;
-    /** @brief Stored: WL_CONNECTED but no TX → STA disconnect/begin on main loop. */
-    static constexpr uint32_t kStoredZombieStaMs = 20000;
+    /** @brief 0.3.16 token bucket: min gap between stored replay ticks (1 event + 1 write). */
+    static constexpr uint32_t kStoredInterTxMs = 25;
+    /** @brief No tcp_tx_ok for this long → TCP forceReconnect only. */
+    static constexpr uint32_t kStoredTcpStallMs = 3000;
+    /** @brief No tcp_tx_ok for this long → one STA bounce + settle. */
+    static constexpr uint32_t kStoredStaRecoverMs = 12000;
+    /** @brief Quiet window after STA recovery before next TX/decision. */
+    static constexpr uint32_t kStoredStaSettleMs = 5000;
+    /** @brief No progress → abort Replay (trip stays pending, no long Drain). */
+    static constexpr uint32_t kStoredAbortMs = 35000;
+    static constexpr uint32_t kStoredReplayHbMs = 3000;
     static constexpr uint32_t kWifiReconnectEveryMs = 10000;
     /** @brief Cap ring depth during stored replay — high pending starved WiFi/HTTP. */
-    static constexpr size_t kReplayMaxPending = 8;
+    static constexpr size_t kReplayMaxPending = 4;
     static constexpr uint32_t kCheckpointEveryMs = 60000;
     static constexpr uint32_t kCheckpointForceMs = 90000;  // no idle gap for this long
     static constexpr uint32_t kCheckpointIdleMs = 500;     // no CBW for this long
@@ -664,7 +671,18 @@ private:
      * each attempt (the old Drain loop never reconnected → frozen purple until RST).
      */
     void reconnectWifiThrottled();
+
+    /**
+     * @brief Abort stored Replay without long Drain: TripStore stays pending, ring cleared.
+     * @param why  Status string (e.g. replay_watchdog).
+     */
+    void abortStoredReplay(const char* why);
+
     unsigned long lastWifiReconnectMs_ = 0;
+    unsigned long lastStoredTxTickMs_ = 0;
+    unsigned long lastStoredTcpForceMs_ = 0;
+    unsigned long storedRecoverUntilMs_ = 0;
+    bool storedStaRecoverDone_ = false;
     uint32_t armFreeHeap_ = 0;
     uint32_t armMaxAlloc_ = 0;
 
