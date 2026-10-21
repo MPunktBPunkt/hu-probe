@@ -47,7 +47,7 @@ Fahrzeug-HU ──USB MSC──► ESP32-S3 hu-probe
 | Busy ~65 s vs Stall-off ~6 s | Szenario `busy_budget` + Marker |
 | Lifecycle Sleep/Ignition | Operator-Marker + VBUS/Phasen |
 
-Details: [SCHEMA.md](SCHEMA.md) (v2), [SZENARIEN.md](SZENARIEN.md), [GATES.md](GATES.md), [MEDIA_VARIATION.md](MEDIA_VARIATION.md).
+Details: [SCHEMA.md](SCHEMA.md) (v2), [FIRMWARE-ABLAUF.md](FIRMWARE-ABLAUF.md), [SZENARIEN.md](SZENARIEN.md), [GATES.md](GATES.md), [MEDIA_VARIATION.md](MEDIA_VARIATION.md).
 
 ## Measurement Integrity
 
