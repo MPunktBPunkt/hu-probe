@@ -639,7 +639,7 @@ void WebUi::pumpTripUpload() {
             DiagLog::printf("[TRIP] drain ok after #%u\n", (unsigned)tripUploadLastId_);
         } else if (now - tripUploadDrainProgressMs_ >= kDrainAbandonMs ||
                    now - tripUploadDrainSinceMs_ > kDrainCapMs) {
-            // Do not fail the batch: clear zombies and let same-trip retry / next trip continue.
+            // Clear zombies so the same trip can retry; never treat abandon as batch success.
             DiagLog::printf("[TRIP] drain abandon pending=%u cleared=1 after #%u\n",
                             (unsigned)pend, (unsigned)tripUploadLastId_);
             bus.clear();
@@ -657,7 +657,8 @@ void WebUi::pumpTripUpload() {
 
     const TripStore::Trip* t = TripStore::instance().firstPending();
     if (!t) {
-        finishTripUploadBatch(true);
+        // drain_abandon / incomplete must not report ok=true (events may have been cleared).
+        finishTripUploadBatch(tripUploadErr_.length() == 0);
         return;
     }
 

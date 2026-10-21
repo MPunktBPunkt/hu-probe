@@ -2,9 +2,9 @@
 
 **Gerät:** Auto-ESP `.89` (ESP32-S3 N8R2)  
 **Collector:** `192.168.178.187:9100`  
-**Firmware-Spanne:** 0.3.3 → **0.3.8**  
-**Aktuelles Bin:** `firmware/dist/hu-probe.0.3.8.esp32s3.bin`  
-**Status:** Problem lokalisiert und teilweise entschärft; Upload noch nicht durchgängig stabil.
+**Firmware-Spanne:** 0.3.3 → **0.3.9**  
+**Aktuelles Bin:** `firmware/dist/hu-probe.0.3.9.esp32s3.bin`  
+**Status:** Hang-Ort lokalisiert; 0.3.9 testet Single-Owner für `TcpStreamer` (Concurrency-Hypothese).
 
 ---
 
@@ -89,6 +89,11 @@ Operator-RST erscheint oft als `reset_reason=power_on` → RTC-NOINIT weg. Ohne 
 | **0.3.6** | NVS-Spiegel für offene Phase (erster Versuch) |
 | **0.3.7** | NVS robust (`power_on` zuerst, sticky, CRC); Phase-Zeile in jedem Diag-Snapshot |
 | **0.3.8** | NeedReset nach Intentional-Detach clearen; LED `TripUpload` (blau blink); Replay-Stall an `tcp_tx_ok`; TCP force-reconnect 12 s; kleinere Bursts/Delays; Stall 60 s / Hard 180 s; Ring max 24 |
+| **0.3.9** | **Single-Owner TcpStreamer:** `wifiCoexTask` ruft weder `tcp_.loop()` noch `superviseWifi()` während Trip-Upload/Replay (Race Mainloop↔Coex auf `WiFiClient`); `drain_abandon` ≠ Batch-Erfolg |
+
+### Concurrency-Hypothese (Audit nach 558d5d3)
+
+`TcpStreamer`/`WiFiClient` wurde parallel aus Arduino-Loop, `OfflineCapture::pumpTcp*` und `wifiCoexTask` bedient — ohne Mutex. Gleichzeitig konnte `enterCoexHold()` → `esp_wifi_stop()` laufen. Das erklärt TCP-Tod bei assoziiertem WLAN besser als reines RF. 0.3.9 ist der A/B-Test: Ownership klar, sonst keine Replay-Tuning-Änderungen.
 
 ---
 

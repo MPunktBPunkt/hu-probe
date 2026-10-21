@@ -233,15 +233,18 @@ void App::begin() {
 void App::wifiCoexTask(void* arg) {
     App* self = static_cast<App*>(arg);
     for (;;) {
-        // Offline-Capture owns WiFi while active. Trip-upload keeps superviseWifi running so
-        // drain_wifi can recover, but enterCoexHold/restart skip wiping the ring / ESP.restart.
-        if (!OfflineCapture::instance().blocksWifiSupervise() &&
-            !DriveMode::instance().ownsWifi()) {
+        // Ownership (0.3.9): TcpStreamer/WiFiClient must not be touched from this task while
+        // stored-trip replay or the upload batch runs — OfflineCapture/WebUi pump TCP from
+        // the Arduino loop only. Parallel tcp_.loop() + enterCoexHold (esp_wifi_stop) raced
+        // WiFiClient::write and matched the trip_replay hangs (see feldbericht 2026-10-21).
+        const bool tripUp = self->web_.tripUploadActive();
+        const bool ocBlocks = OfflineCapture::instance().blocksWifiSupervise();
+        if (!ocBlocks && !DriveMode::instance().ownsWifi() && !tripUp) {
             self->superviseWifi();
         }
-        if (self->coexDetachedForWifi_ || self->web_.tripUploadActive()) {
-            self->tcp_.loop();  // flush ring while USB is off / trip drain
-        }
+        // Do NOT call tcp_.loop() here. Main App::loop() (+ OfflineCapture pumps during
+        // replay) is the sole TcpStreamer owner. Coex soft-detach frees the loop from USB
+        // bulk starvation, so a second flusher is unnecessary and unsafe.
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }

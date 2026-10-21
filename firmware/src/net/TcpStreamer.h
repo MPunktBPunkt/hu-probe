@@ -23,7 +23,8 @@ public:
      *
      * Does nothing if the collector is disabled or WiFi is not connected.
      *
-     * @note Called from the Arduino loop and from App's wifiCoexTask during coex hold.
+     * @warning Not thread-safe. Sole owner must be the Arduino loop (and OfflineCapture
+     * pumps that run on that same stack during stored replay). Do not call from wifiCoexTask.
      */
     void loop();
 

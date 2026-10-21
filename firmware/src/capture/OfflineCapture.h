@@ -51,7 +51,12 @@ public:
     /** @brief True only while the measure window is open (State::Capturing). */
     bool capturing() const { return state_ == State::Capturing; }
 
-    /** @brief True while a run is active(): the App WiFi supervisor must not touch WiFi then. */
+    /**
+     * @brief True while a run is active(): App wifiCoexTask must not call superviseWifi().
+     *
+     * During Uploading (incl. stored replay) OfflineCapture owns WiFi reconnect + TcpStreamer
+     * pumps on the Arduino loop — a second task must not race WiFiClient.
+     */
     bool blocksWifiSupervise() const { return active(); }
 
     /** @brief Capture-window records in the buffer (post-finalize records not included). */
