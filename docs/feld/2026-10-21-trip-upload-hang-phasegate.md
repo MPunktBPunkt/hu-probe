@@ -2,9 +2,9 @@
 
 **Gerät:** Auto-ESP `.89` (ESP32-S3 N8R2)  
 **Collector:** `192.168.178.187:9100`  
-**Firmware-Spanne:** 0.3.3 → **0.3.16**  
-**Aktuelles Bin:** `firmware/dist/hu-probe.0.3.16.esp32s3.bin`  
-**Status:** 0.3.16 = Token-Bucket (1 Event/Tick, 25 ms) + Progress-FSM + Abort ohne Lang-Drain.
+**Firmware-Spanne:** 0.3.3 → **0.3.17**  
+**Aktuelles Bin:** `firmware/dist/hu-probe.0.3.17.esp32s3.bin`  
+**Status:** **0.3.17 Feld-PASS** — `#17`/`#18` `uploaded=true`, Heap ~185 KiB stabil, HTTP down=0.
 
 ---
 
@@ -97,6 +97,7 @@ Operator-RST erscheint oft als `reset_reason=power_on` → RTC-NOINIT weg. Ohne 
 | **0.3.14** | `lastOkAge`: nie-TX ≠ uptime (kein Früh-Zombie-Bounce); Connect-Timeout 2 s |
 | **0.3.15** | TX-Buf 1536 + String-Fallback; kein `setTimeout(1)` beim Write (partial → tx_fail-Sturm) |
 | **0.3.16** | Token-Bucket 1 Event + 1 Write / 25 ms; Progress-FSM 3 s TCP / 12 s STA+5 s settle / 35 s abort; HB mit RSSI/USB/heap; Abort lässt Trip pending |
+| **0.3.17** | **EventBus::pop** move+clear Slot (DRAM-Leak ~370 B/Event); Drop-Pfad cleared ebenfalls |
 
 ### Self-Heal (Feld 0.3.10 / 0.3.11)
 

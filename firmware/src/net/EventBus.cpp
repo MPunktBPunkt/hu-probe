@@ -5,6 +5,7 @@
 
 #include "EventBus.h"
 #include "core/HuMem.h"
+#include <utility>
 
 EventBus& EventBus::instance() {
     static EventBus bus;
@@ -70,11 +71,13 @@ void EventBus::publish(JsonDocument& doc) {
     serializeJson(doc, line);
     portENTER_CRITICAL(&mux_);
     if (count_ >= ringSize_) {
+        // Free overwritten payload — otherwise DRAM leaks for the whole ring life.
+        ring_[head_] = String();
         head_ = (head_ + 1) % ringSize_;
         count_--;
         dropped_++;
     }
-    ring_[tail_] = line;
+    ring_[tail_] = std::move(line);
     tail_ = (tail_ + 1) % ringSize_;
     count_++;
     published_++;
@@ -99,7 +102,10 @@ bool EventBus::pop(String& out) {
         portEXIT_CRITICAL(&mux_);
         return false;
     }
-    out = ring_[head_];
+    // Move out and clear slot. Leaving the String in the ring after pop leaked ~300 B
+    // per event during stored replay (.89 0.3.16: heap 184→21 KiB over ~463 tx_ok).
+    out = std::move(ring_[head_]);
+    ring_[head_] = String();
     head_ = (head_ + 1) % ringSize_;
     count_--;
     portEXIT_CRITICAL(&mux_);
