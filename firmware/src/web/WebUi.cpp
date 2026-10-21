@@ -1,3 +1,8 @@
+/**
+ * @file WebUi.cpp
+ * @brief WebUI page, route registration and HTTP handlers of the probe's web server.
+ */
+
 #include "WebUi.h"
 #include "BuildFlags.h"
 #include "app/DriveMode.h"
@@ -18,6 +23,7 @@
 
 static String profileForVehicle(const String& vehicle, const String& fallback);
 
+/** @brief Embedded single-page WebUI (HTML, CSS and JavaScript) served by GET /. */
 static const char* PAGE =
     "<!DOCTYPE html><html><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
     "<title>hu-probe</title><style>"
@@ -202,6 +208,23 @@ static const char* PAGE =
     "<p class=muted>Live-Marker brauchen WLAN. Während Offline-Capture nur BOOT.</p>"
     "</div>"
 
+    "<div class=card>"
+    "<h2>Diagnose</h2>"
+    "<p class=muted id=diagMeta>…</p>"
+    "<p class=muted>Lebenszyklus-Log (nicht jedes USB-Event). PSRAM 64 KiB für diesen Start, "
+    "2 KiB RTC über Software-Reset/Panic/Watchdog, Flash-Snapshots (8×4 KiB) über Stromverlust. "
+    "Schreiben nur bei Boot nach Absturz, geplantem Restart, Coex-Hold, Capture-Ende, Heimfahrt-Checkpoint.</p>"
+    "<div class=row>"
+    "<button class=sec onclick=loadDiag()>Log laden</button>"
+    "<button class=sec onclick=loadSaved()>Flash-Snapshots</button>"
+    "<button class=sec onclick=saveDiag()>Jetzt im Flash sichern</button>"
+    "</div>"
+    "<p class=muted><a href=/api/diag/log target=_blank style='color:#9ecbff'>Rohtext dieser Start</a>"
+    " · <a href=/api/diag/saved target=_blank style='color:#9ecbff'>Rohtext Flash</a></p>"
+    "<pre id=diagNow class=muted style='max-height:18rem'>…</pre>"
+    "<pre id=diagSaved class=muted style='max-height:18rem'></pre>"
+    "</div>"
+
     "<pre id=st>loading…</pre>"
     "<script>"
     "const PROFILE={lab_debian:'lab_debian',bmw:'bmw_nbt_evo',mazda_cx30:'mazda_cx30'};"
@@ -277,10 +300,14 @@ static const char* PAGE =
     "    const s=j.stall||{};stallNow.textContent=(s.enabled?(s.active?'AKTIV':'wartet auf Start'):'aus')+"
     "      ' · gehalten '+(s.held||0)+' · abgebrochen '+(s.abandoned||0)+' · max '+(s.max_wait_ms||0)+' ms'+"
     "      (s.last_off?(' · zuletzt aus: '+s.last_off):'');"
-    "    const d=j.drive||{},g=j.ota||{};"
+    "    const d=j.drive||{},g=j.ota||{},dg=j.diag||{};"
     "    driveNow.textContent='Zustand '+(d.state||'off')+(d.wlan?(' · WLAN '+d.wlan):'')+"
     "      ' · ausstehend '+(d.trips_pending||0)+(d.error?(' · '+d.error):'')+"
     "      ' · Update: '+(g.result||'–')+(g.rolled_back_from?(' · ROLLBACK von '+g.rolled_back_from):'');"
+    "    diagMeta.textContent='Reset '+(j.reset_reason||'?')+' · Restart '+(j.restart_cause||'none')+"
+    "      ' · Boot #'+(j.boot_generation||'?')+' · '+Math.round((j.uptime_ms||0)/1000)+' s'+"
+    "      ' · Ring '+(dg.ring_bytes||0)+' B · Flash '+(dg.saved||0)+' Snapshots'+"
+    "      (dg.persist_ok?'':' · Flash-Log nicht verfügbar');"
     "    const q=j.sequence||{};"
     "    seqPrompt.textContent=q.active?('['+q.state+'] Schritt '+q.step+'/'+q.steps+' · '+q.media+"
     "      ' · '+(q.prompt||'')):(q.state&&q.state!=='idle'?('Sequenz '+q.state+(q.error?(' · '+q.error):'')):'');"
@@ -397,8 +424,20 @@ static const char* PAGE =
     "async function tripsErase(all){if(all&&!confirm('Alle Fahrten löschen, auch nicht hochgeladene?'))return;"
     "  const r=await fetch('/api/trips/erase',{method:'POST',headers:{'Content-Type':'application/json'},"
     "    body:JSON.stringify({all:all})});st.textContent=await r.text();loadTrips()}"
-    "loadExperiments().then(loadMedia).then(loadSeq).then(loadDrive).then(loadTrips).then(refresh);"
-    "setInterval(refresh,1000);setInterval(loadTrips,5000);"
+    "async function loadDiag(){"
+    "  try{diagNow.textContent=await (await fetch('/api/diag/log?tail=8000')).text()}"
+    "  catch(e){diagNow.textContent='Log nicht erreichbar'}"
+    "}"
+    "async function loadSaved(){"
+    "  try{diagSaved.textContent=await (await fetch('/api/diag/saved')).text()}"
+    "  catch(e){diagSaved.textContent='Snapshots nicht erreichbar'}"
+    "}"
+    "async function saveDiag(){"
+    "  try{st.textContent=await (await fetch('/api/diag/persist',{method:'POST'})).text();loadSaved();loadDiag()}"
+    "  catch(e){st.textContent='persist failed'}"
+    "}"
+    "loadExperiments().then(loadMedia).then(loadSeq).then(loadDrive).then(loadTrips).then(refresh).then(loadDiag).then(loadSaved);"
+    "setInterval(refresh,1000);setInterval(loadTrips,5000);setInterval(loadDiag,8000);"
     "</script></body></html>";
 
 void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
@@ -437,6 +476,8 @@ void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
     server_.on("/api/sequence/skip", HTTP_POST, [this]() { handleSequenceCmd("skip"); });
     server_.on("/api/sequence/abort", HTTP_POST, [this]() { handleSequenceCmd("abort"); });
     server_.on("/api/diag/log", HTTP_GET, [this]() { handleDiagLog(); });
+    server_.on("/api/diag/saved", HTTP_GET, [this]() { handleDiagSaved(); });
+    server_.on("/api/diag/persist", HTTP_POST, [this]() { handleDiagPersist(); });
     server_.on("/api/trips", HTTP_GET, [this]() { handleTrips(); });
     server_.on("/api/trips/upload", HTTP_POST, [this]() { handleTripsUpload(); });
     server_.on("/api/trips/erase", HTTP_POST, [this]() { handleTripsErase(); });
@@ -541,15 +582,19 @@ void WebUi::handleDiagLog() {
              PanicTail::resetReason(), PanicTail::restartCause(),
              (unsigned)PanicTail::bootGeneration(), (unsigned long)millis());
     server_.sendContent(hdr);
-    const char* prev = DiagLog::previousTail();
-    if (prev[0]) {
-        server_.sendContent("# --- previous boot (RTC tail) ---\n");
-        server_.sendContent(prev);
+    const size_t tail = server_.hasArg("tail") ? (size_t)server_.arg("tail").toInt() : 0;
+    if (!tail) {
+        const char* prev = DiagLog::previousTail();
+        if (prev[0]) {
+            server_.sendContent("# --- previous boot (RTC tail) ---\n");
+            server_.sendContent(prev);
+        }
+        server_.sendContent("# --- this boot ---\n");
     }
-    server_.sendContent("# --- this boot ---\n");
     char buf[512];
     const size_t total = DiagLog::size();
-    for (size_t off = 0; off < total;) {
+    size_t off = (tail && total > tail) ? total - tail : 0;
+    for (; off < total;) {
         const size_t n = DiagLog::copyOut(off, buf, sizeof(buf));
         if (n == 0) break;
         server_.sendContent(buf, n);
@@ -557,6 +602,36 @@ void WebUi::handleDiagLog() {
         yield();
     }
     server_.sendContent("");
+}
+
+void WebUi::handleDiagSaved() {
+    server_.setContentLength(CONTENT_LENGTH_UNKNOWN);
+    server_.send(200, "text/plain; charset=utf-8", "");
+    char hdr[80];
+    snprintf(hdr, sizeof(hdr), "# snapshots=%u persist_ok=%d\n",
+             (unsigned)DiagLog::snapshotCount(), DiagLog::persistAvailable() ? 1 : 0);
+    server_.sendContent(hdr);
+    char buf[512];
+    const uint8_t nSnap = DiagLog::snapshotCount();
+    for (uint8_t i = 0; i < nSnap; i++) {
+        for (size_t off = 0;;) {
+            const size_t n = DiagLog::copySnapshot(i, off, buf, sizeof(buf));
+            if (n == 0) break;
+            server_.sendContent(buf, n);
+            off += n;
+            yield();
+        }
+        server_.sendContent("\n");
+    }
+    server_.sendContent("");
+}
+
+void WebUi::handleDiagPersist() {
+    JsonDocument out;
+    const bool ok = DiagLog::persist("webui", true);
+    out["ok"] = ok;
+    if (!ok) out["err"] = DiagLog::persistAvailable() ? "busy" : "no_flash_log";
+    sendJson(ok ? 200 : 409, out);
 }
 
 void WebUi::handleStatus() {
@@ -580,6 +655,8 @@ void WebUi::handleStatus() {
         HwInfo::toJson(hw);
     }
     PanicTail::appendPrevious(doc.as<JsonObject>());
+    PanicTail::appendCurrent(doc.as<JsonObject>());
+    DiagLog::appendStatus(doc["diag"].to<JsonObject>());
     doc["ip"] = WiFi.localIP().toString();
     doc["hub_ok"] = hub_ ? hub_->lastOk() : false;
     doc["tcp_ok"] = tcp_ ? tcp_->connected() : false;
@@ -839,6 +916,12 @@ void WebUi::handleConfigPost() {
     server_.send(200, "application/json", "{\"ok\":true}");
 }
 
+/**
+ * @brief Map a vehicle id to its default HU profile id.
+ * @param vehicle   Vehicle id ("lab_debian", "bmw", "mazda_cx30", ...).
+ * @param fallback  Profile returned for unknown vehicles.
+ * @return "lab_debian", "bmw_nbt_evo" or "mazda_cx30" for known vehicles, else @p fallback.
+ */
 static String profileForVehicle(const String& vehicle, const String& fallback) {
     if (vehicle == "lab_debian") return "lab_debian";
     if (vehicle == "bmw") return "bmw_nbt_evo";

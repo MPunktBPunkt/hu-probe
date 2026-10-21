@@ -1,3 +1,8 @@
+/**
+ * @file StatusLed.cpp
+ * @brief LED mode selection (priority order) and colour/blink rendering.
+ */
+
 #include "StatusLed.h"
 #include "session/Session.h"
 #include "msc/MscGadget.h"

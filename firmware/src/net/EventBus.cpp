@@ -1,3 +1,8 @@
+/**
+ * @file EventBus.cpp
+ * @brief EventBus ring allocation, publish/peek/pop and capture-health statistics.
+ */
+
 #include "EventBus.h"
 #include "core/HuMem.h"
 

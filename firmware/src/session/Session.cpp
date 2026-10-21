@@ -1,3 +1,8 @@
+/**
+ * @file Session.cpp
+ * @brief Session lifecycle and v2 session/phase/marker event publishing.
+ */
+
 #include "Session.h"
 #include "BuildFlags.h"
 #include "BuildId.h"

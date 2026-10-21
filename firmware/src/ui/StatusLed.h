@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file StatusLed.h
+ * @brief On-board RGB status LED showing the probe state at a glance.
+ */
+
 #include <Arduino.h>
 
 class MscGadget;
@@ -9,6 +14,8 @@ class TcpStreamer;
 class EventBus;
 
 /**
+ * @brief Drives the on-board RGB LED from session, MSC, TCP and EventBus state.
+ *
  * On-board RGB (ESP32-S3 DevKit RGB_BUILTIN) — field glanceable probe state.
  *
  * Priority (highest wins):
@@ -30,18 +37,65 @@ class EventBus;
  */
 class StatusLed {
 public:
+    /** @brief Blocking drive-mode boot step shown directly by showDrivePhase(). */
     enum class DrivePhase : uint8_t { None, Check, Upload, Ota };
 
+    /** @brief Show the white boot flash (~80 ms, blocking) and enter boot mode. */
     void begin();
+
+    /**
+     * @brief Flag the WiFi portal / connecting state.
+     *
+     * When switched on, writes yellow immediately because setupWifi() blocks in autoConnect
+     * and tick() does not run meanwhile.
+     *
+     * @param on true while the WiFiManager portal or connect is running.
+     */
     void setWifiPortal(bool on);
+
+    /**
+     * @brief Flag the coex hold (USB soft-detached so WiFi can recover); shown as yellow/cyan.
+     * @param on true while the hold is active. Stored in a volatile flag.
+     */
     void setCoexHold(bool on) { coexHold_ = on; }
+
+    /**
+     * @brief Show a drive-mode boot phase colour immediately (dim white, blue, bright white; off for None).
+     * @param p Phase to display.
+     */
     void showDrivePhase(DrivePhase p);
+
+    /**
+     * @brief Flag a running drive-mode capture (purple with a white flash every 2 s).
+     * @param on true while the drive capture is running.
+     */
     void setDriveCapture(bool on) { driveCapture_ = on; }
+
+    /**
+     * @brief Flag a full trip journal (red/purple blink).
+     * @param on true if no new drive capture can start.
+     */
     void setTripsFull(bool on) { tripsFull_ = on; }
+
+    /**
+     * @brief Select the highest-priority LED mode from the current state and update the LED.
+     *
+     * A host read counts as "recent" for 1.5 s. TCP is considered down when data is pending but
+     * no tcp_tx_ok was seen for 8 s (except the first 30 s after boot) or when USB is plugged and
+     * the collector socket is not connected.
+     *
+     * @param session    Live session (currently unused).
+     * @param msc        MSC gadget (plug state, sample overflow).
+     * @param instrument Read instrumentation (read count for activity detection).
+     * @param tcp        TCP streamer (collector socket state).
+     * @param bus        Event bus (drops, pending events, last tcp_tx_ok).
+     * @note Call periodically from the main loop; blink timing depends on the call rate.
+     */
     void tick(const Session& session, const MscGadget& msc, const ReadInstrument& instrument,
               const TcpStreamer& tcp, const EventBus& bus);
 
 private:
+    /** @brief Displayed LED state, ordered by tick() priority (see class description). */
     enum class Mode : uint8_t {
         Off,
         Boot,
@@ -59,7 +113,23 @@ private:
         TripsFull
     };
 
+    /**
+     * @brief Write a raw colour to RGB_BUILTIN via neopixelWrite (no-op on boards without RGB_BUILTIN).
+     * @param r Red intensity, 0..255.
+     * @param g Green intensity, 0..255.
+     * @param b Blue intensity, 0..255.
+     */
     void write(uint8_t r, uint8_t g, uint8_t b);
+
+    /**
+     * @brief Switch to a mode and render it, toggling the blink phase.
+     *
+     * Blink period is 200 ms for Unhealthy, NeedReset and SeqPrompt, 400 ms otherwise; a mode
+     * change restarts the blink with the LED on.
+     *
+     * @param mode Mode to display.
+     * @param now  Current millis() timestamp.
+     */
     void apply(Mode mode, unsigned long now);
 
     Mode mode_ = Mode::Off;

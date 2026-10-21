@@ -1,3 +1,8 @@
+/**
+ * @file TcpStreamer.cpp
+ * @brief Collector connect/reconnect handling and loss-free batched JSONL flushing.
+ */
+
 #include "TcpStreamer.h"
 #include "EventBus.h"
 #include <WiFi.h>
