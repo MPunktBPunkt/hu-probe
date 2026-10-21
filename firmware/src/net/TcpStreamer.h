@@ -62,4 +62,6 @@ private:
     unsigned long lastConnectAttempt_ = 0;
     bool wasConnected_ = false;
     bool offlineDrain_ = false;
+    /** @brief Scratch for atomic line+"\\n" write (avoids heap String during offline drain). */
+    uint8_t txBuf_[1536];
 };

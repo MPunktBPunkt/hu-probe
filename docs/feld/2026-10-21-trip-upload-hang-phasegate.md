@@ -2,9 +2,9 @@
 
 **Gerät:** Auto-ESP `.89` (ESP32-S3 N8R2)  
 **Collector:** `192.168.178.187:9100`  
-**Firmware-Spanne:** 0.3.3 → **0.3.9**  
-**Aktuelles Bin:** `firmware/dist/hu-probe.0.3.9.esp32s3.bin`  
-**Status:** Hang-Ort lokalisiert; 0.3.9 testet Single-Owner für `TcpStreamer` (Concurrency-Hypothese).
+**Firmware-Spanne:** 0.3.3 → **0.3.15**  
+**Aktuelles Bin:** `firmware/dist/hu-probe.0.3.15.esp32s3.bin`  
+**Status:** 0.3.15 erstmals `tcp_ok=true` während #17-Replay, dann wieder WLAN-Zombie; #17/#18 noch pending.
 
 ---
 
@@ -90,6 +90,16 @@ Operator-RST erscheint oft als `reset_reason=power_on` → RTC-NOINIT weg. Ohne 
 | **0.3.7** | NVS robust (`power_on` zuerst, sticky, CRC); Phase-Zeile in jedem Diag-Snapshot |
 | **0.3.8** | NeedReset nach Intentional-Detach clearen; LED `TripUpload` (blau blink); Replay-Stall an `tcp_tx_ok`; TCP force-reconnect 12 s; kleinere Bursts/Delays; Stall 60 s / Hard 180 s; Ring max 24 |
 | **0.3.9** | **Single-Owner TcpStreamer:** `wifiCoexTask` ruft weder `tcp_.loop()` noch `superviseWifi()` während Trip-Upload/Replay (Race Mainloop↔Coex auf `WiFiClient`); `drain_abandon` ≠ Batch-Erfolg |
+| **0.3.10** | Stored pumps kooperativ (kein `delay`-Busywait); Health ohne 30 s `drainUpload`; `web_.loop()` vor/nach OC-Poll |
+| **0.3.11** | Kurzer TCP-Connect-Timeout (800 ms) + kein `client_.flush()` im Offline-Drain; kein zweites `tcp_.loop()` während OC-Upload |
+| **0.3.12** | Soft-Detach settle 500 ms vor WiFi/TX; stored zombie-STA bounce auf Mainloop; `softWifiKeepalive` (nur Assoc-lost) während Trip-Upload |
+| **0.3.13** | Stall auch bei wifi=1/tcp=1 ohne TX; skip Soft-Detach ohne Host; sanftere Batches; TX-Stack-Buf (zu klein → 0.3.15) |
+| **0.3.14** | `lastOkAge`: nie-TX ≠ uptime (kein Früh-Zombie-Bounce); Connect-Timeout 2 s |
+| **0.3.15** | TX-Buf 1536 + String-Fallback; kein `setTimeout(1)` beim Write (partial → tx_fail-Sturm) |
+
+### Self-Heal (Feld 0.3.10 / 0.3.11)
+
+Upload #17 unter 0.3.10: Web nach ~4 s unreachable, **>6 min** tot. **0.3.11** (kurze Connect-Timeouts, kein `flush`, kein doppeltes `tcp_.loop`): OTA ok, Replay #17 startet (`wifi_up` → `trip_replay`), dann wieder sofort DOWN (~4 min Monitor, 1/80 Samples ok). **Kommt nicht von selbst zurück → RST.** Ursache liegt tiefer als Pump/Flush (vermutlich Soft-Detach/`wifiOn` oder Radio-Zombie ohne Coex-Supervise).
 
 ### Concurrency-Hypothese (Audit nach 558d5d3)
 
@@ -122,25 +132,49 @@ Offen: TCP/WLAN-Pfad stirbt weiterhin früh im Replay; Web wird unreachable; Bat
 
 ---
 
-## 7. Empfohlene nächste Schritte
+## 7. Aktuelles Problem (Stand 0.3.15, Abend 21.10.)
 
-1. **TCP-Stabilität im Replay:** aggressiveres Coex / weniger TX-Burst; optional Upload nur wenn RSSI/TCP-Probe ok; Collector-Keepalive.
-2. **Watchdog für Trip-Upload:** wenn `tripUploadActive` und kein `tcp_tx_ok` + kein HTTP länger als N Sekunden → kontrolliert Batch beenden (nicht ewig blau blinken).
-3. **Trip #17/#18** erneut hochladen unter 0.3.8; bei erneutem Hang Log + `phase_gate` sichern.
-4. Fragwürdige Lab-/Laptop-Trips bei Bedarf löschen (`erase all`) — Qualität der Messdaten getrennt vom Upload-Bug.
+**Ziel:** Pending Trips #17/#18 von Auto-ESP `.89` an Collector `:9100` streamen.  
+**Ist:** Unter 0.3.15 startet Replay, `tcp_ok` wird kurz `true`, dann stirbt die WLAN-Assoziation (Web unreachable, LED dimm-blau / Coex gelb↔cyan). Self-Heal kommt oft **nicht** — RST nötig. Trips bleiben `uploaded=false`.
+
+### Was wir inzwischen wissen (Diag + Feld)
+
+| Befund | Konsequenz |
+|--------|------------|
+| Hang-Ort `trip_replay` / später `stored_oc_drain` | PhaseGate + Diag lokalisiert; kein „mystery reboot“ mehr |
+| `lastOkAge == millis()` wenn noch nie `tcp_tx_ok` | Früh-Zombie-Bounce (0.3.13) — gefixt in **0.3.14** |
+| TX-Stack-Buf 768 B + `setTimeout(1)` | `tcp=1` aber `tx_ok=0` / `tx_fail≫0` — gefixt in **0.3.15** |
+| Soft-Detach ohne Host + live STA | Race; skip ohne Host in 0.3.13 — RF-Coex ggf. wieder nötig, aber mit Settle |
+| Blocking `drainUpload(30s)` / doppeltes `tcp_.loop` | Loop-Starvation — 0.3.10/0.3.11 |
+| Lab `.88` Live-Offline (winzig) | `delivered` unter 0.3.12+ — Pfad grundsätzlich ok |
+| Collector `:9100` | erreichbar vom Dev-Host; Problem liegt am ESP-Pfad unter Replay-Last |
+
+**Kernhypothese jetzt:** Unter Stored-Replay (viele kurze JSONL-Writes) kippt der ESP32-S3-STA in einen **Zombie** (Firmware: `WL_CONNECTED`, LAN: tot). Entweder RF/Coex (USB soft noch attached), TX-Burst ohne Atmung für den WiFi-Stack, oder beides.
 
 ---
 
-## 8. Operator-Checkliste nach Hang
+## 8. Plan — wie es weitergeht
 
-1. LED notieren (Magenta / blau blink / dimm blau / gelb).  
+1. **0.3.16 — TX drosseln + Atmung:** 1 Event/Tick, festes Yield/`web_.loop`-Fenster alle N ms; Write-Timeout moderat (z. B. 3 s), nicht 1 s und nicht unbegrenzt. Ziel: `tcp_tx_ok` steigt kontinuierlich, HTTP bleibt pollbar.
+2. **Soft-Detach mit Settle, ohne Früh-Kill:** Detach nur wenn nötig (Host am Bus **oder** RSSI/TX-Probe schlecht), immer ≥500 ms Settle **vor** erstem Collector-Connect; nie Zombie-STA-Bounce bevor `tcpEverOk`.
+3. **Upload-Watchdog:** Wenn `tripUploadActive` und (kein `tcp_tx_ok` **oder** Web tot) > N s → Ring clear, Phase PASS, Batch sauber beenden (nicht ewig blau / dimm-blau).
+4. **Feld-Gate auf `.89`:** OTA 0.3.16 → POST `/api/trips/upload` → Erfolg = `#17` dann `#18` `uploaded=true`, HTTP durchgängig erreichbar. Bei Fail: `/api/diag/saved` + LED-Notiz.
+5. **Optional später:** Mutex um `WiFiClient` (falls Coex wieder parallel darf); RSSI-Gate vor Batch; Collector-Keepalive.
+
+Nicht parallel: große Refactors am TripStore-Format oder Collectorschema — erst den TX/WLAN-Pfad stabilisieren.
+
+---
+
+## 9. Operator-Checkliste nach Hang
+
+1. LED notieren (Magenta / blau blink / dimm blau / gelb↔cyan).  
 2. RST.  
-3. `GET http://192.168.178.89/api/status` → `phase_gate.last_crash`.  
-4. `GET /api/diag/saved` → Zeilen mit `PHASE`, `replay hb`, `tcp force`, `upload batch`.  
+3. `GET http://192.168.178.89/api/status` → `phase_gate` / `fw`.  
+4. `GET /api/diag/saved` → `PHASE`, `replay hb`, `tcp force`, `tx_ok`/`tx_fail`.  
 5. `GET /api/trips` → `pending`, `upload_error`.
 
 ---
 
-## 9. Fazit
+## 10. Fazit
 
-Das Problem ist **kein „zu große Datei“-Problem**, sondern ein **Coex-/TCP-Stabilitätsproblem im Stored-Trip-Replay**, verstärkt durch NeedReset-Fehlanzeige und früher durch Drain-Orphans. Mit PhaseGate ist der Hang-Ort reproduzierbar: **`trip_replay`**. 0.3.8 macht den Zustand sichtbar und teilweise überlebbar (#16 durch); der eigentliche TCP-Kill während Replay ist der nächste Fix-Schwerpunkt.
+Kein Volumen-Problem (85 KiB), sondern **Stored-Replay killt den WLAN/TCP-Pfad**. 0.3.9–0.3.15 haben Ownership, Loop-Starvation, false Stall-Timer und Write-Timeouts abgeräumt; 0.3.15 zeigt erstmals kurz `tcp_ok` während #17. **Offen:** stabiler TX ohne Zombie bis `delivered` für #17/#18 — nächster Slice **0.3.16** (Drossel + Settle + Watchdog).

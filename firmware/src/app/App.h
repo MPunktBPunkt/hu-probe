@@ -119,6 +119,14 @@ private:
     void superviseWifi();
 
     /**
+     * @brief During trip/OC upload: reconnect only if association is lost.
+     *
+     * Must not call enterCoexHold / esp_wifi_stop or touch TcpStreamer — those race the
+     * main-loop owner during stored replay.
+     */
+    void softWifiKeepalive();
+
+    /**
      * @brief Soft-detach USB + hard WiFi stop/start (lab OTG coex).
      *
      * Records a PanicTail breadcrumb, sets the coex-hold flag and resets the recovery/zombie

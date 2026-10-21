@@ -596,9 +596,11 @@ private:
     static constexpr uint32_t kStoredUploadHardMs = 180000;
     /** @brief Bounce collector socket if no tcp_tx_ok while WiFi is up. */
     static constexpr uint32_t kStoredTcpForceMs = 12000;
+    /** @brief Stored: WL_CONNECTED but no TX → STA disconnect/begin on main loop. */
+    static constexpr uint32_t kStoredZombieStaMs = 20000;
     static constexpr uint32_t kWifiReconnectEveryMs = 10000;
     /** @brief Cap ring depth during stored replay — high pending starved WiFi/HTTP. */
-    static constexpr size_t kReplayMaxPending = 24;
+    static constexpr size_t kReplayMaxPending = 8;
     static constexpr uint32_t kCheckpointEveryMs = 60000;
     static constexpr uint32_t kCheckpointForceMs = 90000;  // no idle gap for this long
     static constexpr uint32_t kCheckpointIdleMs = 500;     // no CBW for this long
@@ -707,6 +709,7 @@ private:
     size_t replayOff_ = 0;
     bool sessionStarted_ = false;
     bool healthPublished_ = false;
+    bool uploadDetachSettled_ = false;
     unsigned long uploadPhaseSinceMs_ = 0;
     uint32_t transportEpochStart_ = 0;
     uint32_t transportEpochEnd_ = 0;

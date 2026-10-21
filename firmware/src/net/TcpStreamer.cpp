@@ -6,6 +6,7 @@
 #include "TcpStreamer.h"
 #include "EventBus.h"
 #include <WiFi.h>
+#include <cstring>
 
 void TcpStreamer::begin(ConfigStore* config) {
     config_ = config;
@@ -48,11 +49,15 @@ void TcpStreamer::tryConnect() {
     lastConnectAttempt_ = now;
     Serial.printf("[TCP] connect %s:%d\n",
                   config_->collectorHost.c_str(), config_->collectorPort);
-    if (client_.connect(config_->collectorHost.c_str(), config_->collectorPort)) {
+    // Default WiFiClient connect timeout is multi-second and freezes App::loop (HTTP/LED).
+    // Offline drain / stored replay: keep connect short so web_.loop keeps breathing.
+    if (client_.connect(config_->collectorHost.c_str(), config_->collectorPort, 2000)) {
         Serial.println("[TCP] connected");
         EventBus::instance().noteTcpConnect();
         wasConnected_ = true;
-        flushPending();
+        // Do not flushPending here when offlineDrain_ — caller pumps slices; a full flush
+        // after connect could block tens of seconds on a half-dead link.
+        if (!offlineDrain_) flushPending();
     }
 }
 
@@ -64,7 +69,8 @@ void TcpStreamer::flushPending() {
     // partially succeeds used to retry the whole line → collector "Extra data" / seq gaps.
     String line;
     int n = 0;
-    const int batch = offlineDrain_ ? 8 : 32;
+    // Stored/offline: tiny batches — .89 died after ~478 lines when blasting 8/tick.
+    const int batch = offlineDrain_ ? 2 : 32;
     EventBus& bus = EventBus::instance();
     while (n < batch) {
         if (!client_.connected()) {
@@ -74,12 +80,22 @@ void TcpStreamer::flushPending() {
         }
         if (!bus.peek(line)) return;
         const size_t need = line.length() + 1;  // + '\n'
-        // Build contiguous packet so WiFiClient cannot interleave mid-record.
-        String packet;
-        packet.reserve(need);
-        packet += line;
-        packet += '\n';
-        size_t w = client_.write(reinterpret_cast<const uint8_t*>(packet.c_str()), need);
+        // Stack packet avoids a second heap String under low-heap stored replay.
+        // Do not clamp setTimeout(1) here — short write timeouts returned partial `w`
+        // on a healthy socket (.89: tcp=1, tx_ok=0, tx_fail=81) and stalled replay.
+        size_t w = 0;
+        if (need <= sizeof(txBuf_)) {
+            memcpy(txBuf_, line.c_str(), line.length());
+            txBuf_[line.length()] = '\n';
+            w = client_.write(reinterpret_cast<const uint8_t*>(txBuf_), need);
+        } else {
+            // Rare oversized line: heap packet (status/health can exceed stack buf).
+            String packet;
+            packet.reserve(need);
+            packet += line;
+            packet += '\n';
+            w = client_.write(reinterpret_cast<const uint8_t*>(packet.c_str()), need);
+        }
         if (w != need) {
             bus.noteTcpTxFail();
             // Partial bytes may already be at the collector — resync with a clean reconnect.
@@ -88,9 +104,6 @@ void TcpStreamer::flushPending() {
             bus.noteTcpDisconnect();
             return;  // leave line at head for retry after reconnect
         }
-        if (offlineDrain_) {
-            client_.flush();
-        }
         String discarded;
         if (!bus.pop(discarded)) {
             return;
@@ -98,7 +111,7 @@ void TcpStreamer::flushPending() {
         bus.noteTcpTxOk();
         n++;
         if (offlineDrain_) {
-            delay(2);
+            delay(5);
             yield();
         } else if ((n & 3) == 0) {
             yield();

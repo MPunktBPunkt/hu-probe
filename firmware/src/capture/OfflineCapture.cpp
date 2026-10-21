@@ -310,12 +310,17 @@ void OfflineCapture::reconnectWifiThrottled() {
 
 void OfflineCapture::pumpTcp(uint32_t maxMs) {
     if (!tcp_) return;
+    // Stored trip upload: never block App::loop — Web/LED must keep ticking.
+    if (replayingStored_) {
+        tcp_->loop();
+        yield();
+        return;
+    }
     unsigned long t0 = millis();
     while (millis() - t0 < maxMs) {
         tcp_->loop();
         yield();
-        // Short sleeps — long delay() starved the WebServer during stored replay.
-        delay(replayingStored_ ? 2 : 10);
+        delay(10);
         if (EventBus::instance().pending() == 0 && tcp_->connected()) break;
     }
 }
@@ -323,11 +328,16 @@ void OfflineCapture::pumpTcp(uint32_t maxMs) {
 void OfflineCapture::pumpTcpWhilePending(uint32_t maxMs, size_t keepBelow) {
     if (!tcp_) return;
     if (EventBus::instance().pending() < keepBelow) return;
+    if (replayingStored_) {
+        tcp_->loop();
+        yield();
+        return;
+    }
     unsigned long t0 = millis();
     while (millis() - t0 < maxMs) {
         tcp_->loop();
         yield();
-        delay(replayingStored_ ? 2 : 5);
+        delay(5);
         if (EventBus::instance().pending() < keepBelow && tcp_->connected()) break;
         if (EventBus::instance().pending() == 0) break;
     }
@@ -718,13 +728,8 @@ bool OfflineCapture::replayStored(Session* session, MscGadget* msc, ReadInstrume
     mediaHidden_ = false;
     fallbackDetached_ = false;
     transportEpochStart_ = transportEpochEnd_ = 0;
-    // Soft-detach before WiFi TX so OTG cannot starve the radio (BMW + lab).
-    if (msc_ && msc_->usbSoftAttached()) {
-        msc_->softDetach(0);
-        fallbackDetached_ = true;
-        MscBotTap::clearNeedReset();
-        DiagLog::printf("[MSC] trip-upload detach trip=#%u\n", (unsigned)tripId_);
-    }
+    // Soft-detach is done in UploadPhase::Wifi (with settle) — not here — so we do not
+    // race tud_disconnect against an already-live STA used by the WebUI.
     EmitOrigin::set("post_finalize", true);
     state_ = State::Uploading;
     uploadPhase_ = UploadPhase::Wifi;
@@ -735,6 +740,7 @@ bool OfflineCapture::replayStored(Session* session, MscGadget* msc, ReadInstrume
     sessionStarted_ = false;
     healthPublished_ = false;
     lastWifiReconnectMs_ = 0;
+    uploadDetachSettled_ = false;
     uploadStatus_ = "stored_upload";
     DiagLog::printf("[OFFLINE] stored trip #%u: %u B, %u records, end=%s\n",
                     (unsigned)tripId_, (unsigned)used_, (unsigned)recordCount_,
@@ -1053,6 +1059,12 @@ bool OfflineCapture::replayOneRec() {
 
 bool OfflineCapture::drainUpload(uint32_t maxMs) {
     if (!tcp_) return EventBus::instance().pending() == 0;
+    // Stored: one flush slice per poll — Health used to block 30s here and freeze Web/LED.
+    if (replayingStored_) {
+        tcp_->loop();
+        yield();
+        return EventBus::instance().pending() == 0 && tcp_->connected();
+    }
     unsigned long t0 = millis();
     while (millis() - t0 < maxMs) {
         tcp_->loop();
@@ -1071,10 +1083,18 @@ void OfflineCapture::ensureLabDetached(const char* why) {
     if (!msc_) return;
     // Lab always; stored trip upload also (BMW coex during multi-minute replay).
     if (!isLabDebian() && !replayingStored_) return;
+    // Home WebUI upload: WiFi already up, no USB host — soft-detach races the live STA
+    // (.89: TX died ~10s into #17 after batch+upload detach with plugged=0).
+    if (replayingStored_ && WiFi.status() == WL_CONNECTED && msc_ && !msc_->plugged()) {
+        DiagLog::printf("[MSC] skip detach (%s) wifi-up unplugged soft=%d\n", why ? why : "?",
+                        msc_->usbSoftAttached() ? 1 : 0);
+        return;
+    }
     // Cancel softCycle auto-reattach so upload stays detached.
     if (msc_->usbSoftAttached()) {
         msc_->softDetach(0);
         fallbackDetached_ = true;
+        MscBotTap::clearNeedReset();
     }
     DiagLog::printf("[MSC] upload detach (%s) soft=%d stored=%d lab=%d\n", why ? why : "?",
                     msc_->usbSoftAttached() ? 1 : 0, replayingStored_ ? 1 : 0,
@@ -1211,6 +1231,7 @@ void OfflineCapture::beginFinalize(MscGadget* msc) {
     sessionStarted_ = false;
     healthPublished_ = false;
     lastWifiReconnectMs_ = 0;
+    uploadDetachSettled_ = false;
     uploadStatus_ = "wifi_connecting";
     PanicTail::breadcrumb(PanicTail::WifiUpload, transportEpochEnd_);
 }
@@ -1219,8 +1240,16 @@ void OfflineCapture::pollUpload() {
     if (state_ != State::Uploading) return;
     switch (uploadPhase_) {
         case UploadPhase::Wifi: {
-            // Lab: detach USB before WiFi comes back — upload must not share the chip with OTG.
-            ensureLabDetached("before-wifiOn");
+            // Soft-detach then immediate STA/TX raced RF on .89 (Web died ~3s into trip_replay).
+            // Detach once, settle ≥500ms, then bring WiFi / reuse existing association.
+            if (!uploadDetachSettled_) {
+                ensureLabDetached("before-wifiOn");
+                uploadDetachSettled_ = true;
+                uploadPhaseSinceMs_ = millis();
+                uploadStatus_ = "usb_settle";
+                break;
+            }
+            if (millis() - uploadPhaseSinceMs_ < 500) break;
             // One blocking wifiOn (≤25s) — only once per capture; App stays responsive after.
             if (WiFi.status() == WL_CONNECTED || wifiOn()) {
                 if (tcp_) tcp_->setOfflineDrain(true);
@@ -1284,20 +1313,50 @@ void OfflineCapture::pollUpload() {
             EventBus& bus = EventBus::instance();
             const unsigned long now = millis();
             const unsigned long lastOk = bus.lastTcpTxOkMs();
-            const unsigned long lastOkAge = lastOk ? (now - lastOk) : now;
+            // lastOk==0 means "never TX'd" — must NOT look like age=uptime (0.3.13 killed a
+            // fresh tcp=1 socket at 20s via zombie-STA before the first write landed).
+            const bool tcpEverOk = (lastOk != 0);
+            const unsigned long lastOkAge = tcpEverOk ? (now - lastOk) : 0;
             const bool wifiUp = WiFi.status() == WL_CONNECTED;
             const bool tcpUp = tcp_ && tcp_->connected();
             const bool linkUp = wifiUp && tcpUp;
+            const unsigned long sinceReplay = now - uploadPhaseSinceMs_;
 
-            if (replayingStored_ && wifiUp && (!tcpUp || lastOkAge >= kStoredTcpForceMs)) {
+            if (replayingStored_ && wifiUp) {
                 static unsigned long lastForceMs = 0;
-                if (now - lastForceMs >= kStoredTcpForceMs) {
+                const bool stallAfterOk =
+                    tcpEverOk && (!tcpUp || lastOkAge >= kStoredTcpForceMs);
+                // No TX yet: only bounce the socket if connect itself is stuck (not while
+                // connected and still trying the first flush).
+                const bool stallBeforeOk =
+                    !tcpEverOk && !tcpUp && sinceReplay >= kStoredTcpForceMs;
+                if ((stallAfterOk || stallBeforeOk) &&
+                    now - lastForceMs >= kStoredTcpForceMs) {
                     lastForceMs = now;
                     DiagLog::printf(
                         "[TRIP] replay tcp force-reconnect trip=#%u pending=%u lastOkAge=%lums "
-                        "tcp=%d\n",
-                        (unsigned)tripId_, (unsigned)bus.pending(), lastOkAge, tcpUp ? 1 : 0);
+                        "tcp=%d ever=%d since=%lums\n",
+                        (unsigned)tripId_, (unsigned)bus.pending(), lastOkAge, tcpUp ? 1 : 0,
+                        tcpEverOk ? 1 : 0, sinceReplay);
                     tcp_->forceReconnect();
+                }
+            }
+
+            // Zombie STA only after real TX existed then died — never on cold start.
+            if (replayingStored_ && wifiUp && tcpEverOk && lastOkAge >= kStoredZombieStaMs &&
+                bus.pending() > 0) {
+                static unsigned long lastZombieMs = 0;
+                if (now - lastZombieMs >= kStoredZombieStaMs) {
+                    lastZombieMs = now;
+                    DiagLog::printf(
+                        "[TRIP] replay zombie-STA bounce trip=#%u pending=%u lastOkAge=%lums\n",
+                        (unsigned)tripId_, (unsigned)bus.pending(), lastOkAge);
+                    if (tcp_) tcp_->forceReconnect();
+                    WiFi.setAutoReconnect(false);
+                    WiFi.disconnect(false, false);
+                    delay(30);
+                    WiFi.begin();
+                    lastWifiReconnectMs_ = now;
                 }
             }
 
@@ -1313,9 +1372,18 @@ void OfflineCapture::pollUpload() {
                 }
                 break;
             }
+            // Advance stall clock only when collector actually accepted bytes.
+            if (tcpEverOk && lastOkAge < 2000UL) uploadPhaseSinceMs_ = now;
+            // No progress (never TX, or TX died): leave Replay after stallMs.
+            if (sinceReplay > stallMs) {
+                uploadStatus_ = "replay_stalled";
+                uploadPhase_ = UploadPhase::Health;
+                uploadPhaseSinceMs_ = now;
+                break;
+            }
             if (bus.pending() < kReplayMaxPending) {
                 // Fewer records/tick → WiFi + WebServer keep breathing room.
-                const int burst = replayingStored_ ? 4 : 10;
+                const int burst = replayingStored_ ? 2 : 10;
                 for (int i = 0; i < burst; i++) {
                     if (!replayOneRec()) {
                         uploadPhase_ = UploadPhase::Health;
@@ -1323,9 +1391,7 @@ void OfflineCapture::pollUpload() {
                     }
                 }
             }
-            // Advance stall clock only when collector actually accepted bytes.
-            if (lastOk && lastOkAge < 2000UL) uploadPhaseSinceMs_ = now;
-            pumpTcpWhilePending(replayingStored_ ? 250 : 200, replayingStored_ ? 8 : 16);
+            pumpTcpWhilePending(replayingStored_ ? 250 : 200, replayingStored_ ? 4 : 16);
             yield();
             if (replayingStored_) {
                 static unsigned long lastHbMs = 0;
@@ -1347,7 +1413,13 @@ void OfflineCapture::pollUpload() {
                 uploadStatus_ = "draining";
                 publishOfflineHealth(true);
                 session_->stop();
-                drainUpload(replayingStored_ ? 30000 : 8000);
+                // Live offline: one blocking drain. Stored: Drain phase does cooperative slices
+                // (a 30s drainUpload here froze HTTP/LED for the whole wait).
+                if (!replayingStored_) drainUpload(8000);
+                else if (tcp_) {
+                    tcp_->loop();
+                    yield();
+                }
             }
             uploadPhase_ = UploadPhase::Drain;
             uploadPhaseSinceMs_ = millis();
@@ -1370,7 +1442,7 @@ void OfflineCapture::pollUpload() {
                     break;
                 }
             } else {
-                drainUpload(replayingStored_ ? 1500 : 400);
+                drainUpload(replayingStored_ ? 0 : 400);  // stored: single slice (maxMs ignored)
             }
             EventBus& bus = EventBus::instance();
             const bool empty = bus.pending() == 0 && tcp_ && tcp_->connected();

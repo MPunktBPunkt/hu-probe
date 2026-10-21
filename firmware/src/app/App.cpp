@@ -241,12 +241,25 @@ void App::wifiCoexTask(void* arg) {
         const bool ocBlocks = OfflineCapture::instance().blocksWifiSupervise();
         if (!ocBlocks && !DriveMode::instance().ownsWifi() && !tripUp) {
             self->superviseWifi();
+        } else if (tripUp || ocBlocks) {
+            // Assoc-lost only — never coex-hold / TcpStreamer from this task during upload.
+            self->softWifiKeepalive();
         }
         // Do NOT call tcp_.loop() here. Main App::loop() (+ OfflineCapture pumps during
         // replay) is the sole TcpStreamer owner. Coex soft-detach frees the loop from USB
         // bulk starvation, so a second flusher is unnecessary and unsafe.
         vTaskDelay(pdMS_TO_TICKS(500));
     }
+}
+
+void App::softWifiKeepalive() {
+    if (WiFi.status() == WL_CONNECTED) return;
+    unsigned long now = millis();
+    if (now - lastWifiReconnectMs_ < WIFI_RECONNECT_EVERY_MS) return;
+    lastWifiReconnectMs_ = now;
+    DiagLog::printf("[WIFI] soft keepalive (upload) heap=%u\n", (unsigned)ESP.getFreeHeap());
+    WiFi.setAutoReconnect(false);
+    WiFi.reconnect();
 }
 
 void App::emitStatus() {
@@ -525,11 +538,15 @@ void App::loop() {
     // WiFi/coex soft-detach runs in wifiCoexTask (loop starves under USB Bulk).
     // Drain Capture-tUs BOT/read before loop-now status/health (keeps t_us non-decreasing).
     msc_.loop();
+    // Serve HTTP before/after upload pumps so trip-replay cannot starve the Web UI.
+    web_.loop();
     OfflineCapture::instance().poll(&msc_);
     DriveMode::instance().poll();
     SequenceRunner::instance().poll();
     instrument_.tick();
-    tcp_.loop();
+    // During OfflineCapture upload, OC owns TcpStreamer pumps — a second loop() here would
+    // stack blocking connect/write on top of replay and freeze HTTP again.
+    if (!OfflineCapture::instance().active()) tcp_.loop();
     web_.loop();
 
     const bool usbHost = msc_.plugged();

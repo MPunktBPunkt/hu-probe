@@ -677,10 +677,14 @@ void WebUi::pumpTripUpload() {
 
     if (!tripUploadStarted_) {
         tripUploadStarted_ = true;
-        if (msc_ && msc_->usbSoftAttached()) {
+        // Only detach when a USB host is on the bus. Idle soft-attach + live WiFi
+        // (typical home upload) — detach raced STA and killed TX mid-replay on .89.
+        if (msc_ && msc_->usbSoftAttached() && msc_->plugged()) {
             msc_->softDetach(0);
             MscBotTap::clearNeedReset();
-            DiagLog::printf("[MSC] trip-upload batch detach\n");
+            DiagLog::printf("[MSC] trip-upload batch detach (host present)\n");
+        } else if (msc_ && msc_->usbSoftAttached()) {
+            DiagLog::printf("[MSC] trip-upload skip batch detach (no host)\n");
         }
         DiagLog::persist("trip_upload", true);
     }
