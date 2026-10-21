@@ -1,3 +1,8 @@
+/**
+ * @file TripStore.cpp
+ * @brief Implementation of the drive-mode trip journal on the raw "trips" flash partition.
+ */
+
 #include "capture/TripStore.h"
 #include "core/DiagLog.h"
 #include "core/PanicTail.h"
@@ -6,6 +11,11 @@
 #include <esp_partition.h>
 
 namespace {
+/**
+ * @brief Cast the opaque partition handle stored in the header back to esp_partition_t.
+ * @param p  Value of TripStore::part_.
+ * @return Typed partition pointer (may be nullptr).
+ */
 const esp_partition_t* P(const void* p) { return static_cast<const esp_partition_t*>(p); }
 }  // namespace
 

@@ -1,3 +1,7 @@
+/**
+ * @file ReadStall.cpp
+ * @brief ReadStall implementation: per-CBW hold decision, Done ring and stall markers.
+ */
 #include "msc/ReadStall.h"
 #include "capture/OfflineCapture.h"
 #include "core/ProbeClock.h"
@@ -8,9 +12,17 @@
 
 namespace {
 
+/** @brief Spinlock guarding the USB-task state shared between hold() and the loop task. */
 portMUX_TYPE g_stallMux = portMUX_INITIALIZER_UNLOCKED;
+
+/** @brief Maximum number of per-command markers emitted per configuration. */
 constexpr uint16_t kMaxMarkers = 64;
 
+/**
+ * @brief Return the name of a single region bit.
+ * @param r  ReadStall::kMeta, kHead or kBody.
+ * @return "meta", "head", "body", or "?" for anything else.
+ */
 const char* regionName(uint8_t r) {
     switch (r) {
         case ReadStall::kMeta: return "meta";
@@ -20,6 +32,13 @@ const char* regionName(uint8_t r) {
     }
 }
 
+/**
+ * @brief Record a marker in the offline capture (if capturing) or the active session.
+ * @param s     Session; may be nullptr.
+ * @param name  Marker name.
+ * @param note  Marker note; nullptr = empty (ignored for offline capture).
+ * @param tUs   Capture time in µs (ProbeClock); 0 = now.
+ */
 void mark(Session* s, const char* name, const char* note, int64_t tUs) {
     OfflineCapture& oc = OfflineCapture::instance();
     if (oc.capturing()) {

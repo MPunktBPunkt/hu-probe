@@ -1,12 +1,17 @@
 #pragma once
 
+/**
+ * @file Mp3Gen.h
+ * @brief Header-only, random-access generator for silent MP3 files (ID3v2/Xing/ID3v1).
+ */
+
 #include <Arduino.h>
 #include <cstring>
 #include "media/CoverJpegs.h"
 #include "media/MediaLayout.h"
 
 /**
- * Random-access MP3 silence generator for SynthFat (0.2.31).
+ * @brief Random-access MP3 silence generator for SynthFat (0.2.31).
  *
  * File = [ID3v2 (TIT2/TPE1/TALB in fixed 30-byte slots + optional TRCK + optional APIC)]
  *        [optional Xing/Info frame]
@@ -26,6 +31,14 @@ static constexpr uint8_t kStampOff = 36;  // 4 header + 32 side info (joint ster
 static constexpr uint8_t kStampLen = 12;
 static constexpr uint32_t kId3v1Len = 128;
 
+/**
+ * @brief Map a bitrate to the nearest MPEG-1 Layer III bitrate index.
+ *
+ * On a tie the lower bitrate wins.
+ *
+ * @param kbps  Requested bitrate in kbit/s.
+ * @return Index 1..14 into kKbps (32..320 kbit/s).
+ */
 inline uint8_t kbpsIndex(uint16_t kbps) {
     uint8_t best = 3;
     uint16_t bestDiff = 0xFFFF;
@@ -39,20 +52,33 @@ inline uint8_t kbpsIndex(uint16_t kbps) {
     return best;
 }
 
+/**
+ * @brief Return the length of one unpadded MPEG-1 Layer III frame at 44.1 kHz.
+ *
+ * @param idx  Bitrate index 0..14 into kKbps (0 yields 0).
+ * @return Frame length in bytes (144000 * kbps / 44100, truncated).
+ */
 inline uint16_t frameLen(uint8_t idx) { return (uint16_t)(144000UL * kKbps[idx] / kSampleRate); }
 
+/**
+ * @brief Clamp a computed bitrate index to the valid range.
+ *
+ * @param v  Bitrate index, may be out of range.
+ * @return v limited to 1..14.
+ */
 inline uint8_t clampIdx(int v) { return (uint8_t)(v < 1 ? 1 : (v > 14 ? 14 : v)); }
 
+/** @brief Byte layout of one synthesized MP3 file; all offsets are file-relative bytes. */
 struct Layout {
-    uint32_t id3Fixed = 0;   // ID3v2 bytes before APIC picture data
-    uint32_t id3Total = 0;   // whole ID3v2 tag
-    uint32_t xingLen = 0;
-    uint32_t audioStart = 0;
-    uint32_t audioLen = 0;
-    uint32_t tailStart = 0;  // ID3v1 offset (== size if none)
-    uint8_t pat[4] = {3, 3, 3, 3};
-    uint8_t patN = 1;
-    uint32_t patBytes = 0;
+    uint32_t id3Fixed = 0;   ///< ID3v2 bytes before APIC picture data
+    uint32_t id3Total = 0;   ///< whole ID3v2 tag
+    uint32_t xingLen = 0;    ///< Xing/Info frame length, 0 if none
+    uint32_t audioStart = 0; ///< offset of the first audio frame
+    uint32_t audioLen = 0;   ///< total audio frame bytes
+    uint32_t tailStart = 0;  ///< ID3v1 offset (== size if none)
+    uint8_t pat[4] = {3, 3, 3, 3};  ///< bitrate indices of the repeating frame pattern
+    uint8_t patN = 1;        ///< pattern length: 1 (CBR) or 4 (VBR)
+    uint32_t patBytes = 0;   ///< bytes of one full pattern
 };
 
 static constexpr uint32_t kTextFrameLen = 10u + 1u + MediaLayout::kTagLen;
@@ -61,13 +87,22 @@ static constexpr uint32_t kTrckFrameLen = 10u + 1u + kTrckSlot;
 static constexpr uint32_t kApicHeadLen = 24;
 static constexpr uint32_t kId3FixedMax = 10u + 3u * kTextFrameLen + kTrckFrameLen + kApicHeadLen;
 
+/** @brief Resolved ID3 texts (tag slot or default), each at most MediaLayout::kTagLen chars. */
 struct Texts {
     char title[MediaLayout::kTagLen + 1];
     char artist[MediaLayout::kTagLen + 1];
     char album[MediaLayout::kTagLen + 1];
 };
 
-/** Tag slot text, or the default ("HP <name> v<seed>", "hu-probe", "HUPROBE"). */
+/**
+ * @brief Resolve the ID3 texts of a node.
+ *
+ * Tag slot text, or the default ("HP <name> v<seed>", "hu-probe", "HUPROBE").
+ *
+ * @param n       Node providing name and seed for the default title.
+ * @param t       Tag slot of the node; nullptr or empty fields select the defaults.
+ * @param[out] x  Resolved, NUL-terminated texts.
+ */
 inline void resolveTexts(const MediaLayout::Node& n, const MediaLayout::Tags* t, Texts& x) {
     if (t && t->title[0]) snprintf(x.title, sizeof(x.title), "%s", t->title);
     else snprintf(x.title, sizeof(x.title), "HP %s v%u", n.name, (unsigned)n.seed);
@@ -75,6 +110,15 @@ inline void resolveTexts(const MediaLayout::Node& n, const MediaLayout::Tags* t,
     snprintf(x.album, sizeof(x.album), "%s", (t && t->album[0]) ? t->album : "HUPROBE");
 }
 
+/**
+ * @brief Compute the frame bitrate pattern of a node.
+ *
+ * CBR: one frame at the base bitrate (n.kbps, default 48 kbit/s). kVbr: fixed 4-frame
+ * pattern base, base-2, base+1, base-1 (indices clamped to 1..14).
+ *
+ * @param n          Node providing kbps and flags.
+ * @param[in,out] L  Layout whose pat, patN and patBytes are set.
+ */
 inline void pattern(const MediaLayout::Node& n, Layout& L) {
     const uint8_t b = kbpsIndex(n.kbps ? n.kbps : 48);
     if (n.flags & MediaLayout::kVbr) {
@@ -91,6 +135,13 @@ inline void pattern(const MediaLayout::Node& n, Layout& L) {
     for (uint8_t i = 0; i < L.patN; i++) L.patBytes += frameLen(L.pat[i]);
 }
 
+/**
+ * @brief Return the audio byte count of a number of frames following the pattern.
+ *
+ * @param L       Layout with a valid pattern (see pattern()).
+ * @param frames  Number of audio frames.
+ * @return Total bytes of the first `frames` frames.
+ */
 inline uint32_t audioBytesForFrames(const Layout& L, uint32_t frames) {
     uint32_t full = frames / L.patN;
     uint32_t bytes = full * L.patBytes;
@@ -98,6 +149,13 @@ inline uint32_t audioBytesForFrames(const Layout& L, uint32_t frames) {
     return bytes;
 }
 
+/**
+ * @brief Return how many complete frames fit into an audio byte budget.
+ *
+ * @param L      Layout with a valid pattern (patBytes > 0).
+ * @param bytes  Audio byte budget.
+ * @return Number of whole frames that fit (partial last frame is dropped).
+ */
 inline uint32_t framesForAudioBytes(const Layout& L, uint32_t bytes) {
     uint32_t frames = (bytes / L.patBytes) * L.patN;
     uint32_t rem = bytes % L.patBytes;
@@ -109,7 +167,15 @@ inline uint32_t framesForAudioBytes(const Layout& L, uint32_t bytes) {
     return frames;
 }
 
-/** Header-side layout (independent of audio length). */
+/**
+ * @brief Compute the header-side layout (independent of audio length).
+ *
+ * Sets the pattern, ID3v2 sizes (0 with kNoId3v2; TRCK/APIC frames only if track/apicBytes
+ * are set), the Xing/Info frame length (one base frame with kXing or kVbr) and audioStart.
+ *
+ * @param n          Node providing flags, track, apicBytes and kbps.
+ * @param[in,out] L  Layout to fill; audioLen and tailStart are not touched.
+ */
 inline void headLayout(const MediaLayout::Node& n, Layout& L) {
     pattern(n, L);
     if (n.flags & MediaLayout::kNoId3v2) {
@@ -123,11 +189,25 @@ inline void headLayout(const MediaLayout::Node& n, Layout& L) {
     L.audioStart = L.id3Total + L.xingLen;
 }
 
+/**
+ * @brief Return the length of the trailing ID3v1 tag.
+ *
+ * @param n  Node providing flags.
+ * @return 128 bytes if kId3v1 is set, else 0.
+ */
 inline uint32_t tailLen(const MediaLayout::Node& n) {
     return (n.flags & MediaLayout::kId3v1) ? kId3v1Len : 0;
 }
 
-/** Fill n.frames / n.size / n.durMs from either durMs (preferred) or size budget. */
+/**
+ * @brief Fill n.frames / n.size / n.durMs from either durMs (preferred) or size budget.
+ *
+ * Duration is rounded up to whole frames (1152 samples at 44.1 kHz); a size budget is
+ * rounded down to whole frames. At least one frame is generated. size and durMs are then
+ * recomputed from the frame count.
+ *
+ * @param[in,out] n  Node with durMs or size, flags, kbps, track and apicBytes set.
+ */
 inline void finalizeNode(MediaLayout::Node& n) {
     Layout L;
     headLayout(n, L);
@@ -144,12 +224,24 @@ inline void finalizeNode(MediaLayout::Node& n) {
     n.durMs = (uint32_t)((uint64_t)n.frames * kSamplesPerFrame * 1000 / kSampleRate);
 }
 
+/**
+ * @brief Compute the complete file layout including audio length and ID3v1 offset.
+ *
+ * @param n          Finalized node (frames set, see finalizeNode()).
+ * @param[in,out] L  Layout to fill.
+ */
 inline void fullLayout(const MediaLayout::Node& n, Layout& L) {
     headLayout(n, L);
     L.audioLen = audioBytesForFrames(L, n.frames);
     L.tailStart = L.audioStart + L.audioLen;
 }
 
+/**
+ * @brief Write a 32-bit value big-endian.
+ *
+ * @param[out] p  Destination, 4 bytes.
+ * @param v       Value to write.
+ */
 inline void be32(uint8_t* p, uint32_t v) {
     p[0] = (uint8_t)(v >> 24);
     p[1] = (uint8_t)(v >> 16);
@@ -157,6 +249,14 @@ inline void be32(uint8_t* p, uint32_t v) {
     p[3] = (uint8_t)v;
 }
 
+/**
+ * @brief Write an ID3v2.3 text frame with a fixed 30-byte, NUL-padded ISO-8859-1 slot.
+ *
+ * @param[out] p  Destination, kTextFrameLen bytes.
+ * @param id      4-char frame id, e.g. "TIT2".
+ * @param text    Text; only the first MediaLayout::kTagLen chars are used.
+ * @return Pointer just past the written frame.
+ */
 inline uint8_t* textFrame(uint8_t* p, const char* id, const char* text) {
     memcpy(p, id, 4);
     be32(p + 4, 1u + MediaLayout::kTagLen);
@@ -167,7 +267,17 @@ inline uint8_t* textFrame(uint8_t* p, const char* id, const char* text) {
     return p + kTextFrameLen;
 }
 
-/** ID3v2.3 header + text frames + APIC frame header; b must hold kId3FixedMax bytes. */
+/**
+ * @brief Build the fixed ID3v2 part: ID3v2.3 header + text frames + APIC frame header.
+ *
+ * Writes TIT2/TPE1/TALB, TRCK if n.track is set, and the APIC frame header (image/jpeg,
+ * front cover) if n.apicBytes is set. The picture data itself comes from apicByte().
+ *
+ * @param n       Node providing track, apicBytes and default texts.
+ * @param t       Tag slot of the node, may be nullptr.
+ * @param L       Layout from headLayout()/fullLayout() (id3Total for the synchsafe size).
+ * @param[out] b  Destination; b must hold kId3FixedMax bytes, L.id3Fixed bytes are written.
+ */
 inline void buildId3Fixed(const MediaLayout::Node& n, const MediaLayout::Tags* t, const Layout& L,
                           uint8_t* b) {
     const uint32_t body = L.id3Total - 10;
@@ -206,7 +316,13 @@ inline void buildId3Fixed(const MediaLayout::Node& n, const MediaLayout::Tags* t
     }
 }
 
-/** Picture byte i of the APIC slot: real JPEG then zero padding, or SOI/EOI placeholder. */
+/**
+ * @brief Return picture byte i of the APIC slot: real JPEG then zero padding, or SOI/EOI placeholder.
+ *
+ * @param n  Node providing cover (1..CoverJpegs::kCount = real JPEG) and apicBytes.
+ * @param i  Byte index within the picture slot (0..apicBytes-1).
+ * @return Picture byte at index i.
+ */
 inline uint8_t apicByte(const MediaLayout::Node& n, uint32_t i) {
     if (const CoverJpegs::Cover* c = CoverJpegs::get(n.cover)) {
         return i < c->len ? c->data[i] : 0;
@@ -221,7 +337,15 @@ inline uint8_t apicByte(const MediaLayout::Node& n, uint32_t i) {
 
 static constexpr uint8_t kXingHeadLen = kStampOff + 16;
 
-/** First kXingHeadLen bytes of the Xing/Info frame; the rest of the frame is zero. */
+/**
+ * @brief Build the first kXingHeadLen bytes of the Xing/Info frame; the rest of the frame is zero.
+ *
+ * Tag is "Xing" for kVbr, else "Info"; carries frame count and file size.
+ *
+ * @param n       Finalized node (frames, size, flags).
+ * @param L       Layout providing the base bitrate index pat[0].
+ * @param[out] f  Destination, kXingHeadLen bytes.
+ */
 inline void buildXingHead(const MediaLayout::Node& n, const Layout& L, uint8_t* f) {
     memset(f, 0, kXingHeadLen);
     f[0] = 0xFF;
@@ -234,6 +358,15 @@ inline void buildXingHead(const MediaLayout::Node& n, const Layout& L, uint8_t* 
     be32(f + kStampOff + 12, n.size);
 }
 
+/**
+ * @brief Build the 128-byte ID3v1 tag (ID3v1.1 with track byte if n.track is set).
+ *
+ * Year "2026", comment "seed <seed>", genre 12 (Other).
+ *
+ * @param n       Node providing seed, track and default texts.
+ * @param tags    Tag slot of the node, may be nullptr.
+ * @param[out] t  Destination, kId3v1Len bytes.
+ */
 inline void buildId3v1(const MediaLayout::Node& n, const MediaLayout::Tags* tags, uint8_t* t) {
     memset(t, 0, kId3v1Len);
     Texts x;
@@ -254,7 +387,19 @@ inline void buildId3v1(const MediaLayout::Node& n, const MediaLayout::Tags* tags
     t[127] = 12;  // Other
 }
 
-/** Write audio frames for audio-relative range [a, a+len) into out (pre-zeroed). */
+/**
+ * @brief Write audio frames for audio-relative range [a, a+len) into out (pre-zeroed).
+ *
+ * Only the 4-byte frame headers and, with kStamp, the 12-byte stamp at kStampOff are
+ * written; all other bytes stay zero (silence).
+ *
+ * @param n           Node providing flags and seed.
+ * @param nodeIdx     Node index written into the stamp.
+ * @param L           Full layout of the node.
+ * @param a           Start offset relative to L.audioStart.
+ * @param[in,out] out Pre-zeroed destination buffer.
+ * @param len         Number of bytes to produce.
+ */
 inline void fillAudio(const MediaLayout::Node& n, uint8_t nodeIdx, const Layout& L, uint32_t a,
                       uint8_t* out, uint32_t len) {
     const bool stamp = (n.flags & MediaLayout::kStamp) != 0;
@@ -288,7 +433,19 @@ inline void fillAudio(const MediaLayout::Node& n, uint8_t nodeIdx, const Layout&
     }
 }
 
-/** Fill out[0..len) with file bytes at offset off (zero past EOF). */
+/**
+ * @brief Fill out[0..len) with file bytes at offset off (zero past EOF).
+ *
+ * Random access in O(1) per section: ID3v2 fixed part, APIC picture, Xing/Info frame,
+ * audio frames, ID3v1 tail.
+ *
+ * @param n         Finalized node.
+ * @param tags      Tag slot of the node, may be nullptr.
+ * @param nodeIdx   Node index (for the per-frame stamp).
+ * @param off       File byte offset.
+ * @param[out] out  Destination buffer.
+ * @param len       Number of bytes to produce.
+ */
 inline void fill(const MediaLayout::Node& n, const MediaLayout::Tags* tags, uint8_t nodeIdx,
                  uint32_t off, uint8_t* out, uint32_t len) {
     memset(out, 0, len);

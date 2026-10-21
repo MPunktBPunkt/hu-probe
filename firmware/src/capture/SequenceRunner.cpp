@@ -1,3 +1,8 @@
+/**
+ * @file SequenceRunner.cpp
+ * @brief Implementation of the ExperimentSequence state machine (Prepare, WaitDriver, Running).
+ */
+
 #include "SequenceRunner.h"
 #include "BuildFlags.h"
 #include "capture/OfflineCapture.h"
@@ -13,6 +18,11 @@ constexpr uint32_t kSettleMs = 3000;      // HU sees the new LUN before the capt
 constexpr uint32_t kBootLongMs = 1500;
 constexpr uint32_t kBootMinMs = 30;
 
+/**
+ * @brief Map a runner state to its JSON name.
+ * @param s  Runner state.
+ * @return Static string "prepare", "wait_driver", "running", "done", "failed" or "idle".
+ */
 const char* stateName(SequenceRunner::State s) {
     switch (s) {
         case SequenceRunner::State::Prepare: return "prepare";

@@ -1,3 +1,8 @@
+/**
+ * @file OfflineCapture.cpp
+ * @brief Offline capture implementation: compact/1 record encoding, drive-mode persistence and JSONL replay.
+ */
+
 #include "capture/OfflineCapture.h"
 #include "capture/TripStore.h"
 #include "core/DiagLog.h"
@@ -24,11 +29,21 @@ const char* const kRecFormat = "compact/1";
 constexpr uint32_t kCbwSignature = 0x43425355;  // "USBC"
 constexpr uint32_t kCswSignature = 0x53425355;  // "USBS"
 
+/**
+ * @brief Store a 16-bit value little-endian.
+ * @param p  Destination (2 bytes).
+ * @param v  Value to store.
+ */
 void putLe16(uint8_t* p, uint16_t v) {
     p[0] = (uint8_t)v;
     p[1] = (uint8_t)(v >> 8);
 }
 
+/**
+ * @brief Store a 32-bit value little-endian.
+ * @param p  Destination (4 bytes).
+ * @param v  Value to store.
+ */
 void putLe32(uint8_t* p, uint32_t v) {
     p[0] = (uint8_t)v;
     p[1] = (uint8_t)(v >> 8);
@@ -36,14 +51,30 @@ void putLe32(uint8_t* p, uint32_t v) {
     p[3] = (uint8_t)(v >> 24);
 }
 
+/**
+ * @brief Read a little-endian 16-bit value.
+ * @param p  Source (2 bytes).
+ * @return Decoded value.
+ */
 uint16_t getLe16(const uint8_t* p) { return (uint16_t)(p[0] | (p[1] << 8)); }
 
+/**
+ * @brief Read a little-endian 32-bit value.
+ * @param p  Source (4 bytes).
+ * @return Decoded value.
+ */
 uint32_t getLe32(const uint8_t* p) {
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) |
            ((uint32_t)p[3] << 24);
 }
 
-/** Length-prefixed string, at most maxLen chars. Returns bytes written. */
+/**
+ * @brief Write a length-prefixed string, at most maxLen chars (no terminator).
+ * @param p       Destination (1 + maxLen bytes available).
+ * @param s       String to store; nullptr is stored as empty.
+ * @param maxLen  Maximum number of characters (longer strings are truncated).
+ * @return Bytes written (1 + string length).
+ */
 size_t putStr(uint8_t* p, const char* s, size_t maxLen) {
     const size_t n = s ? strnlen(s, maxLen) : 0;
     p[0] = (uint8_t)n;
@@ -51,6 +82,14 @@ size_t putStr(uint8_t* p, const char* s, size_t maxLen) {
     return 1 + n;
 }
 
+/**
+ * @brief Read a length-prefixed string written by putStr() into a terminated buffer.
+ * @param p       Source (length byte followed by the characters).
+ * @param avail   Bytes available at p; the length is clamped to it.
+ * @param[out] out  Destination, always terminated (truncated to outLen - 1 chars).
+ * @param outLen  Size of out in bytes (≥ 1).
+ * @return Bytes consumed at p (1 + clamped length), 0 if avail is 0.
+ */
 size_t getStr(const uint8_t* p, size_t avail, char* out, size_t outLen) {
     out[0] = 0;
     if (avail < 1) return 0;
@@ -64,10 +103,6 @@ size_t getStr(const uint8_t* p, size_t avail, char* out, size_t outLen) {
 
 }  // namespace
 
-/**
- * Every kind has a fixed or self-describing payload length, so a corrupt length byte
- * (which would shift all following records) is caught instead of replayed as garbage.
- */
 bool OfflineCapture::recShapeOk(uint8_t kind, const uint8_t* b, size_t bn) {
     switch (kind) {
         case 1:
@@ -283,7 +318,6 @@ void OfflineCapture::pumpTcp(uint32_t maxMs) {
     }
 }
 
-/** Drain ring during replay so a 254+ Rec capture cannot drop before WiFi TX. */
 void OfflineCapture::pumpTcpWhilePending(uint32_t maxMs, size_t keepBelow) {
     if (!tcp_) return;
     if (EventBus::instance().pending() < keepBelow) return;
@@ -573,6 +607,7 @@ void OfflineCapture::checkpointStep() {
     DiagLog::printf("[OFFLINE] checkpoint #%u %u B in %u ms (persisted %u)\n",
                     (unsigned)checkpoints_, (unsigned)ckptBytes_, (unsigned)ckptMs_,
                     (unsigned)persistedLen_);
+    DiagLog::persist("ckpt", false);
 }
 
 void OfflineCapture::finalPersist() {
@@ -592,14 +627,15 @@ void OfflineCapture::finishRun(bool delivered) {
     PanicTail::breadcrumb(PanicTail::UploadDone,
                           delivered ? PanicTail::UploadDelivered : PanicTail::UploadQueued);
     if (delivered && tripId_) TripStore::instance().markUploaded(tripId_);
-    restoreUsbAfterUpload();
-    EmitOrigin::clear();
-    uploadPhase_ = UploadPhase::Done;
-    state_ = State::Idle;
     DiagLog::printf(
         "[OFFLINE] upload done status=%s records=%u pending=%u dropped=%u integrity=%d trip=%u\n",
         uploadStatus_.c_str(), lastRun_.records, (unsigned)EventBus::instance().pending(),
         (unsigned)lastRun_.dropped, lastRun_.integrityPass ? 1 : 0, (unsigned)tripId_);
+    DiagLog::persist("capture", true);
+    restoreUsbAfterUpload();
+    EmitOrigin::clear();
+    uploadPhase_ = UploadPhase::Done;
+    state_ = State::Idle;
     persist_ = false;
     replayingStored_ = false;
     tripId_ = 0;

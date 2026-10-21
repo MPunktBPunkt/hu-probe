@@ -1,3 +1,7 @@
+/**
+ * @file HubClient.cpp
+ * @brief Implementation of the hub heartbeat and Hub-OTA download.
+ */
 #include "HubClient.h"
 #include "capture/OfflineCapture.h"
 #include "core/PanicTail.h"

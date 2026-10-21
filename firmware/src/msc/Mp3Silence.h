@@ -1,26 +1,43 @@
 #pragma once
 
+/**
+ * @file Mp3Silence.h
+ * @brief Header-only generator for CBR MP3 silence (with M3 lab markers) served as MSC file content.
+ */
+
 #include <Arduino.h>
 #include <cstring>
 
 /**
- * CBR MP3 silence filler for MSC station stubs (Baustelle B2).
+ * @brief CBR MP3 silence filler for MSC station stubs (Baustelle B2).
+ *
  * Tiles a fixed 48 kbit/s MPEG-1 Layer III stereo frame so HU decoders
  * hold the track for the full slot size instead of skipping on 0xFF padding.
  */
 namespace Mp3Silence {
 
-/** One MPEG-1 L3 stereo 48 kb/s frame @ 44.1 kHz (pad=0), length 156. */
+/** @brief Frame length in bytes: one MPEG-1 L3 stereo 48 kb/s frame @ 44.1 kHz (pad=0), length 156. */
 static constexpr uint16_t kFrameLen = 156;
 
-/** M3 lab markers: distinctive stamp every ~30 s @ 48 kbit/s (≈6000 B/s). */
+/** @brief Approximate MP3 byte rate used for marker spacing; M3 lab markers: distinctive stamp every ~30 s @ 48 kbit/s (≈6000 B/s). */
 static constexpr uint32_t kBytesPerSec = 6000;
+
+/** @brief Body distance in bytes between two M3 markers (30 s x kBytesPerSec = 180000). */
 static constexpr uint32_t kMarkerIntervalBytes = 30u * kBytesPerSec;  // 180000
+
+/** @brief Marker stamp byte 0 ('P' of "PDMK"), written at frame offset 4. */
 static constexpr uint8_t kMarkerMagic0 = 'P';
+
+/** @brief Marker stamp byte 1 ('D' of "PDMK"), written at frame offset 5. */
 static constexpr uint8_t kMarkerMagic1 = 'D';
+
+/** @brief Marker stamp byte 2 ('M' of "PDMK"), written at frame offset 6. */
 static constexpr uint8_t kMarkerMagic2 = 'M';
+
+/** @brief Marker stamp byte 3 ('K' of "PDMK"), written at frame offset 7. */
 static constexpr uint8_t kMarkerMagic3 = 'K';
 
+/** @brief Raw bytes of the silent 48 kb/s MPEG-1 L3 frame that is tiled after the head. */
 // clang-format off
 static const uint8_t kFrame[kFrameLen] = {
     0xff, 0xfb, 0x30, 0x64, 0x00, 0x0f, 0xf0, 0x00, 0x00, 0x69, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00,
@@ -36,9 +53,14 @@ static const uint8_t kFrame[kFrameLen] = {
 };
 // clang-format on
 
-/** Minimal ID3v2.4 + LAME Info frame (208 B audio header @ 64 kb/s) with patchable size. */
+/** @brief Head length in bytes written by writeHead(): minimal ID3v2.4 + LAME Info frame (208 B audio header @ 64 kb/s) with patchable size. */
 static constexpr uint16_t kHeadLen = 252;  // 44 ID3 + 208 Info frame
 
+/**
+ * @brief Store a 32-bit value big-endian at p.
+ * @param p  Destination; must have room for 4 bytes.
+ * @param v  Value to store (MSB first).
+ */
 inline void writeBe32(uint8_t* p, uint32_t v) {
     p[0] = (uint8_t)(v >> 24);
     p[1] = (uint8_t)(v >> 16);
@@ -46,7 +68,16 @@ inline void writeBe32(uint8_t* p, uint32_t v) {
     p[3] = (uint8_t)v;
 }
 
-/** Build ID3 + Info/Xing head for fileSize; frames = payload frames after head. */
+/**
+ * @brief Build the ID3 + Info/Xing head for a file of fileSize bytes.
+ *
+ * Writes kHeadLen bytes: a fixed 44-byte ID3 tag followed by a 208-byte 64 kb/s frame
+ * carrying an "Info" tag whose frame count (frames = payload frames after head, i.e.
+ * (fileSize - kHeadLen) / kFrameLen) and byte count (fileSize) are patched in.
+ *
+ * @param dest      Destination buffer; must hold at least kHeadLen bytes.
+ * @param fileSize  Total MP3 file size in bytes, including the head.
+ */
 inline void writeHead(uint8_t* dest, uint32_t fileSize) {
     // ID3v2.3 header, size=34 (synchsafe) → total ID3 = 44
     static const uint8_t kId3[44] = {
@@ -75,26 +106,59 @@ inline void writeHead(uint8_t* dest, uint32_t fileSize) {
     writeBe32(dest + tagOff + 12, fileSize);
 }
 
-/** Body offset of the first frame that carries marker index `idx` (0-based). */
+/**
+ * @brief Return the body offset of the first frame that carries marker index `idx` (0-based).
+ *
+ * The body starts after the kHeadLen head; the offset is idx × kMarkerIntervalBytes aligned
+ * down to a kFrameLen frame boundary.
+ *
+ * @param idx  Marker index (0-based).
+ * @return Byte offset relative to the start of the body (not the file).
+ */
 inline uint32_t markerBodyOff(uint16_t idx) {
     uint32_t raw = (uint32_t)idx * kMarkerIntervalBytes;
     return (raw / kFrameLen) * kFrameLen;
 }
 
-/** Absolute file offset of marker `idx` (start of stamped frame), or 0 if past EOF. */
+/**
+ * @brief Return the absolute file offset of marker `idx` (start of stamped frame).
+ * @param idx       Marker index (0-based).
+ * @param fileSize  Total MP3 file size in bytes, including the head.
+ * @return File offset of the stamped frame, or 0 if past EOF or the file is not larger than kHeadLen.
+ */
 inline uint32_t markerFileOff(uint16_t idx, uint32_t fileSize) {
     if (fileSize <= kHeadLen) return 0;
     uint32_t abs = kHeadLen + markerBodyOff(idx);
     return abs < fileSize ? abs : 0;
 }
 
+/**
+ * @brief Return the number of M3 markers contained in a file of fileSize bytes.
+ *
+ * Marker 0 sits at the start of the body, so any body yields at least one marker.
+ *
+ * @param fileSize  Total MP3 file size in bytes, including the head.
+ * @return body / kMarkerIntervalBytes + 1, or 0 if fileSize <= kHeadLen.
+ */
 inline uint16_t markerCount(uint32_t fileSize) {
     if (fileSize <= kHeadLen || kMarkerIntervalBytes == 0) return 0;
     uint32_t body = fileSize - kHeadLen;
     return (uint16_t)(body / kMarkerIntervalBytes + 1);
 }
 
-/** Fill read buffer as MP3 silence for absolute file offset (with M3 stamps). */
+/**
+ * @brief Fill a read buffer with MP3 silence for an absolute file offset (with M3 stamps).
+ *
+ * Bytes below kHeadLen come from writeHead(), the rest tiles kFrame; the first frame of each
+ * marker window gets "PDMK" + 16-bit big-endian marker index at frame bytes 4..9.
+ * Bytes at or beyond fileSize are zero-filled.
+ *
+ * @param out       Destination buffer.
+ * @param outLen    Number of bytes to produce in out.
+ * @param fileOff   Absolute file offset corresponding to out[0].
+ * @param fileSize  Total MP3 file size in bytes, including the head.
+ * @note Uses a kHeadLen (252 B) stack buffer when the range touches the head.
+ */
 inline void fill(uint8_t* out, uint32_t outLen, uint32_t fileOff, uint32_t fileSize) {
     uint32_t o = 0;
     while (o < outLen) {

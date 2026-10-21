@@ -1,3 +1,8 @@
+/**
+ * @file AutoMarker.cpp
+ * @brief Detection of protocol-derived markers from CBWs and their routing to offline capture or live session.
+ */
+
 #include "AutoMarker.h"
 #include "capture/OfflineCapture.h"
 #include "media/ProbeMedia.h"
@@ -17,6 +22,16 @@ bool g_mountDone = false;
 bool g_firstRead = false;
 int16_t g_lastNode = -1;
 
+/**
+ * @brief Route a marker to the offline capture buffer or the live session.
+ *
+ * Offline capture accepting records → buffered marker at tUs; offline run otherwise active
+ * (replay) → dropped, so live markers do not interleave; else the active live session.
+ *
+ * @param tUs   Marker time (ProbeClock µs).
+ * @param name  Marker name.
+ * @param note  Note for the live session marker; nullptr = "auto" (not stored offline).
+ */
 void emit(int64_t tUs, const char* name, const char* note) {
     OfflineCapture& oc = OfflineCapture::instance();
     if (oc.acceptsPending()) {
@@ -27,6 +42,7 @@ void emit(int64_t tUs, const char* name, const char* note) {
     if (g_session && g_session->active()) g_session->marker(name, note ? note : "auto", tUs);
 }
 
+/** @brief Forget the current mount: TUR count, mount_done/first_read flags and last file node. */
 void resetMount() {
     g_turs = 0;
     g_mountDone = false;

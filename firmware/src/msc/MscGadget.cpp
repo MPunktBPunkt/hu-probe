@@ -1,3 +1,7 @@
+/**
+ * @file MscGadget.cpp
+ * @brief MscGadget implementation on Arduino USBMSC/TinyUSB (stubs when ARDUINO_USB_MODE=1).
+ */
 #include "MscGadget.h"
 #include "core/DiagLog.h"
 #include "MscBotTap.h"
@@ -49,24 +53,58 @@ void MscGadget::mark(const char* name, const char* note, int64_t tUs) {
 
 #include "tusb.h"
 
+/** @brief Gadget instance receiving the C-style USB callbacks; set in MscGadget::begin(). */
 static MscGadget* g_msc = nullptr;
+
+/** @brief Arduino USBMSC device backing the single LUN. */
 static USBMSC MSC;
 
+/**
+ * @brief TinyUSB callback: report the LUN as read-only.
+ * @param lun  Logical unit number (unused).
+ * @return Always false (write-protected).
+ * @note USB task context.
+ */
 extern "C" bool tud_msc_is_writable_cb(uint8_t lun) {
     (void)lun;
     return false;
 }
 
+/**
+ * @brief USBMSC read callback forwarding to MscGadget::onRead().
+ * @param lba      Logical block address.
+ * @param offset   Byte offset within the command.
+ * @param buffer   Destination buffer.
+ * @param bufsize  Requested bytes.
+ * @return Result of MscGadget::onRead(), or -1 before begin().
+ * @note USB task context.
+ */
 static int32_t huprobe_msc_read(uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize) {
     if (!g_msc) return -1;
     return g_msc->onRead(lba, offset, buffer, bufsize);
 }
 
+/**
+ * @brief USBMSC write callback forwarding to MscGadget::onWrite().
+ * @param lba      Logical block address.
+ * @param offset   Byte offset within the command.
+ * @param buffer   Host data.
+ * @param bufsize  Chunk size in bytes.
+ * @return Result of MscGadget::onWrite() (always -1), or -1 before begin().
+ * @note USB task context.
+ */
 static int32_t huprobe_msc_write(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize) {
     if (!g_msc) return -1;
     return g_msc->onWrite(lba, offset, buffer, bufsize);
 }
 
+/**
+ * @brief Arduino USB event handler mapping STARTED/STOPPED/SUSPEND/RESUME to the gadget.
+ * @param arg         Handler argument (unused).
+ * @param event_base  Event base; only ARDUINO_USB_EVENTS is handled.
+ * @param event_id    ARDUINO_USB_*_EVENT id.
+ * @param event_data  Event payload (unused).
+ */
 static void usb_event_cb(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
     (void)arg;
     (void)event_data;

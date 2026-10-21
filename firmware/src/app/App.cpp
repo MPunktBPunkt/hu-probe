@@ -1,3 +1,8 @@
+/**
+ * @file App.cpp
+ * @brief App boot sequence, main loop, status/health publishing and WiFi/USB coex supervision.
+ */
+
 #include "App.h"
 #include "app/DriveMode.h"
 #include "capture/TripStore.h"
@@ -33,6 +38,7 @@
 #ifndef WIFI_RESTART_AFTER_MS
 #define WIFI_RESTART_AFTER_MS 25000
 #endif
+
 /** WiFi assoc up but no TCP event progress while queue backs up → treat as link dead. */
 #ifndef WIFI_TCP_STALL_MS
 #define WIFI_TCP_STALL_MS 8000
@@ -40,26 +46,32 @@
 #ifndef WIFI_TCP_STALL_PENDING
 #define WIFI_TCP_STALL_PENDING 32
 #endif
+
 /** After WiFi returns from coex soft-detach: hold USB off until ring drains. */
 #ifndef WIFI_COEX_FLUSH_MS
 #define WIFI_COEX_FLUSH_MS 15000
 #endif
+
 /** Only full-chip restart if soft-detach still cannot bring WiFi back. */
 #ifndef WIFI_RESTART_AFTER_COEX_MS
 #define WIFI_RESTART_AFTER_COEX_MS 90000
 #endif
+
 /** Reattach only when EventBus is this quiet (was: timer alone → kill WiFi again). */
 #ifndef WIFI_COEX_REATTACH_PENDING
 #define WIFI_COEX_REATTACH_PENDING 16
 #endif
+
 /** No stall until TCP has succeeded at least once + this grace after STA up. */
 #ifndef WIFI_STALL_GRACE_MS
 #define WIFI_STALL_GRACE_MS 30000
 #endif
+
 /** tcp_tx_ok within this window ⇒ IP data path alive. */
 #ifndef WIFI_TCP_ALIVE_MS
 #define WIFI_TCP_ALIVE_MS 8000
 #endif
+
 /** Zombie (assoc, no data) before hard STA restart in coex hold. */
 #ifndef WIFI_COEX_ZOMBIE_RESTART_MS
 #define WIFI_COEX_ZOMBIE_RESTART_MS 20000
@@ -351,6 +363,7 @@ void App::enterCoexHold(const char* reason) {
         "[WIFI] coex-hold (%s) pending_was=%u heap=%u psram_free=%u soft=%d\n",
         reason ? reason : "?", (unsigned)pendingBefore, (unsigned)ESP.getFreeHeap(),
         (unsigned)ESP.getFreePsram(), msc_.usbSoftAttached() ? 1 : 0);
+    DiagLog::persist("coex", false);
 }
 
 void App::superviseWifi() {

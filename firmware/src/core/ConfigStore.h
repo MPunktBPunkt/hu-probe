@@ -1,10 +1,20 @@
 #pragma once
 
+/**
+ * @file ConfigStore.h
+ * @brief Persistent device configuration backed by NVS (Preferences).
+ */
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include "BuildFlags.h"
 
-/** NVS "esphub" für Familienfelder, "huprobe" für Mess-Config. */
+/**
+ * @brief Device configuration with NVS persistence and JSON (de)serialization.
+ *
+ * NVS namespace "esphub" holds the device-family fields (name, hub, heartbeat, mDNS),
+ * namespace "huprobe" holds the measurement configuration (collector, IDs, NTP, drive mode, OTA).
+ */
 class ConfigStore {
 public:
     String deviceName = DEVICE_NAME_DEFAULT;
@@ -23,6 +33,7 @@ public:
     String vehicleId = "lab_debian";
     String profileId = "lab_debian";
     String scenarioId = "s0_plug_enum";
+
     /** Offline timer end: media_hide (default) or soft_detach (legacy). */
     String offlineEndStrategy = "media_hide";
 
@@ -35,18 +46,58 @@ public:
     String autoExperiment = "drive_home";
     String autoMedia = "drive_mix";
     bool autoFine = true;
+
     /** Second WLAN (phone hotspot); the home WLAN stays in the WiFiManager store. */
     String wifi2Ssid;
     String wifi2Pass;
     bool autoUpdate = true;
     String otaManifestUrl = OTA_MANIFEST_URL_DEFAULT;
 
+    /** @brief Initialize the store by loading the configuration from NVS (calls load()). */
     void begin();
+
+    /**
+     * @brief Reset all fields to defaults, then overlay the values stored in NVS.
+     *
+     * Reads namespaces "esphub" and "huprobe" read-only; missing keys keep their default.
+     * An unknown offlineEndStrategy is coerced back to "media_hide".
+     */
     void load();
+
+    /**
+     * @brief Write all fields to NVS namespaces "esphub" and "huprobe".
+     *
+     * Each namespace also gets the config version key "ver" (kConfigVersion).
+     * @warning Writes flash; a namespace that cannot be opened is silently skipped.
+     */
     void save();
+
+    /** @brief Clear both NVS namespaces ("esphub", "huprobe") and restore the in-memory defaults. */
     void factoryReset();
+
+    /** @brief Reset all in-memory fields to their compile-time/lab defaults (does not touch NVS). */
     void applyDefaults();
+
+    /**
+     * @brief Serialize the configuration plus firmware/board info into a JSON object.
+     *
+     * The WLAN2 password is never emitted; only "wifi2PassSet" (true if non-empty) is reported.
+     * Adds read-only keys "fwVersion", "fwType" and "board".
+     *
+     * @param obj  Target JSON object to fill.
+     */
     void toJson(JsonObject obj) const;
+
+    /**
+     * @brief Apply the fields present in a JSON object to the in-memory configuration.
+     *
+     * Missing or wrongly typed keys leave the field unchanged; an offlineEndStrategy other than
+     * "media_hide"/"soft_detach" is ignored; an empty "wifi2Pass" keeps the stored password.
+     * Does not persist; call save() afterwards.
+     *
+     * @param obj  JSON object with camelCase keys as produced by toJson().
+     * @return Always true.
+     */
     bool fromJson(JsonVariantConst obj);
 
 private:

@@ -1,3 +1,7 @@
+/**
+ * @file MscBotTap.cpp
+ * @brief MscBotTap implementation plus the `--wrap` linker hooks around TinyUSB MSC/USBD functions.
+ */
 #include "MscBotTap.h"
 #include "BuildFlags.h"
 #include "capture/AutoMarker.h"
@@ -13,6 +17,7 @@
 // TinyUSB 0.15 `_mscd_itf` (DWARF): cbw@0 (31), csw@32 (13), stage@48, …
 extern "C" uint8_t _mscd_itf[];
 
+/** @brief Byte offsets into `_mscd_itf` and TinyUSB 0.15 MSC stage values. */
 enum {
     kOffCbw = 0,
     kOffCsw = 32,
@@ -23,10 +28,20 @@ enum {
     kStageNeedReset = 4
 };
 
+/** @brief Pointer to the 31-byte CBW inside TinyUSB's `_mscd_itf`. */
 static const uint8_t* itfCbw() { return _mscd_itf + kOffCbw; }
+
+/** @brief Pointer to the 13-byte CSW inside TinyUSB's `_mscd_itf`. */
 static const uint8_t* itfCsw() { return _mscd_itf + kOffCsw; }
+
+/** @brief Current TinyUSB MSC stage (kStageData, kStageStatus, kStageStatusSent, kStageNeedReset). */
 static uint8_t itfStage() { return _mscd_itf[kOffStage]; }
 
+/**
+ * @brief Read a little-endian 32-bit value.
+ * @param p  Source; must have 4 readable bytes.
+ * @return Decoded value.
+ */
 static uint32_t readLe32(const uint8_t* p) {
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
@@ -338,6 +353,15 @@ bool __real_mscd_control_xfer_cb(uint8_t rhport, uint8_t stage,
 bool __real_mscd_xfer_cb(uint8_t rhport, uint8_t ep_addr, xfer_result_t result,
                          uint32_t xferred_bytes);
 
+/**
+ * @brief Linker wrap of TinyUSB mscd_xfer_cb: run the real handler, then tap the new MSC stage.
+ * @param rhport         Root hub port.
+ * @param ep_addr        Endpoint address of the completed transfer.
+ * @param result         Transfer result.
+ * @param xferred_bytes  Number of bytes transferred.
+ * @return Result of the real mscd_xfer_cb.
+ * @note USB task context.
+ */
 bool __wrap_mscd_xfer_cb(uint8_t rhport, uint8_t ep_addr, xfer_result_t result,
                          uint32_t xferred_bytes) {
     bool ok = __real_mscd_xfer_cb(rhport, ep_addr, result, xferred_bytes);
@@ -345,6 +369,16 @@ bool __wrap_mscd_xfer_cb(uint8_t rhport, uint8_t ep_addr, xfer_result_t result,
     return ok;
 }
 
+/**
+ * @brief Linker wrap of tud_msc_test_unit_ready_cb: tap the CBW and inject a pending UNIT ATTENTION.
+ *
+ * If the real callback reports ready and a UNIT ATTENTION is pending, sets sense 06/28/00
+ * and fails the TUR once.
+ *
+ * @param lun  Logical unit number.
+ * @return false if not ready or a UNIT ATTENTION was injected, true otherwise.
+ * @note USB task context.
+ */
 bool __wrap_tud_msc_test_unit_ready_cb(uint8_t lun) {
     MscBotTap::onNonDataScsiEnter();
     const bool ready = __real_tud_msc_test_unit_ready_cb(lun);
@@ -356,29 +390,74 @@ bool __wrap_tud_msc_test_unit_ready_cb(uint8_t lun) {
     return ready;
 }
 
+/**
+ * @brief Linker wrap of tud_msc_inquiry_cb: tap the CBW, then fill INQUIRY via the real callback.
+ * @param[in]  lun          Logical unit number.
+ * @param[out] vendor_id    Vendor ID (8 bytes).
+ * @param[out] product_id   Product ID (16 bytes).
+ * @param[out] product_rev  Product revision (4 bytes).
+ * @note USB task context.
+ */
 void __wrap_tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16],
                                uint8_t product_rev[4]) {
     MscBotTap::onNonDataScsiEnter();
     __real_tud_msc_inquiry_cb(lun, vendor_id, product_id, product_rev);
 }
 
+/**
+ * @brief Linker wrap of tud_msc_capacity_cb: tap the CBW, then report capacity via the real callback.
+ * @param[in]  lun          Logical unit number.
+ * @param[out] block_count  Number of blocks.
+ * @param[out] block_size   Block size in bytes.
+ * @note USB task context.
+ */
 void __wrap_tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_size) {
     MscBotTap::onNonDataScsiEnter();
     __real_tud_msc_capacity_cb(lun, block_count, block_size);
 }
 
+/**
+ * @brief Linker wrap of tud_msc_scsi_cb: tap the CBW, then handle the command via the real callback.
+ * @param lun       Logical unit number.
+ * @param scsi_cmd  16-byte SCSI CDB.
+ * @param buffer    Data buffer for the response.
+ * @param bufsize   Size of buffer in bytes.
+ * @return Result of the real tud_msc_scsi_cb (bytes of response data, or negative on error).
+ * @note USB task context.
+ */
 int32_t __wrap_tud_msc_scsi_cb(uint8_t lun, uint8_t const scsi_cmd[16], void* buffer,
                                uint16_t bufsize) {
     MscBotTap::onNonDataScsiEnter();
     return __real_tud_msc_scsi_cb(lun, scsi_cmd, buffer, bufsize);
 }
 
+/**
+ * @brief Linker wrap of tud_msc_start_stop_cb: tap the CBW, then forward to the real callback.
+ * @param lun              Logical unit number.
+ * @param power_condition  START STOP UNIT power condition field.
+ * @param start            START bit.
+ * @param load_eject       LOEJ bit.
+ * @return Result of the real tud_msc_start_stop_cb.
+ * @note USB task context.
+ */
 bool __wrap_tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start,
                                   bool load_eject) {
     MscBotTap::onNonDataScsiEnter();
     return __real_tud_msc_start_stop_cb(lun, power_condition, start, load_eject);
 }
 
+/**
+ * @brief Linker wrap of mscd_control_xfer_cb: queue the SETUP and detect MSC BOT_RESET.
+ *
+ * A class request 0xFF (Bulk-Only Mass Storage Reset) at SETUP stage starts a new BOT epoch
+ * after the real handler ran.
+ *
+ * @param rhport   Root hub port.
+ * @param stage    Control stage (only CONTROL_STAGE_SETUP is tapped).
+ * @param request  Control request; may be nullptr.
+ * @return Result of the real mscd_control_xfer_cb.
+ * @note USB task context.
+ */
 bool __wrap_mscd_control_xfer_cb(uint8_t rhport, uint8_t stage,
                                  tusb_control_request_t const* request) {
     if (request && stage == CONTROL_STAGE_SETUP) {
@@ -401,10 +480,24 @@ void __real_usbd_edpt_clear_stall(uint8_t rhport, uint8_t ep_addr);
 bool __real_usbd_edpt_xfer(uint8_t rhport, uint8_t ep_addr, uint8_t* buffer,
                            uint16_t total_bytes);
 
-// TinyUSB 0.15 builtin MODE_SENSE6 returns only the 4-byte header. BMW CBWs ask
-// for 192 bytes → Case 5 (Hi > Di) → usbd_edpt_stall(ep_in) before CSW → host
-// CLEAR_HALT + retry (ms6/cap≈2). Pad the IN buffer to the CBW length so residue
-// is 0 and the Case-5 stall never fires.
+/**
+ * @brief Pad a 4-byte MODE SENSE(6) IN response to the host-requested CBW length.
+ *
+ * TinyUSB 0.15 builtin MODE_SENSE6 returns only the 4-byte header. BMW CBWs ask
+ * for 192 bytes → Case 5 (Hi > Di) → usbd_edpt_stall(ep_in) before CSW → host
+ * CLEAR_HALT + retry (ms6/cap≈2). Pad the IN buffer to the CBW length so residue
+ * is 0 and the Case-5 stall never fires.
+ *
+ * Only acts on IN transfers of exactly 4 bytes whose current CBW is MODE SENSE(6) (0x1A)
+ * with 4 < dCBWDataTransferLength <= 4096. Zero-fills the tail, patches the mode data length,
+ * adds an empty Caching page header if room allows, and rewrites mscd total_len in `_mscd_itf`.
+ *
+ * @param ep_addr      Endpoint address (bit 7 set = IN).
+ * @param[in,out] buffer  Transfer buffer; must hold dCBWDataTransferLength bytes.
+ * @param total_bytes  Transfer length requested by TinyUSB.
+ * @return New transfer length (the CBW length) or total_bytes unchanged.
+ * @warning Writes into TinyUSB's private interface state at fixed 0.15 offsets.
+ */
 static uint16_t expandModeSense6IfNeeded(uint8_t ep_addr, uint8_t* buffer,
                                          uint16_t total_bytes) {
     if (!buffer || (ep_addr & 0x80) == 0 || total_bytes != 4) return total_bytes;
@@ -430,6 +523,10 @@ static uint16_t expandModeSense6IfNeeded(uint8_t ep_addr, uint8_t* buffer,
     return (uint16_t)expect;
 }
 
+/**
+ * @brief Linker wrap of tud_mount_cb: queue the mount epoch before the real callback.
+ * @note USB task context.
+ */
 void __wrap_tud_mount_cb(void) {
     // Queue before real so Capture-tUs ≤ any Arduino STARTED side effects; identity/phase
     // are emitted in drain with the same tUs (no cross-task interleave).
@@ -437,42 +534,90 @@ void __wrap_tud_mount_cb(void) {
     __real_tud_mount_cb();
 }
 
+/**
+ * @brief Linker wrap of tud_umount_cb: queue the umount epoch before the real callback.
+ * @note USB task context.
+ */
 void __wrap_tud_umount_cb(void) {
     MscBotTap::queueUmount();
     __real_tud_umount_cb();
 }
 
+/**
+ * @brief Linker wrap of dcd_set_address: queue a SET_ADDRESS event, then apply it.
+ * @param rhport    Root hub port.
+ * @param dev_addr  Device address assigned by the host.
+ * @note USB task context.
+ */
 void __wrap_dcd_set_address(uint8_t rhport, uint8_t dev_addr) {
     MscBotTap::queueSetAddress(dev_addr);
     __real_dcd_set_address(rhport, dev_addr);
 }
 
+/**
+ * @brief Linker wrap of usbd_edpt_stall: queue an endpoint STALL event, then stall.
+ * @param rhport   Root hub port.
+ * @param ep_addr  Endpoint address (bit 7 set = IN).
+ * @note USB task context.
+ */
 void __wrap_usbd_edpt_stall(uint8_t rhport, uint8_t ep_addr) {
     MscBotTap::queueEpStall(ep_addr);
     __real_usbd_edpt_stall(rhport, ep_addr);
 }
 
+/**
+ * @brief Linker wrap of usbd_edpt_clear_stall: queue a Clear-Halt event, then clear the stall.
+ * @param rhport   Root hub port.
+ * @param ep_addr  Endpoint address (bit 7 set = IN).
+ * @note USB task context.
+ */
 void __wrap_usbd_edpt_clear_stall(uint8_t rhport, uint8_t ep_addr) {
     MscBotTap::queueEpClearHalt(ep_addr);
     __real_usbd_edpt_clear_stall(rhport, ep_addr);
 }
 
+/**
+ * @brief Linker wrap of usbd_edpt_xfer: apply the MODE SENSE(6) padding, then start the transfer.
+ * @param rhport       Root hub port.
+ * @param ep_addr      Endpoint address (bit 7 set = IN).
+ * @param buffer       Transfer buffer.
+ * @param total_bytes  Requested transfer length in bytes.
+ * @return Result of the real usbd_edpt_xfer.
+ * @note USB task context.
+ * @see expandModeSense6IfNeeded
+ */
 bool __wrap_usbd_edpt_xfer(uint8_t rhport, uint8_t ep_addr, uint8_t* buffer,
                            uint16_t total_bytes) {
     total_bytes = expandModeSense6IfNeeded(ep_addr, buffer, total_bytes);
     return __real_usbd_edpt_xfer(rhport, ep_addr, buffer, total_bytes);
 }
 
+/**
+ * @brief TinyUSB callback after a READ10 data phase completed: queue the CSW.
+ * @param lun  Logical unit number (unused).
+ * @note USB task context.
+ */
 void tud_msc_read10_complete_cb(uint8_t lun) {
     (void)lun;
     MscBotTap::emitCsw();
 }
 
+/**
+ * @brief TinyUSB callback after a WRITE10 data phase completed: queue the CSW.
+ * @param lun  Logical unit number (unused).
+ * @note USB task context.
+ */
 void tud_msc_write10_complete_cb(uint8_t lun) {
     (void)lun;
     MscBotTap::emitCsw();
 }
 
+/**
+ * @brief TinyUSB callback after a generic SCSI command completed: queue the CSW.
+ * @param lun       Logical unit number (unused).
+ * @param scsi_cmd  16-byte SCSI CDB (unused).
+ * @note USB task context.
+ */
 void tud_msc_scsi_complete_cb(uint8_t lun, uint8_t const scsi_cmd[16]) {
     (void)lun;
     (void)scsi_cmd;

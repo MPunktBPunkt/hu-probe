@@ -1,3 +1,8 @@
+/**
+ * @file DriveMode.cpp
+ * @brief Drive mode boot phase (WLAN, trip upload, OTA, arm), host-wait and capture state handling.
+ */
+
 #include "app/DriveMode.h"
 #include "capture/ExperimentProfiles.h"
 #include "capture/OfflineCapture.h"
@@ -128,6 +133,7 @@ void DriveMode::uploadPending() {
 }
 
 void DriveMode::bootPhase() {
+    DiagLog::persist("drive", true);
     TripStore& ts = TripStore::instance();
     // Accept the image before the (possibly long) upload: pulling the plug during an upload
     // must not count as a failed boot and trigger a rollback.

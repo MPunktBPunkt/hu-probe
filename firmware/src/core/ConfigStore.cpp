@@ -1,3 +1,7 @@
+/**
+ * @file ConfigStore.cpp
+ * @brief NVS load/save/reset and JSON mapping for ConfigStore.
+ */
 #include "ConfigStore.h"
 #include <Preferences.h>
 

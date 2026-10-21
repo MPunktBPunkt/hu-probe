@@ -1,3 +1,7 @@
+/**
+ * @file SynthFat.cpp
+ * @brief SynthFat spec parsing, FAT16 geometry/cluster allocation and per-LBA sector synthesis.
+ */
 #include "media/SynthFat.h"
 #include "media/CoverJpegs.h"
 #include "media/Mp3Gen.h"
@@ -11,10 +15,23 @@ constexpr uint32_t kMaxFat16Clusters = 65524;
 constexpr uint16_t kFatDate = ((2026 - 1980) << 9) | (10 << 5) | 19;
 constexpr uint16_t kFatTime = (12 << 11);
 
+/**
+ * @brief Write a 16-bit value little-endian.
+ *
+ * @param[out] p  Destination, 2 bytes.
+ * @param v       Value to write.
+ */
 void put16(uint8_t* p, uint16_t v) {
     p[0] = (uint8_t)v;
     p[1] = (uint8_t)(v >> 8);
 }
+
+/**
+ * @brief Write a 32-bit value little-endian.
+ *
+ * @param[out] p  Destination, 4 bytes.
+ * @param v       Value to write.
+ */
 void put32(uint8_t* p, uint32_t v) {
     p[0] = (uint8_t)v;
     p[1] = (uint8_t)(v >> 8);
@@ -22,13 +39,26 @@ void put32(uint8_t* p, uint32_t v) {
     p[3] = (uint8_t)(v >> 24);
 }
 
+/**
+ * @brief Check whether an (upper-case) character is allowed in a FAT short name.
+ *
+ * @param c  Character to check.
+ * @return true for A-Z, 0-9 and _-~!#$%&'()@^{}.
+ */
 bool validSfnChar(char c) {
     if (c >= 'A' && c <= 'Z') return true;
     if (c >= '0' && c <= '9') return true;
     return strchr("_-~!#$%&'()@^{}", c) != nullptr;
 }
 
-/** "name.ext" component → uppercase 8.3 into out[13]; false if not representable. */
+/**
+ * @brief Convert a "name.ext" path component to uppercase 8.3 into out[13].
+ *
+ * @param comp      Path component (not NUL-terminated).
+ * @param len       Length of comp in chars.
+ * @param[out] out  Destination, 13 bytes; "NAME.EXT", NUL-terminated.
+ * @return false if not representable (empty stem, stem > 8, ext > 3, two dots, invalid char).
+ */
 bool toSfn(const char* comp, size_t len, char* out) {
     const char* dot = nullptr;
     for (size_t i = 0; i < len; i++) {
@@ -58,6 +88,12 @@ bool toSfn(const char* comp, size_t len, char* out) {
     return true;
 }
 
+/**
+ * @brief Expand "NAME.EXT" to the 11-byte space-padded directory entry form.
+ *
+ * @param name      8.3 name with optional extension.
+ * @param[out] out  Destination, 11 bytes.
+ */
 void sfn11(const char* name, uint8_t* out) {
     memset(out, ' ', 11);
     const char* dot = strchr(name, '.');
@@ -69,6 +105,13 @@ void sfn11(const char* name, uint8_t* out) {
     }
 }
 
+/**
+ * @brief Parse a volume id given as number or string ("0x48500B01", decimal or octal).
+ *
+ * @param v    JSON value.
+ * @param def  Value returned if v is neither a number nor a string.
+ * @return Parsed volume id (strtoul base 0; invalid strings yield 0).
+ */
 uint32_t parseVolumeId(JsonVariantConst v, uint32_t def) {
     if (v.is<uint32_t>()) return v.as<uint32_t>();
     if (v.is<const char*>()) {

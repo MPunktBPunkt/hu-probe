@@ -1,3 +1,7 @@
+/**
+ * @file ProbeMedia.cpp
+ * @brief Active medium selection, persistence, MSC reads, live mutations and JSON export.
+ */
 #include "media/ProbeMedia.h"
 #include "media/CoverJpegs.h"
 #include "media/MediaPresets.h"
@@ -13,6 +17,14 @@
 
 namespace {
 
+/**
+ * @brief Compute the 32-bit FNV-1a hash of a byte range.
+ *
+ * @param p  Data.
+ * @param n  Length in bytes.
+ * @param h  Start value (FNV offset basis by default) for chaining.
+ * @return Hash value.
+ */
 uint32_t fnv1a(const uint8_t* p, size_t n, uint32_t h = 2166136261u) {
     for (size_t i = 0; i < n; i++) {
         h ^= p[i];
@@ -21,6 +33,12 @@ uint32_t fnv1a(const uint8_t* p, size_t n, uint32_t h = 2166136261u) {
     return h;
 }
 
+/**
+ * @brief Format a value as "0x%08x".
+ *
+ * @param v         Value.
+ * @param[out] out  Destination, at least 11 bytes.
+ */
 void hex32(uint32_t v, char* out) { snprintf(out, 11, "0x%08x", (unsigned)v); }
 
 }  // namespace

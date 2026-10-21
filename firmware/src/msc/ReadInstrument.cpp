@@ -1,3 +1,7 @@
+/**
+ * @file ReadInstrument.cpp
+ * @brief ReadInstrument implementation: BOT/USB event JSON, TUR statistics and rate window.
+ */
 #include "ReadInstrument.h"
 #include "core/EmitOrigin.h"
 #include "core/ProbeClock.h"
@@ -7,6 +11,11 @@
 #include "class/msc/msc.h"
 #include <cstring>
 
+/**
+ * @brief Map a SCSI opcode byte to the event opcode name.
+ * @param op  First CDB byte.
+ * @return Static name such as "tur", "read10", "mode_sense6", or "other" for unknown opcodes.
+ */
 static const char* scsiOpcodeName(uint8_t op) {
     switch (op) {
         case 0x00: return "tur";

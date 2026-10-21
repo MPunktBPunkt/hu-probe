@@ -1,3 +1,7 @@
+/**
+ * @file GithubOta.cpp
+ * @brief Manifest fetch, streamed OTA download with sha256 check and NVS rollback state.
+ */
 #include "core/GithubOta.h"
 #include "BuildFlags.h"
 #include "core/DiagLog.h"
@@ -27,6 +31,19 @@ String rolledBackFrom;
 uint8_t bootTries = 0;
 bool pendingImage = false;
 
+/**
+ * @brief Issue an HTTPS GET, following up to kMaxRedirects redirects manually.
+ *
+ * Redirects (301/302/303/307/308) are only followed to https:// locations.
+ *
+ * @param client     TLS client (CA bundle already set).
+ * @param http       HTTP client; left open on success so the caller can read the body.
+ * @param url        Initial URL.
+ * @param timeoutMs  Connect and read timeout in ms.
+ * @param[out] codeOut  Final HTTP status; -1 if begin() failed, -2 if too many redirects,
+ *                      or the redirect code if the target was not https.
+ * @return true if the final response is 200 (caller must call http.end()).
+ */
 bool openGet(WiFiClientSecure& client, HTTPClient& http, String url, uint32_t timeoutMs,
              int* codeOut) {
     static const char* hdrs[] = {"Location"};
@@ -58,6 +75,11 @@ bool openGet(WiFiClientSecure& client, HTTPClient& http, String url, uint32_t ti
     return false;
 }
 
+/**
+ * @brief Store the last check result, copy it to info and log it.
+ * @param r          Result string.
+ * @param[out] info  Optional (may be null); receives r.
+ */
 void setResult(const String& r, String* info) {
     lastResult = r;
     if (info) *info = r;

@@ -1,10 +1,16 @@
 #pragma once
 
+/**
+ * @file ExperimentProfiles.h
+ * @brief Built-in experiment profiles and experiment sequences for offline HU measurements.
+ */
+
 #include <Arduino.h>
 #include <cstring>
 
 /**
- * Experiment profiles for reproducible HU offline measurements (0.2.25+).
+ * @brief Experiment profiles for reproducible HU offline measurements (0.2.25+).
+ *
  * One button in the WebUI arms the matching offline capture; BOOT short cycles
  * the listed operator markers while WiFi is down.
  *
@@ -25,20 +31,35 @@ struct ExperimentProfile {
     bool freeMarkers;         // BOOT short = mark_NN, BOOT double = soft replug
 };
 
+/** @brief Storage for the experiment profile table and its operator marker lists. */
 namespace ExperimentProfilesDetail {
+/** @brief Operator marker list for S0 (cycled by BOOT short while WiFi is down). */
 static const char* const kMarkersS0[] = {"plug_ready", "stop"};
+
+/** @brief Operator marker list for S1 (eager EOF). */
 static const char* const kMarkersS1[] = {"play_start", "audible_change", "stop"};
+
+/** @brief Operator marker list for S2 (prefetch). */
 static const char* const kMarkersS2[] = {
     "play_start", "track_next", "audible_change", "stop"};
+
+/** @brief Operator marker list for S3 (cache/replay). */
 static const char* const kMarkersS3[] = {
     "play_start", "audible_change", "stop", "replay", "audible_change", "stop"};
+
+/** @brief Operator marker list for S4 (remount). */
 static const char* const kMarkersS4[] = {
     "play_start", "audible_change", "stop", "replug", "play_start", "audible_change"};
+
+/** @brief Operator marker list shared by S6 (identity) and S7 (lifecycle). */
 static const char* const kMarkersGeneric[] = {
     "play_start", "track_next", "audible_change", "replay", "stop"};
+
+/** @brief Operator marker list for S5 (busy budget / read stall). */
 static const char* const kMarkersStall[] = {
     "play_start", "menu_open", "menu_reaction", "audio_gap", "stop"};
 
+/** @brief All experiment profiles S0..S7, free capture and drive mode, in WebUI order. */
 static const ExperimentProfile kTable[] = {
     {"s0_plug_enum", "S0 Plug/Enum", "s0_plug_enum", 12000, true, "media_hide",
      kMarkersS0, 2},
@@ -67,10 +88,18 @@ static const ExperimentProfile kTable[] = {
 };
 }  // namespace ExperimentProfilesDetail
 
+/** @brief Public view of the experiment profile table. */
 static const ExperimentProfile* const kExperiments = ExperimentProfilesDetail::kTable;
+
+/** @brief Number of entries in kExperiments. */
 static const size_t kExperimentCount =
     sizeof(ExperimentProfilesDetail::kTable) / sizeof(ExperimentProfilesDetail::kTable[0]);
 
+/**
+ * @brief Look up an experiment profile by id (exact, case-sensitive match).
+ * @param id  Profile id such as "s2_prefetch"; may be nullptr.
+ * @return Pointer into kExperiments, or nullptr if @p id is nullptr or unknown.
+ */
 inline const ExperimentProfile* findExperiment(const char* id) {
     if (!id) return nullptr;
     for (size_t i = 0; i < kExperimentCount; i++) {
@@ -79,11 +108,21 @@ inline const ExperimentProfile* findExperiment(const char* id) {
     return nullptr;
 }
 
+/**
+ * @brief Look up an experiment profile by session scenario id.
+ *
+ * Relies on the scenario id being equal to the profile id (true for all built-in profiles).
+ *
+ * @param scenario  Session scenario id.
+ * @return Matching profile, or nullptr if none has this id.
+ */
 inline const ExperimentProfile* findExperimentByScenario(const String& scenario) {
     return findExperiment(scenario.c_str());
 }
 
 /**
+ * @brief Serial-number policy of a sequence step across USB re-enumerations.
+ *
  * Experiment sequences (0.2.31, R1). One step = media variant + base experiment
  * (markers, end strategy) + measure window + repetitions. SequenceRunner switches the
  * medium, prompts the driver (LED + WebUI), arms the offline capture and splits a step
@@ -94,6 +133,7 @@ enum class SeqSerial : uint8_t {
     Keep = 1,    // hold the current serial across re-enum (cache key = content only)
 };
 
+/** @brief One step of an ExperimentSequence: media variant, base experiment, window and repeats. */
 struct SequenceStep {
     const char* media;       // MediaPresets id
     const char* experiment;  // ExperimentProfile id (markers, end strategy)
@@ -105,6 +145,7 @@ struct SequenceStep {
     bool fineData;           // one DATA record per 4 KiB callback (chunk timing)
 };
 
+/** @brief Named, ordered list of SequenceStep entries run by SequenceRunner. */
 struct ExperimentSequence {
     const char* id;
     const char* label;
@@ -112,7 +153,9 @@ struct ExperimentSequence {
     uint8_t stepCount;
 };
 
+/** @brief Storage for the experiment sequence table and its step lists. */
 namespace ExperimentSequencesDetail {
+/** @brief SEQ-DUR steps: track duration mix (10/26/60/180 s). */
 static const SequenceStep kSeqDur[] = {
     {"dur_mix", "s2_prefetch", 120000, 1, SeqSerial::Policy,
      "D010 waehlen, Autoplay laufen lassen (D010 -> D026 -> D060)"},
@@ -121,6 +164,8 @@ static const SequenceStep kSeqDur[] = {
     {"dur_mix", "s2_prefetch", 180000, 1, SeqSerial::Policy,
      "D180 waehlen, bis zum Wechsel auf D010 laufen lassen"},
 };
+
+/** @brief SEQ-SIZE steps: 1/4/8 MiB files plus PiDrive L3, with fine DATA records. */
 static const SequenceStep kSeqSize[] = {
     {"size_1_4_8", "s1_eager_eof", 90000, 1, SeqSerial::Policy,
      "S1M waehlen, bis zum Wechsel auf S4M laufen lassen", nullptr, true},
@@ -131,6 +176,8 @@ static const SequenceStep kSeqSize[] = {
     {"pidrive_l3", "s1_eager_eof", 180000, 1, SeqSerial::Policy,
      "FAVORITE/01ROCK waehlen, durchlaufen lassen (3 min)", nullptr, true},
 };
+
+/** @brief SEQ-CACHE steps: content vs. serial vs. identity changes. */
 static const SequenceStep kSeqCache[] = {
     {"cache_a", "s3_cache_hit", 90000, 1, SeqSerial::Policy,
      "TRACK1 waehlen, Autoplay T1 -> T2 -> T3"},
@@ -141,6 +188,8 @@ static const SequenceStep kSeqCache[] = {
     {"ident_b", "s6_identity", 90000, 1, SeqSerial::Policy,
      "Inhalt A, neue Serial/Label/Volume-ID: TRACK1 waehlen, Autoplay"},
 };
+
+/** @brief SEQ-STRUCT steps: folders, placement, header variants, fragmentation. */
 static const SequenceStep kSeqStruct[] = {
     {"folders_30", "s2_prefetch", 120000, 1, SeqSerial::Policy,
      "ALBUM1/T01 waehlen, Autoplay; nach 60 s Ordner ALBUM3 waehlen"},
@@ -152,8 +201,12 @@ static const SequenceStep kSeqStruct[] = {
      "F1 waehlen, Autoplay F1 -> F2 -> F3"},
 };
 
-// Stall ladder: one held READ10 per run (TRACK body, from 20 s after capture start).
-// Steps 6/7 exceed the inferred >= 20 s per-command timeout on purpose: only parked.
+/**
+ * @brief SEQ-STALL steps: READ10 stall ladder, menu stall and live-tempo pacing.
+ *
+ * Stall ladder: one held READ10 per run (TRACK body, from 20 s after capture start).
+ * Steps 6/7 exceed the inferred >= 20 s per-command timeout on purpose: only parked.
+ */
 static const SequenceStep kSeqStall[] = {
     {"cache_a", "s5_busy_budget", 75000, 1, SeqSerial::Policy,
      "STAND. TRACK1 waehlen (BOOT), Autoplay; Ton/Display beobachten (1 Read 2 s gebremst)",
@@ -190,6 +243,7 @@ static const SequenceStep kSeqStall[] = {
      R"({"regions":["head","body"],"pace":"realtime","count":0,"arm_delay_s":5,"window_s":100})"},
 };
 
+/** @brief All built-in experiment sequences, in WebUI order. */
 static const ExperimentSequence kTable[] = {
     {"seq_dur", "SEQ-DUR Dauer 10/26/60/180 s", kSeqDur, 3},
     {"seq_size", "SEQ-SIZE 1/4/8 MiB + PiDrive L3", kSeqSize, 4},
@@ -199,10 +253,18 @@ static const ExperimentSequence kTable[] = {
 };
 }  // namespace ExperimentSequencesDetail
 
+/** @brief Public view of the experiment sequence table. */
 static const ExperimentSequence* const kSequences = ExperimentSequencesDetail::kTable;
+
+/** @brief Number of entries in kSequences. */
 static const size_t kSequenceCount =
     sizeof(ExperimentSequencesDetail::kTable) / sizeof(ExperimentSequencesDetail::kTable[0]);
 
+/**
+ * @brief Look up an experiment sequence by id (exact, case-sensitive match).
+ * @param id  Sequence id such as "seq_dur"; may be nullptr.
+ * @return Pointer into kSequences, or nullptr if @p id is nullptr or unknown.
+ */
 inline const ExperimentSequence* findSequence(const char* id) {
     if (!id) return nullptr;
     for (size_t i = 0; i < kSequenceCount; i++) {

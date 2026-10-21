@@ -1,7 +1,24 @@
+/**
+ * @file MediaLayout.cpp
+ * @brief FAT geometry computation, extent map, LBA classification and FAT12/16 image parsing.
+ */
 #include "media/MediaLayout.h"
 #include <cstring>
 
+/**
+ * @brief Read a little-endian 16-bit value.
+ *
+ * @param p  Pointer to 2 bytes.
+ * @return Decoded value.
+ */
 static uint16_t le16(const uint8_t* p) { return (uint16_t)(p[0] | (p[1] << 8)); }
+
+/**
+ * @brief Read a little-endian 32-bit value.
+ *
+ * @param p  Pointer to 4 bytes.
+ * @return Decoded value.
+ */
 static uint32_t le32(const uint8_t* p) {
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
@@ -200,6 +217,12 @@ void MediaLayout::nodePath(uint8_t idx, char* out, size_t n) const {
     }
 }
 
+/**
+ * @brief Convert the 11-byte space-padded short name of a directory entry to "NAME.EXT".
+ *
+ * @param e         32-byte FAT directory entry (name at bytes 0..10).
+ * @param[out] out  Destination, at least 13 bytes; NUL-terminated.
+ */
 static void sfnToName(const uint8_t* e, char* out) {
     size_t p = 0;
     for (int i = 0; i < 8 && e[i] != ' '; i++) out[p++] = (char)e[i];

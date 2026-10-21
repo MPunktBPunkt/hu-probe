@@ -1,3 +1,7 @@
+/**
+ * @file HwInfo.cpp
+ * @brief eFuse BLK1 decoding and flash JEDEC lookup for HwInfo.
+ */
 #include "core/HwInfo.h"
 #include <Arduino.h>
 #include <esp_flash.h>
@@ -5,9 +9,17 @@
 
 namespace {
 
-// EFUSE_RD_MAC_SPI_SYS_n_REG (BLK1); bit layout as in esptool targets/esp32s3.py.
+/**
+ * @brief Read word n of eFuse BLK1.
+ *
+ * EFUSE_RD_MAC_SPI_SYS_n_REG (BLK1); bit layout as in esptool targets/esp32s3.py.
+ *
+ * @param n  Word index within BLK1.
+ * @return Raw 32-bit register value.
+ */
 uint32_t efuseBlk1Word(uint8_t n) { return REG_READ(DR_REG_EFUSE_BASE + 0x44 + 4u * n); }
 
+/** @brief Decoded hardware info, filled once by HwInfo::begin(). */
 struct Info {
     bool read = false;
     uint8_t pkg = 0;
@@ -21,6 +33,11 @@ struct Info {
     char module[16] = "?";
 } g;
 
+/**
+ * @brief Map the eFuse PSRAM capacity code to bytes.
+ * @param c  eFuse PSRAM capacity code.
+ * @return 8/2/16/4 MiB for codes 1/2/3/4, otherwise 0.
+ */
 uint32_t psramCapBytes(uint8_t c) {
     switch (c) {
         case 1: return 8u << 20;
@@ -31,6 +48,11 @@ uint32_t psramCapBytes(uint8_t c) {
     }
 }
 
+/**
+ * @brief Map the eFuse embedded-flash capacity code to bytes.
+ * @param c  eFuse flash capacity code.
+ * @return 8 MiB for code 1, 4 MiB for code 2, otherwise 0 (no embedded flash / unknown).
+ */
 uint32_t flashCapBytes(uint8_t c) {
     switch (c) {
         case 1: return 8u << 20;
@@ -39,7 +61,14 @@ uint32_t flashCapBytes(uint8_t c) {
     }
 }
 
-// In-package PSRAM of the S3: R2 = quad, R8/R8V/R16V = octal.
+/**
+ * @brief Return the PSRAM bus width for an eFuse PSRAM capacity code.
+ *
+ * In-package PSRAM of the S3: R2 = quad, R8/R8V/R16V = octal.
+ *
+ * @param c  eFuse PSRAM capacity code.
+ * @return "quad" (code 2), "octal" (codes 1, 3) or "unknown".
+ */
 const char* psramBus(uint8_t c) {
     switch (c) {
         case 2: return "quad";
@@ -49,6 +78,11 @@ const char* psramBus(uint8_t c) {
     }
 }
 
+/**
+ * @brief Map the eFuse PSRAM vendor code to the esptool name.
+ * @param v  eFuse PSRAM vendor code.
+ * @return "AP_3v3", "AP_1v8" or "" if unknown.
+ */
 const char* psramVendorName(uint8_t v) {
     switch (v) {
         case 1: return "AP_3v3";
@@ -57,6 +91,11 @@ const char* psramVendorName(uint8_t v) {
     }
 }
 
+/**
+ * @brief Map the eFuse embedded-flash vendor code to the esptool name.
+ * @param v  eFuse flash vendor code.
+ * @return "XMC", "GD", "FM", "TT", "BY" (codes 1..5) or "" if unknown.
+ */
 const char* flashVendorName(uint8_t v) {
     switch (v) {
         case 1: return "XMC";
@@ -68,6 +107,11 @@ const char* flashVendorName(uint8_t v) {
     }
 }
 
+/**
+ * @brief Map a JEDEC manufacturer ID to a vendor name.
+ * @param m  JEDEC manufacturer byte (bits 23..16 of the flash ID).
+ * @return Vendor name, or "" if unknown.
+ */
 const char* jedecVendorName(uint8_t m) {
     switch (m) {
         case 0xC8: return "GigaDevice";
@@ -83,6 +127,11 @@ const char* jedecVendorName(uint8_t m) {
     }
 }
 
+/**
+ * @brief Map the eFuse package code to a package name.
+ * @param p  eFuse package code.
+ * @return "QFN56" (0), "PICO-1 LGA56" (1) or "unknown".
+ */
 const char* pkgName(uint8_t p) {
     switch (p) {
         case 0: return "QFN56";

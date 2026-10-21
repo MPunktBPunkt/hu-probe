@@ -1,16 +1,23 @@
 #pragma once
 
+/**
+ * @file MediaPresets.h
+ * @brief Built-in media variant presets (JSON specs for SynthFat) and lookup by id.
+ */
+
 #include <Arduino.h>
 
 /**
- * Media variant presets (0.2.31). Each preset changes exactly one dimension against
- * its reference so HU behaviour can be attributed (docs/MEDIA_VARIATION.md).
+ * @brief Media variant preset (0.2.31).
+ *
+ * Each preset changes exactly one dimension against its reference so HU behaviour can be
+ * attributed (docs/MEDIA_VARIATION.md).
  * `demo_v1` = legacy flash image (FAT12, 3 × identical 158208 B tracks).
  */
 struct MediaPreset {
-    const char* id;
-    const char* label;
-    const char* json;  // nullptr = demo image
+    const char* id;     ///< preset id, also used in the JSON "id" field
+    const char* label;  ///< human-readable description (German) for the UI
+    const char* json;   ///< SynthFat media spec; nullptr = demo image
 };
 
 // clang-format off
@@ -147,6 +154,12 @@ static const MediaPreset kMediaPresets[] = {
 
 static constexpr size_t kMediaPresetCount = sizeof(kMediaPresets) / sizeof(kMediaPresets[0]);
 
+/**
+ * @brief Look up a built-in preset by its id (exact, case-sensitive match).
+ *
+ * @param id  Preset id such as "cache_a"; nullptr is allowed.
+ * @return Pointer into kMediaPresets, or nullptr if id is null or unknown.
+ */
 inline const MediaPreset* findMediaPreset(const char* id) {
     if (!id) return nullptr;
     for (size_t i = 0; i < kMediaPresetCount; i++) {
