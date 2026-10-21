@@ -1,0 +1,54 @@
+# Doxygen configuration for the hu-probe firmware (docs/KOMMENTARSTANDARD.md).
+# Usage: cd firmware && doxygen Doxyfile  ->  build/docs/html/index.html
+# Only non-default settings are listed; Doxygen fills in the rest.
+
+PROJECT_NAME           = "hu-probe firmware"
+PROJECT_BRIEF          = "USB-MSC head-unit measurement probe (ESP32-S3)"
+OUTPUT_DIRECTORY       = build/docs
+CREATE_SUBDIRS         = NO
+OUTPUT_LANGUAGE        = English
+
+INPUT                  = src include ../docs/KOMMENTARSTANDARD.md
+FILE_PATTERNS          = *.h *.cpp *.md
+RECURSIVE              = YES
+EXCLUDE                = src/media/CoverJpegs.cpp include/BuildId.h
+USE_MDFILE_AS_MAINPAGE =
+
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = NO
+MARKDOWN_SUPPORT       = YES
+BUILTIN_STL_SUPPORT    = YES
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_ANON_NSPACES   = YES
+EXTRACT_LOCAL_CLASSES  = YES
+HIDE_UNDOC_MEMBERS     = NO
+SORT_MEMBER_DOCS       = NO
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+
+# Arduino/IDF macros that would otherwise confuse the parser.
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = HUPROBE_BOARD_S3=1 BOARD_HAS_PSRAM=1 IRAM_ATTR= \
+                         "FW_VERSION=\"doc\"" ARDUINO=10819
+
+# StyleCop-like checks: every documented entity needs @param/@return.
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_IF_INCOMPLETE_DOC = YES
+WARN_NO_PARAMDOC       = YES
+WARN_AS_ERROR          = NO
+WARN_LOGFILE           = build/docs/doxygen-warnings.log
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_TREEVIEW      = YES
+GENERATE_LATEX         = NO
+HAVE_DOT               = NO

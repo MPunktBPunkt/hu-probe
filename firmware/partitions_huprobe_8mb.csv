@@ -1,5 +1,6 @@
 # hu-probe 0.3.0, 8 MiB flash. nvs/otadata keep the min_spiffs offsets so WiFi
 # credentials and config survive the one-time cable flash.
+# spiffs: no filesystem. First 32 KiB = DiagLog snapshots (8 × 4 KiB), rest unused.
 # Name,     Type, SubType,  Offset,   Size
 nvs,        data, nvs,      0x9000,   0x5000
 otadata,    data, ota,      0xe000,   0x2000
