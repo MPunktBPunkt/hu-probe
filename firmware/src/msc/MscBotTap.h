@@ -205,6 +205,14 @@ public:
     /** @brief True after NEED_RESET until BOT_RESET / Mount / begin — for StatusLed. */
     static bool needResetLatched() { return needResetArmed_; }
 
+    /**
+     * @brief Clear a latched NEED_RESET after an intentional soft-detach (trip upload).
+     *
+     * Without this the magenta LED stays on and coex logic treats the bus as broken even
+     * though we disconnected on purpose so WiFi can TX.
+     */
+    static void clearNeedReset();
+
     /** @brief Number of pending events dropped because the 256-entry ring was full. */
     static uint32_t pendingOverflow() { return pendingOverflow_; }
 

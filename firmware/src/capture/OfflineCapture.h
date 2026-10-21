@@ -313,6 +313,15 @@ public:
     /** @brief True if the last finished run passed the probe-side integrity gate (no overflow/drops, complete). */
     bool lastRunIntegrity() const { return lastRun_.valid && lastRun_.integrityPass; }
 
+    /** @brief Current upload phase string (e.g. "replaying", "queued", "delivered"). */
+    const char* uploadStatus() const { return uploadStatus_.c_str(); }
+
+    /** @brief Trip id being uploaded (0 if none). */
+    uint32_t currentTripId() const { return tripId_; }
+
+    /** @brief True while a TripStore flash trip is being replayed to the collector. */
+    bool replayingStored() const { return replayingStored_; }
+
     /**
      * @brief Fill the offline-capture status: state, counters, end settings, markers,
      *        capture_budget and last_run (if any).
@@ -576,8 +585,15 @@ private:
     static constexpr uint16_t kSoftReplugHoldMs = 2000;
     static constexpr uint32_t kUnplugIdleMs = 1500;
     static constexpr uint32_t kUploadStallMs = 120000;
+    /** @brief Stored trip: leave Replay/Drain if no TCP progress for this long. */
+    static constexpr uint32_t kStoredUploadStallMs = 60000;
+    /** @brief Stored trip: hard cap before accepting status=queued with leftover ring lines. */
+    static constexpr uint32_t kStoredUploadHardMs = 180000;
+    /** @brief Bounce collector socket if no tcp_tx_ok while WiFi is up. */
+    static constexpr uint32_t kStoredTcpForceMs = 12000;
     static constexpr uint32_t kWifiReconnectEveryMs = 10000;
-    static constexpr size_t kReplayMaxPending = 48;
+    /** @brief Cap ring depth during stored replay — high pending starved WiFi/HTTP. */
+    static constexpr size_t kReplayMaxPending = 24;
     static constexpr uint32_t kCheckpointEveryMs = 60000;
     static constexpr uint32_t kCheckpointForceMs = 90000;  // no idle gap for this long
     static constexpr uint32_t kCheckpointIdleMs = 500;     // no CBW for this long

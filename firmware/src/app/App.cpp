@@ -16,6 +16,7 @@
 #include "core/HwInfo.h"
 #include "core/ProbeClock.h"
 #include "core/PanicTail.h"
+#include "core/PhaseGate.h"
 #include "msc/MscBotTap.h"
 #include <WiFi.h>
 #include <WiFiManager.h>
@@ -162,6 +163,7 @@ void App::begin() {
 
     PanicTail::begin();
     DiagLog::begin();
+    PhaseGate::begin();
     GithubOta::bootCheck();
     HwInfo::begin();
     led_.begin();
@@ -231,13 +233,14 @@ void App::begin() {
 void App::wifiCoexTask(void* arg) {
     App* self = static_cast<App*>(arg);
     for (;;) {
-        // Offline-Capture owns WiFi — coex soft-detach must not fight WIFI_OFF.
+        // Offline-Capture owns WiFi while active. Trip-upload keeps superviseWifi running so
+        // drain_wifi can recover, but enterCoexHold/restart skip wiping the ring / ESP.restart.
         if (!OfflineCapture::instance().blocksWifiSupervise() &&
             !DriveMode::instance().ownsWifi()) {
             self->superviseWifi();
         }
-        if (self->coexDetachedForWifi_) {
-            self->tcp_.loop();  // flush ring while USB is off
+        if (self->coexDetachedForWifi_ || self->web_.tripUploadActive()) {
+            self->tcp_.loop();  // flush ring while USB is off / trip drain
         }
         vTaskDelay(pdMS_TO_TICKS(500));
     }
@@ -340,11 +343,13 @@ void App::enterCoexHold(const char* reason) {
     coexRecoveredAtMs_ = 0;
     coexZombieSinceMs_ = 0;
     // B23: never wipe live session evidence — only clear when idle / no session.
-    if (!session_.active()) {
+    // Trip-upload drain also needs the ring; clearing here made "drain ok" after data loss.
+    if (!session_.active() && !web_.tripUploadActive()) {
         bus.clear();
     } else {
-        DiagLog::printf("[WIFI] coex-hold keep ring pending=%u (session active)\n",
-                      (unsigned)pendingBefore);
+        DiagLog::printf("[WIFI] coex-hold keep ring pending=%u (session=%d trip_up=%d)\n",
+                        (unsigned)pendingBefore, session_.active() ? 1 : 0,
+                        web_.tripUploadActive() ? 1 : 0);
     }
     WiFi.setAutoReconnect(false);
     // Soft reconnect() is not enough after OTG RF death — full MAC stop/start.
@@ -497,6 +502,15 @@ void App::superviseWifi() {
     unsigned long restartAfter =
         coexDetachedForWifi_ ? WIFI_RESTART_AFTER_COEX_MS : WIFI_RESTART_AFTER_MS;
     if (downFor >= restartAfter && wifiReconnectAttempts_ >= 3) {
+        if (web_.tripUploadActive()) {
+            // Keep soft-reconnecting; a hard restart aborts the batch and loses RAM state.
+            DiagLog::printf("[WIFI] unrecoverable deferred (trip upload) pending=%u\n",
+                            (unsigned)bus.pending());
+            DiagLog::persist("trip_upload", false);
+            wifiReconnectAttempts_ = 0;
+            wifiDownSinceMs_ = now;
+            return;
+        }
         DiagLog::printf("[WIFI] unrecoverable — ESP.restart()");
         PanicTail::noteRestart(PanicTail::RestartWifiUnrecoverable);
         delay(200);
@@ -526,6 +540,8 @@ void App::loop() {
 
     // lab_debian never reattaches after a hold; detached is its normal state there.
     led_.setCoexHold(coexDetachedForWifi_ && !labMscDetachedDefault_);
+    led_.setTripUpload(web_.tripUploadActive() ||
+                       OfflineCapture::instance().replayingStored());
     led_.tick(session_, msc_, instrument_, tcp_, EventBus::instance());
 
     unsigned long now = millis();

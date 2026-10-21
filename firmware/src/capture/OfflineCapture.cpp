@@ -12,6 +12,7 @@
 #include "core/HwInfo.h"
 #include "core/ProbeClock.h"
 #include "core/PanicTail.h"
+#include "core/PhaseGate.h"
 #include "media/MediaLayout.h"
 #include "msc/MscBotTap.h"
 #include "net/EventBus.h"
@@ -313,7 +314,8 @@ void OfflineCapture::pumpTcp(uint32_t maxMs) {
     while (millis() - t0 < maxMs) {
         tcp_->loop();
         yield();
-        delay(10);
+        // Short sleeps — long delay() starved the WebServer during stored replay.
+        delay(replayingStored_ ? 2 : 10);
         if (EventBus::instance().pending() == 0 && tcp_->connected()) break;
     }
 }
@@ -325,7 +327,7 @@ void OfflineCapture::pumpTcpWhilePending(uint32_t maxMs, size_t keepBelow) {
     while (millis() - t0 < maxMs) {
         tcp_->loop();
         yield();
-        delay(5);
+        delay(replayingStored_ ? 2 : 5);
         if (EventBus::instance().pending() < keepBelow && tcp_->connected()) break;
         if (EventBus::instance().pending() == 0) break;
     }
@@ -716,6 +718,13 @@ bool OfflineCapture::replayStored(Session* session, MscGadget* msc, ReadInstrume
     mediaHidden_ = false;
     fallbackDetached_ = false;
     transportEpochStart_ = transportEpochEnd_ = 0;
+    // Soft-detach before WiFi TX so OTG cannot starve the radio (BMW + lab).
+    if (msc_ && msc_->usbSoftAttached()) {
+        msc_->softDetach(0);
+        fallbackDetached_ = true;
+        MscBotTap::clearNeedReset();
+        DiagLog::printf("[MSC] trip-upload detach trip=#%u\n", (unsigned)tripId_);
+    }
     EmitOrigin::set("post_finalize", true);
     state_ = State::Uploading;
     uploadPhase_ = UploadPhase::Wifi;
@@ -1059,23 +1068,30 @@ bool OfflineCapture::isLabDebian() const {
 }
 
 void OfflineCapture::ensureLabDetached(const char* why) {
-    if (!msc_ || !isLabDebian()) return;
-    // Cancel softCycle auto-reattach so Lab stays detached.
+    if (!msc_) return;
+    // Lab always; stored trip upload also (BMW coex during multi-minute replay).
+    if (!isLabDebian() && !replayingStored_) return;
+    // Cancel softCycle auto-reattach so upload stays detached.
     if (msc_->usbSoftAttached()) {
         msc_->softDetach(0);
+        fallbackDetached_ = true;
     }
-    DiagLog::printf("[MSC] lab detach (%s) soft=%d\n", why ? why : "?",
-                  msc_->usbSoftAttached() ? 1 : 0);
+    DiagLog::printf("[MSC] upload detach (%s) soft=%d stored=%d lab=%d\n", why ? why : "?",
+                    msc_->usbSoftAttached() ? 1 : 0, replayingStored_ ? 1 : 0,
+                    isLabDebian() ? 1 : 0);
 }
 
 void OfflineCapture::restoreUsbAfterUpload() {
     if (!msc_) return;
     // Lab: never restore media / soft-attach after offline — that reopens OTG+WiFi coex
     // (restoreMedia-before-detach was the T3b killer). Stay soft-detached.
-    if (isLabDebian()) {
+    // Stored trip batch: WebUi owns reattach after all pending trips are done.
+    if (isLabDebian() || replayingStored_) {
         fallbackDetached_ = false;
         mediaHidden_ = false;
-        ensureLabDetached("after-offline");
+        if (msc_->usbSoftAttached()) msc_->softDetach(0);
+        DiagLog::printf("[MSC] keep detached after upload (lab=%d stored=%d)\n",
+                        isLabDebian() ? 1 : 0, replayingStored_ ? 1 : 0);
         return;
     }
     if (fallbackDetached_) {
@@ -1262,27 +1278,67 @@ void OfflineCapture::pollUpload() {
         case UploadPhase::Replay: {
             // Backpressure: every queued event is a heap String (~300 B, no PSRAM). Replaying
             // while TCP/WiFi is stalled filled the heap until WiFi itself dropped.
-            const bool linkUp = WiFi.status() == WL_CONNECTED && tcp_ && tcp_->connected();
+            // Progress = recent tcp_tx_ok (not enqueue) — otherwise a half-dead TCP never
+            // tripped the stall timer and starved HTTP until magenta/NeedReset.
+            const uint32_t stallMs = replayingStored_ ? kStoredUploadStallMs : kUploadStallMs;
+            EventBus& bus = EventBus::instance();
+            const unsigned long now = millis();
+            const unsigned long lastOk = bus.lastTcpTxOkMs();
+            const unsigned long lastOkAge = lastOk ? (now - lastOk) : now;
+            const bool wifiUp = WiFi.status() == WL_CONNECTED;
+            const bool tcpUp = tcp_ && tcp_->connected();
+            const bool linkUp = wifiUp && tcpUp;
+
+            if (replayingStored_ && wifiUp && (!tcpUp || lastOkAge >= kStoredTcpForceMs)) {
+                static unsigned long lastForceMs = 0;
+                if (now - lastForceMs >= kStoredTcpForceMs) {
+                    lastForceMs = now;
+                    DiagLog::printf(
+                        "[TRIP] replay tcp force-reconnect trip=#%u pending=%u lastOkAge=%lums "
+                        "tcp=%d\n",
+                        (unsigned)tripId_, (unsigned)bus.pending(), lastOkAge, tcpUp ? 1 : 0);
+                    tcp_->forceReconnect();
+                }
+            }
+
             if (!linkUp) {
-                if (WiFi.status() != WL_CONNECTED) reconnectWifiThrottled();
-                pumpTcp(200);
-                if (millis() - uploadPhaseSinceMs_ > kUploadStallMs) {
+                if (!wifiUp) reconnectWifiThrottled();
+                pumpTcp(replayingStored_ ? 100 : 200);
+                yield();
+                // Stall on no TX progress (uploadPhaseSinceMs_ advanced only on tcp_tx_ok).
+                if (now - uploadPhaseSinceMs_ > stallMs) {
                     uploadStatus_ = "replay_stalled";
                     uploadPhase_ = UploadPhase::Health;
-                    uploadPhaseSinceMs_ = millis();
+                    uploadPhaseSinceMs_ = now;
                 }
                 break;
             }
-            if (EventBus::instance().pending() < kReplayMaxPending) {
-                for (int i = 0; i < 10; i++) {
+            if (bus.pending() < kReplayMaxPending) {
+                // Fewer records/tick → WiFi + WebServer keep breathing room.
+                const int burst = replayingStored_ ? 4 : 10;
+                for (int i = 0; i < burst; i++) {
                     if (!replayOneRec()) {
                         uploadPhase_ = UploadPhase::Health;
                         break;
                     }
                 }
-                uploadPhaseSinceMs_ = millis();
             }
-            pumpTcpWhilePending(200, 16);
+            // Advance stall clock only when collector actually accepted bytes.
+            if (lastOk && lastOkAge < 2000UL) uploadPhaseSinceMs_ = now;
+            pumpTcpWhilePending(replayingStored_ ? 250 : 200, replayingStored_ ? 8 : 16);
+            yield();
+            if (replayingStored_) {
+                static unsigned long lastHbMs = 0;
+                if (now - lastHbMs >= 15000UL) {
+                    lastHbMs = now;
+                    DiagLog::printf(
+                        "[TRIP] replay hb trip=#%u off=%u/%u pending=%u wifi=%d tcp=%d "
+                        "lastOkAge=%lums heap=%u\n",
+                        (unsigned)tripId_, (unsigned)replayOff_, (unsigned)used_,
+                        (unsigned)bus.pending(), wifiUp ? 1 : 0, tcpUp ? 1 : 0, lastOkAge,
+                        (unsigned)ESP.getFreeHeap());
+                }
+            }
             break;
         }
         case UploadPhase::Health: {
@@ -1291,30 +1347,57 @@ void OfflineCapture::pollUpload() {
                 uploadStatus_ = "draining";
                 publishOfflineHealth(true);
                 session_->stop();
-                drainUpload(8000);
+                drainUpload(replayingStored_ ? 30000 : 8000);
             }
             uploadPhase_ = UploadPhase::Drain;
             uploadPhaseSinceMs_ = millis();
+            if (replayingStored_) PhaseGate::enter(PhaseGate::StoredOcDrain, tripId_);
             break;
         }
         case UploadPhase::Drain: {
             // The timeout must also fire with WiFi down: the App WiFi supervisor is blocked
             // while active(), so this phase is the only way back to Idle.
-            const bool timedOut = millis() - uploadPhaseSinceMs_ > kUploadStallMs;
+            // Stored trips: keep draining through WiFi blips up to kStoredUploadHardMs — coex
+            // used to clear the ring on finishRun→Idle and then zombie-restart the batch.
+            const uint32_t stallMs = replayingStored_ ? kStoredUploadStallMs : kUploadStallMs;
+            const uint32_t hardMs = replayingStored_ ? kStoredUploadHardMs : kUploadStallMs;
+            const bool softTimedOut = millis() - uploadPhaseSinceMs_ > stallMs;
+            const bool hardTimedOut = millis() - uploadPhaseSinceMs_ > hardMs;
             if (WiFi.status() != WL_CONNECTED) {
                 reconnectWifiThrottled();
-                if (!timedOut) {
+                if (!hardTimedOut) {
                     pumpTcp(200);
                     break;
                 }
             } else {
-                drainUpload(400);
+                drainUpload(replayingStored_ ? 1500 : 400);
             }
-            const bool empty = EventBus::instance().pending() == 0 && tcp_ && tcp_->connected();
-            if (empty || timedOut) {
+            EventBus& bus = EventBus::instance();
+            const bool empty = bus.pending() == 0 && tcp_ && tcp_->connected();
+            // Live offline: soft timeout may end as queued. Stored: only hard timeout.
+            const bool giveUp = replayingStored_ ? hardTimedOut : softTimedOut;
+            if (empty || giveUp) {
                 uploadStatus_ = empty ? "delivered" : "queued";
                 if (empty) publishOfflineHealth(true);
-                const uint32_t dropped = EventBus::instance().dropped();
+                // Stored give-up: clear orphan ring lines so WebUi drain cannot hang on zombies.
+                if (replayingStored_ && !empty) {
+                    const unsigned long lastOk = bus.lastTcpTxOkMs();
+                    const unsigned long now = millis();
+                    PhaseGate::enter(PhaseGate::StoredQueuedClear, tripId_);
+                    DiagLog::printf(
+                        "[OFFLINE] stored queued-clear trip=%u pending=%u tx_ok=%u tx_fail=%u "
+                        "lastOkAge=%lums wifi=%d tcp=%d heap=%u\n",
+                        (unsigned)tripId_, (unsigned)bus.pending(), (unsigned)bus.tcpTxOk(),
+                        (unsigned)bus.tcpTxFail(),
+                        lastOk ? (unsigned long)(now - lastOk) : 0UL,
+                        WiFi.status() == WL_CONNECTED ? 1 : 0, tcp_ && tcp_->connected() ? 1 : 0,
+                        (unsigned)ESP.getFreeHeap());
+                    bus.clear();
+                    DiagLog::persist("trip_upload", true);
+                    PhaseGate::pass(PhaseGate::StoredQueuedClear);
+                }
+                if (replayingStored_) PhaseGate::pass(PhaseGate::StoredOcDrain);
+                const uint32_t dropped = bus.dropped();
                 saveLastRun(empty && overflow_ == 0 && dropped == 0 && timeRangeDropped_ == 0 &&
                                 replayComplete(),
                             dropped);

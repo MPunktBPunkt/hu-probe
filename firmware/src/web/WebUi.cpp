@@ -11,6 +11,7 @@
 #include "capture/SequenceRunner.h"
 #include "capture/TripStore.h"
 #include "core/DiagLog.h"
+#include "core/PhaseGate.h"
 #include "core/GithubOta.h"
 #include "core/HwInfo.h"
 #include "core/PanicTail.h"
@@ -18,6 +19,7 @@
 #include "msc/MscBotTap.h"
 #include "msc/MscGadget.h"
 #include "msc/ReadStall.h"
+#include "net/EventBus.h"
 #include <Update.h>
 #include <WiFi.h>
 
@@ -102,6 +104,8 @@ static const char* PAGE =
     "Einstecken. BOOT beim Einstecken gedrückt halten = WLAN-Portal.</p>"
     "<h2>Gespeicherte Fahrten (Flash)</h2>"
     "<p class=muted id=tripsNow></p>"
+    "<p class=muted>Upload braucht stabiles WLAN; OTG am PC/HU währenddessen vermeiden "
+    "(USB wird für den Transfer soft-detached).</p>"
     "<div class=row>"
     "<button class=sec onclick=tripsUpload()>Ausstehende hochladen</button>"
     "<button class=sec onclick=tripsErase(false)>Hochgeladene löschen</button>"
@@ -413,17 +417,32 @@ static const char* PAGE =
     "async function loadTrips(){"
     "  const j=await (await fetch('/api/trips')).json();"
     "  if(!j.available){tripsNow.textContent='keine trips-Partition (einmal per Kabel flashen)';tripList.textContent='';return}"
-    "  tripsNow.textContent=(j.trips||[]).length+' Fahrten · ausstehend '+(j.pending||0)+' · frei '+"
-    "    Math.round((j.free_bytes||0)/1024)+' KiB'+(j.upload_all?' · Upload läuft':'')+(j.upload_error?(' · '+j.upload_error):'');"
+    "  let line=(j.trips||[]).length+' Fahrten · ausstehend '+(j.pending||0)+' · frei '+"
+    "    Math.round((j.free_bytes||0)/1024)+' KiB';"
+    "  if(j.upload_all)line+=' · Upload läuft'+(j.upload_trip_id?(' #'+j.upload_trip_id):'')+"
+    "    (j.upload_status?(' · '+j.upload_status):'');"
+    "  if(j.upload_error)line+=' · Fehler: '+j.upload_error;"
+    "  tripsNow.textContent=line;"
     "  tripList.textContent=(j.trips||[]).map(t=>'#'+t.trip_id+' '+(t.bytes/1024).toFixed(1)+' KiB · '+"
     "    t.commits+' Commits · '+t.end_reason+(t.uploaded?' · hochgeladen':' · AUSSTEHEND')+"
     "    (t.writing?' · schreibt':'')+' · '+t.media+' · '+t.wallclock+' · fw '+t.fw).join('\\n')||'keine';"
     "}"
-    "async function tripsUpload(){const r=await fetch('/api/trips/upload',{method:'POST'});"
-    "  st.textContent=await r.text();loadTrips()}"
+    "async function tripsUpload(){"
+    "  const r=await fetch('/api/trips/upload',{method:'POST'});"
+    "  const t=await r.text();st.textContent=t;let j={};try{j=JSON.parse(t)}catch(e){}"
+    "  if(!j.ok)tripsNow.textContent='Upload Start fehlgeschlagen: '+(j.err||r.status);"
+    "  loadTrips()}"
     "async function tripsErase(all){if(all&&!confirm('Alle Fahrten löschen, auch nicht hochgeladene?'))return;"
     "  const r=await fetch('/api/trips/erase',{method:'POST',headers:{'Content-Type':'application/json'},"
-    "    body:JSON.stringify({all:all})});st.textContent=await r.text();loadTrips()}"
+    "    body:JSON.stringify({all:all})});"
+    "  const t=await r.text();st.textContent=t;let j={};try{j=JSON.parse(t)}catch(e){}"
+    "  if(!j.ok){"
+    "    const msg=j.err==='pending_trips_left'"
+    "      ?'Hochgeladene löschen geht erst, wenn keine AUSSTEHEND mehr (Journal append-only). Nutze Alle löschen oder zuerst Upload.'"
+    "      :('Löschen fehlgeschlagen: '+(j.err||r.status));"
+    "    tripsNow.textContent=msg;"
+    "  }"
+    "  loadTrips()}"
     "async function loadDiag(){"
     "  try{diagNow.textContent=await (await fetch('/api/diag/log?tail=8000')).text()}"
     "  catch(e){diagNow.textContent='Log nicht erreichbar'}"
@@ -494,36 +513,201 @@ void WebUi::loop() {
     if (tripUploadAll_) pumpTripUpload();
 }
 
-void WebUi::pumpTripUpload() {
-    OfflineCapture& oc = OfflineCapture::instance();
-    if (oc.active()) return;
-    const TripStore::Trip* t = TripStore::instance().firstPending();
-    bool done = !t;
-    if (t && t->meta.tripId == tripUploadLastId_) {
-        tripUploadErr_ = "trip_upload_incomplete";
-        done = true;
-    }
-    if (!done) {
-        tripUploadLastId_ = t->meta.tripId;
-        if (!oc.replayStored(session_, msc_, inst_, tcp_)) {
-            tripUploadErr_ = "replay_failed";
-            done = true;
-        }
-    }
-    if (!done) return;
+void WebUi::finishTripUploadBatch(bool ok) {
     tripUploadAll_ = false;
-    if (tripUploadRestoreLive_ && session_ && !session_->active() && cfg_) {
+    tripUploadStarted_ = false;
+    tripUploadWasActive_ = false;
+    tripUploadAwaitDrain_ = false;
+    tripUploadDrainSinceMs_ = 0;
+    tripUploadDrainHbMs_ = 0;
+    tripUploadDrainProgressMs_ = 0;
+    tripUploadDrainLastPend_ = 0;
+    if (tcp_) tcp_->setOfflineDrain(false);
+    const size_t ringPend = EventBus::instance().pending();
+    const uint8_t tripsPend = TripStore::instance().pendingCount();
+    DiagLog::printf("[TRIP] upload batch done ok=%d err=%s ring=%u trips_pending=%u\n", ok ? 1 : 0,
+                    tripUploadErr_.length() ? tripUploadErr_.c_str() : "-", (unsigned)ringPend,
+                    (unsigned)tripsPend);
+    DiagLog::persist("trip_upload", true);
+    PhaseGate::finish(PhaseGate::TripBatch);
+    if (ok) tripUploadErr_ = "";
+    tripUploadStatus_ = ok ? "done" : (tripUploadErr_.length() ? tripUploadErr_ : "stopped");
+    // Live session only when clean — otherwise coex/zombie with leftover ring lines.
+    if (ok && tripUploadRestoreLive_ && ringPend == 0 && tripsPend == 0 && session_ &&
+        !session_->active() && cfg_) {
         session_->start(cfg_->vehicleId, cfg_->scenarioId, cfg_->profileId,
                         msc_ ? msc_->identitySerial() : nullptr,
                         msc_ ? msc_->volumeLabel() : nullptr);
     }
 }
 
+void WebUi::pumpTripUpload() {
+    // OfflineCapture already spent the hard upload budget; post-replay drain is short.
+    static constexpr unsigned long kDrainCapMs = 90000UL;
+    static constexpr unsigned long kDrainAbandonMs = 60000UL;
+    static constexpr unsigned long kDrainHbMs = 15000UL;
+    static constexpr unsigned long kDrainTcpStallMs = 15000UL;
+
+    OfflineCapture& oc = OfflineCapture::instance();
+    if (oc.active()) {
+        tripUploadWasActive_ = true;
+        tripUploadStatus_ = oc.uploadStatus();
+        if (oc.currentTripId()) tripUploadLastId_ = oc.currentTripId();
+        return;
+    }
+
+    // Just finished a stored replay: drain EventBus before next trip or live restore.
+    if (tripUploadWasActive_) {
+        tripUploadWasActive_ = false;
+        PhaseGate::pass(PhaseGate::TripReplay);
+        tripUploadAwaitDrain_ = true;
+        const unsigned long now = millis();
+        tripUploadDrainSinceMs_ = now;
+        tripUploadDrainHbMs_ = now;
+        tripUploadDrainProgressMs_ = now;
+        tripUploadDrainLastPend_ = EventBus::instance().pending();
+        tripUploadStatus_ = oc.uploadStatus();
+        if (tcp_) tcp_->setOfflineDrain(true);
+        PhaseGate::enter(PhaseGate::TripDrain, tripUploadLastId_);
+        DiagLog::printf("[TRIP] drain after #%u status=%s pending=%u\n",
+                        (unsigned)tripUploadLastId_, oc.uploadStatus(),
+                        (unsigned)tripUploadDrainLastPend_);
+        // OfflineCapture already cleared orphans on stored queued — nothing to wait for.
+        if (tripUploadDrainLastPend_ == 0) {
+            tripUploadAwaitDrain_ = false;
+            if (tcp_) tcp_->setOfflineDrain(false);
+            tripUploadStatus_ = "drain_ok";
+            PhaseGate::pass(PhaseGate::TripDrain);
+            DiagLog::printf("[TRIP] drain ok after #%u (empty)\n", (unsigned)tripUploadLastId_);
+        }
+    }
+
+    if (tripUploadAwaitDrain_) {
+        if (tcp_) tcp_->loop();
+        EventBus& bus = EventBus::instance();
+        const unsigned long now = millis();
+        const size_t pend = bus.pending();
+        const unsigned long lastOk = bus.lastTcpTxOkMs();
+        const unsigned long lastOkAge = lastOk ? (now - lastOk) : 0UL;
+
+        if (pend < tripUploadDrainLastPend_) {
+            tripUploadDrainLastPend_ = pend;
+            tripUploadDrainProgressMs_ = now;
+        }
+
+        if (now - tripUploadDrainHbMs_ >= kDrainHbMs) {
+            tripUploadDrainHbMs_ = now;
+            DiagLog::printf(
+                "[TRIP] drain hb after #%u pending=%u wifi=%d tcp=%d lastOkAge=%lums\n",
+                (unsigned)tripUploadLastId_, (unsigned)pend,
+                WiFi.status() == WL_CONNECTED ? 1 : 0, tcp_ && tcp_->connected() ? 1 : 0,
+                lastOkAge);
+        }
+
+        if (WiFi.status() != WL_CONNECTED) {
+            // Soft reconnect here; App still runs superviseWifi but will not ESP.restart().
+            tripUploadStatus_ = "drain_wifi";
+            static unsigned long lastDrainWifiReMs = 0;
+            if (now - lastDrainWifiReMs >= 10000UL) {
+                lastDrainWifiReMs = now;
+                PhaseGate::enter(PhaseGate::TripWifiRe, (uint32_t)pend);
+                WiFi.setAutoReconnect(false);
+                WiFi.reconnect();
+                PhaseGate::pass(PhaseGate::TripWifiRe);
+                DiagLog::printf("[TRIP] drain wifi reconnect pending=%u\n", (unsigned)pend);
+            }
+        } else if (pend > 0 && tcp_ && lastOkAge >= kDrainTcpStallMs) {
+            // Stuck TX with association: bounce the collector socket.
+            static unsigned long lastDrainTcpForceMs = 0;
+            if (now - lastDrainTcpForceMs >= kDrainTcpStallMs) {
+                lastDrainTcpForceMs = now;
+                DiagLog::printf("[TRIP] drain tcp force-reconnect pending=%u lastOkAge=%lums\n",
+                                (unsigned)pend, lastOkAge);
+                PhaseGate::enter(PhaseGate::TripTcpForce, (uint32_t)pend);
+                tcp_->forceReconnect();
+                tcp_->loop();
+                PhaseGate::pass(PhaseGate::TripTcpForce);
+            }
+        }
+
+        const bool empty = pend == 0 && tcp_ && tcp_->connected();
+        if (empty || pend == 0) {
+            tripUploadAwaitDrain_ = false;
+            if (tcp_) tcp_->setOfflineDrain(false);
+            tripUploadStatus_ = "drain_ok";
+            PhaseGate::pass(PhaseGate::TripDrain);
+            DiagLog::printf("[TRIP] drain ok after #%u\n", (unsigned)tripUploadLastId_);
+        } else if (now - tripUploadDrainProgressMs_ >= kDrainAbandonMs ||
+                   now - tripUploadDrainSinceMs_ > kDrainCapMs) {
+            // Do not fail the batch: clear zombies and let same-trip retry / next trip continue.
+            DiagLog::printf("[TRIP] drain abandon pending=%u cleared=1 after #%u\n",
+                            (unsigned)pend, (unsigned)tripUploadLastId_);
+            bus.clear();
+            tripUploadAwaitDrain_ = false;
+            if (tcp_) tcp_->setOfflineDrain(false);
+            tripUploadStatus_ = "drain_abandon";
+            tripUploadErr_ = "drain_abandon";
+            PhaseGate::pass(PhaseGate::TripDrain);
+            DiagLog::persist("trip_upload", true);
+        } else {
+            tripUploadStatus_ = String("draining:") + String((unsigned)pend);
+            return;
+        }
+    }
+
+    const TripStore::Trip* t = TripStore::instance().firstPending();
+    if (!t) {
+        finishTripUploadBatch(true);
+        return;
+    }
+
+    if (t->meta.tripId == tripUploadLastId_) {
+        // Still pending after replay → one retry, then stop.
+        if (tripUploadRetriedId_ != t->meta.tripId) {
+            tripUploadRetriedId_ = t->meta.tripId;
+            DiagLog::printf("[TRIP] retry #%u after incomplete upload\n",
+                            (unsigned)t->meta.tripId);
+        } else {
+            tripUploadErr_ = "trip_upload_incomplete";
+            finishTripUploadBatch(false);
+            return;
+        }
+    }
+
+    if (!tripUploadStarted_) {
+        tripUploadStarted_ = true;
+        if (msc_ && msc_->usbSoftAttached()) {
+            msc_->softDetach(0);
+            MscBotTap::clearNeedReset();
+            DiagLog::printf("[MSC] trip-upload batch detach\n");
+        }
+        DiagLog::persist("trip_upload", true);
+    }
+
+    tripUploadLastId_ = t->meta.tripId;
+    tripUploadStatus_ = "starting";
+    PhaseGate::enter(PhaseGate::TripReplay, t->meta.tripId);
+    if (!oc.replayStored(session_, msc_, inst_, tcp_)) {
+        PhaseGate::pass(PhaseGate::TripReplay);
+        tripUploadErr_ = "replay_failed";
+        finishTripUploadBatch(false);
+        return;
+    }
+    tripUploadStatus_ = oc.uploadStatus();
+}
+
 void WebUi::handleTrips() {
     JsonDocument doc;
     TripStore::instance().toJson(doc.to<JsonObject>());
     doc["upload_all"] = tripUploadAll_;
+    if (tripUploadLastId_) doc["upload_trip_id"] = tripUploadLastId_;
+    if (tripUploadStatus_.length()) doc["upload_status"] = tripUploadStatus_;
     if (tripUploadErr_.length()) doc["upload_error"] = tripUploadErr_;
+    OfflineCapture& oc = OfflineCapture::instance();
+    if (oc.active() && oc.replayingStored()) {
+        doc["upload_status"] = oc.uploadStatus();
+        if (oc.currentTripId()) doc["upload_trip_id"] = oc.currentTripId();
+    }
     sendJson(200, doc);
 }
 
@@ -543,9 +727,19 @@ void WebUi::handleTripsUpload() {
     }
     out["pending"] = ts.pendingCount();
     tripUploadErr_ = "";
+    tripUploadStatus_ = "queued";
     tripUploadLastId_ = 0;
+    tripUploadRetriedId_ = 0;
+    tripUploadStarted_ = false;
+    tripUploadWasActive_ = false;
+    tripUploadAwaitDrain_ = false;
+    tripUploadDrainSinceMs_ = 0;
+    tripUploadDrainHbMs_ = 0;
+    tripUploadDrainProgressMs_ = 0;
+    tripUploadDrainLastPend_ = 0;
     tripUploadRestoreLive_ = session_ && session_->active();
     tripUploadAll_ = ts.pendingCount() > 0;
+    if (tripUploadAll_) PhaseGate::enter(PhaseGate::TripBatch, ts.pendingCount());
     sendJson(200, out);
 }
 
@@ -656,6 +850,7 @@ void WebUi::handleStatus() {
     }
     PanicTail::appendPrevious(doc.as<JsonObject>());
     PanicTail::appendCurrent(doc.as<JsonObject>());
+    PhaseGate::appendStatus(doc.as<JsonObject>());
     DiagLog::appendStatus(doc["diag"].to<JsonObject>());
     doc["ip"] = WiFi.localIP().toString();
     doc["hub_ok"] = hub_ ? hub_->lastOk() : false;

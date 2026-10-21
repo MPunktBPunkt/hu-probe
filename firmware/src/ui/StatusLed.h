@@ -25,6 +25,7 @@ class EventBus;
  *   green solid   — host actively reading (measurement alive)
  *   cyan solid    — USB plugged, quiet / enum
  *   blue dim      — WiFi OK, stick not plugged (waiting for HU)
+ *   blue blink    — stored-trip upload (USB soft-detached on purpose; not NeedReset)
  *   yellow/cyan   — coex hold: USB soft-detached so WiFi can recover
  *   yellow blink  — WiFi portal / connecting
  *   white flash   — boot
@@ -78,6 +79,12 @@ public:
     void setTripsFull(bool on) { tripsFull_ = on; }
 
     /**
+     * @brief Flag a stored-trip upload job (suppresses NeedReset magenta after soft-detach).
+     * @param on true while WebUi trip-upload or stored replay is running.
+     */
+    void setTripUpload(bool on) { tripUpload_ = on; }
+
+    /**
      * @brief Select the highest-priority LED mode from the current state and update the LED.
      *
      * A host read counts as "recent" for 1.5 s. TCP is considered down when data is pending but
@@ -110,7 +117,8 @@ private:
         SeqPrompt,
         CoexHold,
         DriveCapture,
-        TripsFull
+        TripsFull,
+        TripUpload  ///< dim blue blink — WiFi TX of stored trips (USB intentionally detached)
     };
 
     /**
@@ -137,6 +145,7 @@ private:
     volatile bool coexHold_ = false;
     bool driveCapture_ = false;
     bool tripsFull_ = false;
+    bool tripUpload_ = false;
     uint32_t lastReadCount_ = 0;
     unsigned long lastReadMs_ = 0;
     unsigned long lastBlinkMs_ = 0;

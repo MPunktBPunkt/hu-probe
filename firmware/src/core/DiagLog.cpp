@@ -5,6 +5,7 @@
 #include "core/DiagLog.h"
 #include "core/HuMem.h"
 #include "core/PanicTail.h"
+#include "core/PhaseGate.h"
 #include "BuildFlags.h"
 
 #include <esp_attr.h>
@@ -319,6 +320,12 @@ bool persist(const char* reason, bool force) {
              (unsigned)PanicTail::bootGeneration());
     appendText(body, cap, used, line);
     appendText(body, cap, used, crumbs);
+    // Open ENTER stack (if any) — survives in flash even when RTC/NVS recovery fails.
+    {
+        char phaseLine[160];
+        PhaseGate::formatOpenLine(phaseLine, sizeof(phaseLine));
+        appendText(body, cap, used, phaseLine);
+    }
 
     if (reason && strcmp(reason, "boot") == 0 && prevTail[0]) {
         appendText(body, cap, used, "# previous boot RTC tail\n");

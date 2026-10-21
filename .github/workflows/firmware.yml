@@ -1,0 +1,118 @@
+# Release build for the GitHub auto-update (FW 0.3.0+).
+# Push a tag v<FW_VERSION> → build, attach hu-probe-<ver>.bin to a release, refresh
+# ota/manifest.json (version/url/sha256/size). "enabled" is never touched here: the
+# device only installs once enabled is set to true by hand in ota/manifest.json.
+name: firmware-release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: firmware-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Version from tag
+        id: ver
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            ver="${GITHUB_REF_NAME#v}"
+          else
+            ver="$(grep -oP 'FW_VERSION=\\"\K[^\\"]+' firmware/platformio.ini)"
+          fi
+          ini="$(grep -oP 'FW_VERSION=\\"\K[^\\"]+' firmware/platformio.ini)"
+          if [ "$ver" != "$ini" ]; then
+            echo "::error::tag v$ver does not match FW_VERSION $ini in platformio.ini"
+            exit 1
+          fi
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        working-directory: firmware
+        env:
+          HUPROBE_RELEASE: ${{ github.ref_type == 'tag' && '1' || '0' }}
+        run: pio run -e huprobe-s3
+
+      - name: Check CA bundle
+        run: |
+          size=$(stat -c %s firmware/data/cert/x509_crt_bundle.bin)
+          if [ "$size" -le 2 ]; then
+            echo "::error::CA bundle empty — the image could not reach GitHub over HTTPS"
+            exit 1
+          fi
+
+      - name: Package
+        id: pkg
+        run: |
+          ver="${{ steps.ver.outputs.version }}"
+          bin="hu-probe-${ver}.bin"
+          cp firmware/.pio/build/huprobe-s3/firmware.bin "$bin"
+          echo "bin=$bin" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$bin" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "size=$(stat -c %s "$bin")" >> "$GITHUB_OUTPUT"
+
+      - name: Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" "${{ steps.pkg.outputs.bin }}" \
+            --title "hu-probe ${{ steps.ver.outputs.version }}" --generate-notes \
+            || gh release upload "${GITHUB_REF_NAME}" "${{ steps.pkg.outputs.bin }}" --clobber
+
+      - name: Update manifest on main
+        if: github.ref_type == 'tag'
+        env:
+          VER: ${{ steps.ver.outputs.version }}
+          SHA: ${{ steps.pkg.outputs.sha256 }}
+          SIZE: ${{ steps.pkg.outputs.size }}
+          BIN: ${{ steps.pkg.outputs.bin }}
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+          mkdir -p ota
+          python - <<'EOF'
+          import json, os, pathlib
+          p = pathlib.Path("ota/manifest.json")
+          m = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {"enabled": False}
+          repo = os.environ["GITHUB_REPOSITORY"]
+          m.update(
+              version=os.environ["VER"],
+              url=f"https://github.com/{repo}/releases/download/v{os.environ['VER']}/{os.environ['BIN']}",
+              sha256=os.environ["SHA"],
+              size=int(os.environ["SIZE"]),
+          )
+          m.setdefault("enabled", False)
+          p.write_text(json.dumps(m, indent=2) + "\n", encoding="utf-8")
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ota/manifest.json
+          git diff --cached --quiet || git commit -m "ota: manifest v${VER}"
+          git push origin main

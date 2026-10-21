@@ -31,6 +31,17 @@ void TcpStreamer::loop() {
     flushPending();
 }
 
+void TcpStreamer::forceReconnect() {
+    if (client_.connected()) {
+        client_.stop();
+    }
+    if (wasConnected_) {
+        EventBus::instance().noteTcpDisconnect();
+        wasConnected_ = false;
+    }
+    lastConnectAttempt_ = 0;  // next loop() may tryConnect immediately
+}
+
 void TcpStreamer::tryConnect() {
     unsigned long now = millis();
     if (now - lastConnectAttempt_ < 3000) return;

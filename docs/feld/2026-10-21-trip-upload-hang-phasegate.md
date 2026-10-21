@@ -1,0 +1,141 @@
+# Stored-Trip-Upload: Hang in `trip_replay` — Diagnose & Fixes (2026-10-21)
+
+**Gerät:** Auto-ESP `.89` (ESP32-S3 N8R2)  
+**Collector:** `192.168.178.187:9100`  
+**Firmware-Spanne:** 0.3.3 → **0.3.8**  
+**Aktuelles Bin:** `firmware/dist/hu-probe.0.3.8.esp32s3.bin`  
+**Status:** Problem lokalisiert und teilweise entschärft; Upload noch nicht durchgängig stabil.
+
+---
+
+## 1. Kurzfassung
+
+Beim Hochladen ausstehender Offline-Fahrten (Trip-Journal → Collector) hängt die Firmware systematisch in der Phase **`trip_replay`** (Replay der gespeicherten Events über TCP). Typische Begleiterscheinungen:
+
+| Symptom | Bedeutung |
+|---------|-----------|
+| LED Magenta (bis 0.3.7) | TinyUSB `NEED_RESET` nach absichtlichem Soft-Detach |
+| LED blau hell/dunkel (ab 0.3.8) | Upload noch aktiv (`TripUpload`), USB absichtlich detached |
+| LED Dimm-Blau + Web „STATUS unreachable“ | WLAN-Assoziation „zombie“: ESP meint verbunden, LAN erreicht `.89` nicht |
+| Web/HTTP tot während Upload | Radio/Stack unter Replay-Last, TCP oft `connected=0` |
+
+Die **Datenmengen sind klein** (ca. 13–85 KiB pro Trip). Die Dauer entsteht nicht durch Volumen, sondern durch **TCP-Tod + Reconnect-Schleifen + Stall-Timeouts** und früher durch **falsches NeedReset-Magenta** nach Soft-Detach.
+
+---
+
+## 2. Ausgangslage
+
+Nach Heimfahrten lagen mehrere **pending** Trips im Flash-Journal (`TripStore`). Manuelles „Ausstehende hochladen“ sollte sie nacheinander an den Collector streamen (`OfflineCapture::replayStored` → EventBus → `TcpStreamer`).
+
+Beobachtete Pending-Trips (BMW `drive_home`, FW 0.3.0 Capture):
+
+| Trip | Bytes (ca.) | Verlauf 21.10. |
+|------|-------------|----------------|
+| #13 | 12 KiB | früher `delivered` |
+| #15 | 13 KiB | `delivered` (nach Retries) |
+| #16 | 38 KiB | `delivered` unter 0.3.8 nach ~3 min TCP-Kampf |
+| #17 | 85 KiB | Hang: `last_crash = trip_replay / 17` |
+| #18 | 51 KiB | noch pending |
+
+---
+
+## 3. Was schiefging (Root Cause)
+
+### 3.1 Primärer Hang-Ort: `trip_replay`
+
+PhaseGate (ab 0.3.5/0.3.7) und DiagLog belegen wiederholt:
+
+```text
+last_crash: { "phase": "trip_replay", "arg": <trip_id>, "depth": 2 }
+```
+
+Stack typisch: `trip_batch` → `trip_replay`. Der Absturz/Hang ist **nicht** erst Drain/Batch-Ende, sondern mitten im Replay.
+
+### 3.2 TCP stirbt bei „WLAN verbunden“
+
+Beispiel Replay #16 unter 0.3.8 (Diag):
+
+```text
+83759  replay hb trip=#16 ... wifi=1 tcp=1 lastOkAge=175ms
+96867  replay tcp force-reconnect ... pending=1 lastOkAge=10015ms tcp=0
+...    (weitere force-reconnect alle ~12 s, lastOkAge wächst)
+186946 ENTER stored_oc_drain arg=16
+308105 PASS stored_oc_drain  → später delivered
+```
+
+Also: **Assoziation bleibt**, Collector-Socket liefert kein `tcp_tx_ok` mehr. Ohne Force-Reconnect und Fortschritts-Stall (vor 0.3.8) konnte Replay weiter Events enqueuen und den Stall-Timer falsch zurücksetzen — Web/HTTP und Radio gingen unter.
+
+### 3.3 Soft-Detach → NeedReset → Magenta
+
+Trip-Upload macht absichtlich `tud_disconnect()` / Soft-Detach, damit OTG die Antenne nicht killt. TinyUSB latched dabei oft **`NEED_RESET`**. Die Status-LED priorisierte Magenta und suggerierte einen USB-Fehler, obwohl der Detach **gewollt** war. Zusätzlich blieb der Latch nach dem Upload stehen.
+
+### 3.4 Früher: `drain_timeout` / Orphan-Ring
+
+Unter 0.3.3 endete ein Trip als `queued` mit `pending=6` im EventBus; WebUi wartete danach bis zu 300 s auf Drain und brach den **ganzen Batch** ab (`drain_timeout`). Fix: Ring bei stored give-up clearen, kürzerer Drain, Abandon ohne Batch-Kill.
+
+### 3.5 PhaseGate / `last_crash` und `power_on`
+
+Operator-RST erscheint oft als `reset_reason=power_on` → RTC-NOINIT weg. Ohne NVS-Spiegel war `last_crash` leer. Ab 0.3.7: NVS + sticky + CRC-validiertes RTC; Diag-Snapshots enthalten `# phase open=…`.
+
+---
+
+## 4. Zeitlinie der Firmware-Fixes
+
+| Version | Inhalt |
+|---------|--------|
+| **0.3.3** | Soft-Detach für stored Replay; Drain/Reconnect während Trip-Upload; kein `ESP.restart` mitten im Batch |
+| **0.3.4** | Stored hard-timeout: Ring clear + Diag; WebUi-Drain mit Heartbeat, TCP force-reconnect, Abandon 60 s / Cap 90 s |
+| **0.3.5** | `PhaseGate` ENTER/PASS (RTC) um Trip-Upload |
+| **0.3.6** | NVS-Spiegel für offene Phase (erster Versuch) |
+| **0.3.7** | NVS robust (`power_on` zuerst, sticky, CRC); Phase-Zeile in jedem Diag-Snapshot |
+| **0.3.8** | NeedReset nach Intentional-Detach clearen; LED `TripUpload` (blau blink); Replay-Stall an `tcp_tx_ok`; TCP force-reconnect 12 s; kleinere Bursts/Delays; Stall 60 s / Hard 180 s; Ring max 24 |
+
+---
+
+## 5. Was 0.3.8 bereits verbessert
+
+- **Kein Magenta** mehr während Upload (NeedReset-Clear + eigene LED-Mode).
+- **`last_crash` nach Power-RST** zuverlässig (z. B. `trip_replay/16`, später `trip_replay/17`).
+- Trip **#16** kam trotz mehrerer Minuten TCP-Ausfall noch **`delivered`**.
+- Diag zeigt klar: force-reconnect, Heartbeats, Phase-Stack, `# phase open=…`.
+
+Offen: TCP/WLAN-Pfad stirbt weiterhin früh im Replay; Web wird unreachable; Batch hängt bis RST. #17/#18 noch pending.
+
+---
+
+## 6. LED-Lexikon (relevant hier)
+
+| LED | Mode |
+|-----|------|
+| Magenta blink | NeedReset (USB BOT) — bei Upload ab 0.3.8 unerwünscht/unterdrückt |
+| Blau hell↔dunkel | **TripUpload** — Job läuft, Soft-Detach aktiv |
+| Dimm-Blau fest | IdleWifi — WLAN ok laut Firmware, Stick nicht gesteckt |
+| Gelb blink | WLAN verbindet / Portal |
+| Gelb↔Cyan | Coex-Hold |
+
+**Falle:** Dimm-Blau oder Upload-Blau + UI „STATUS unreachable“ = Zombie-Assoziation; RST hilft, PhaseGate liest den Hang-Ort.
+
+---
+
+## 7. Empfohlene nächste Schritte
+
+1. **TCP-Stabilität im Replay:** aggressiveres Coex / weniger TX-Burst; optional Upload nur wenn RSSI/TCP-Probe ok; Collector-Keepalive.
+2. **Watchdog für Trip-Upload:** wenn `tripUploadActive` und kein `tcp_tx_ok` + kein HTTP länger als N Sekunden → kontrolliert Batch beenden (nicht ewig blau blinken).
+3. **Trip #17/#18** erneut hochladen unter 0.3.8; bei erneutem Hang Log + `phase_gate` sichern.
+4. Fragwürdige Lab-/Laptop-Trips bei Bedarf löschen (`erase all`) — Qualität der Messdaten getrennt vom Upload-Bug.
+
+---
+
+## 8. Operator-Checkliste nach Hang
+
+1. LED notieren (Magenta / blau blink / dimm blau / gelb).  
+2. RST.  
+3. `GET http://192.168.178.89/api/status` → `phase_gate.last_crash`.  
+4. `GET /api/diag/saved` → Zeilen mit `PHASE`, `replay hb`, `tcp force`, `upload batch`.  
+5. `GET /api/trips` → `pending`, `upload_error`.
+
+---
+
+## 9. Fazit
+
+Das Problem ist **kein „zu große Datei“-Problem**, sondern ein **Coex-/TCP-Stabilitätsproblem im Stored-Trip-Replay**, verstärkt durch NeedReset-Fehlanzeige und früher durch Drain-Orphans. Mit PhaseGate ist der Hang-Ort reproduzierbar: **`trip_replay`**. 0.3.8 macht den Zustand sichtbar und teilweise überlebbar (#16 durch); der eigentliche TCP-Kill während Replay ist der nächste Fix-Schwerpunkt.

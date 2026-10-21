@@ -39,6 +39,13 @@ public:
      */
     void loop();
 
+    /**
+     * @brief True while a trip-upload job is running (incl. inter-trip EventBus drain).
+     *
+     * App WiFi coex must not clear the ring or ESP.restart() during this window.
+     */
+    bool tripUploadActive() const { return tripUploadAll_; }
+
 private:
     /** @brief GET /: send the embedded single-page WebUI (text/html). */
     void handleRoot();
@@ -47,7 +54,8 @@ private:
      * @brief GET /api/status: full device status as JSON (polled by the WebUI every second).
      *
      * Fields: fw, fwType, board, hw{chip, chip_rev, cpu_mhz, flash/psram/heap/sketch sizes,
-     * HwInfo}, previous-boot panic info, this-boot panic_now, diag ring/snapshot counters,
+     * HwInfo}, previous-boot panic info, this-boot panic_now, phase_gate (ENTER/PASS crash
+     * site), diag ring/snapshot counters,
      * ip, hub_ok, tcp_ok, msc_* counters and flags,
      * plug_count, unplug_count, read_rate_kb_s, tur_hz, read_count, session, vehicle,
      * scenario, collector ("host:port"), offline, media, sequence, stall, drive, ota, tur.
@@ -272,12 +280,19 @@ private:
     /**
      * @brief Upload one stored trip after the other via OfflineCapture::replayStored.
      *
-     * Called from loop() while the job runs; waits while OfflineCapture is active. Ends when
-     * nothing is pending, the same trip is still pending after its replay
-     * ("trip_upload_incomplete") or a replay could not start ("replay_failed"); then
-     * restarts the live session if it was running when the job started.
+     * Called from loop() while the job runs; waits while OfflineCapture is active, then
+     * drains the EventBus before the next trip (≤90 s, abandon+clear on stall). Ends when
+     * nothing is pending, the same trip stays pending after one retry
+     * ("trip_upload_incomplete"), or a replay could not start. Restarts the live session
+     * only when the ring is empty and no trips remain pending.
      */
     void pumpTripUpload();
+
+    /**
+     * @brief End the trip-upload batch: clear flags, persist diag, optionally restore live session.
+     * @param ok  True when every pending trip was uploaded (ring empty).
+     */
+    void finishTripUploadBatch(bool ok);
 
     /**
      * @brief Serialize a JSON document and send it as application/json.
@@ -341,6 +356,15 @@ private:
     TcpStreamer* tcp_ = nullptr;
     bool tripUploadAll_ = false;
     bool tripUploadRestoreLive_ = false;
+    bool tripUploadStarted_ = false;
+    bool tripUploadWasActive_ = false;
+    bool tripUploadAwaitDrain_ = false;
     uint32_t tripUploadLastId_ = 0;
+    uint32_t tripUploadRetriedId_ = 0;
+    unsigned long tripUploadDrainSinceMs_ = 0;
+    unsigned long tripUploadDrainHbMs_ = 0;
+    unsigned long tripUploadDrainProgressMs_ = 0;
+    size_t tripUploadDrainLastPend_ = 0;
     String tripUploadErr_;
+    String tripUploadStatus_;
 };

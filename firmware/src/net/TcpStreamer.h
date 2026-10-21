@@ -36,6 +36,14 @@ public:
      */
     void setOfflineDrain(bool on) { offlineDrain_ = on; }
 
+    /**
+     * @brief Drop a stuck collector socket and allow an immediate reconnect attempt.
+     *
+     * Used by trip-upload drain when TX stalls with lines still pending. Resets the connect
+     * throttle so the next loop()/tryConnect() is not blocked by the 3 s backoff.
+     */
+    void forceReconnect();
+
 private:
     /** @brief Attempt a collector connect at most every 3 s (blocking) and flush immediately on success. */
     void tryConnect();

@@ -66,7 +66,10 @@ void StatusLed::tick(const Session& session, const MscGadget& msc, const ReadIns
     bool recentRead = (lastReadMs_ > 0) && (now - lastReadMs_ < 1500);
 
     Mode next = Mode::IdleWifi;
-    if (OfflineCapture::instance().active()) {
+    // Stored trip upload: soft-detach latches NEED_RESET — show upload blue, not magenta.
+    if (tripUpload_ || OfflineCapture::instance().replayingStored()) {
+        next = Mode::TripUpload;
+    } else if (OfflineCapture::instance().active()) {
         // Offline: green while host reads, purple otherwise (WiFi intentionally off).
         next = (msc.plugged() && recentRead) ? Mode::Measuring
                : driveCapture_                ? Mode::DriveCapture
@@ -154,6 +157,10 @@ void StatusLed::apply(Mode mode, unsigned long now) {
         case Mode::TripsFull:
             if (blinkOn_) write(55, 0, 0);
             else write(28, 0, 40);
+            break;
+        case Mode::TripUpload:
+            // Dim blue blink — intentional USB detach, WiFi TX in progress.
+            write(0, 0, blinkOn_ ? 28 : 10);
             break;
         case Mode::CoexHold:
             if (blinkOn_) write(50, 35, 0);  // yellow

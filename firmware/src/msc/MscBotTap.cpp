@@ -6,6 +6,7 @@
 #include "BuildFlags.h"
 #include "capture/AutoMarker.h"
 #include "capture/OfflineCapture.h"
+#include "core/DiagLog.h"
 #include "core/PanicTail.h"
 #include "core/ProbeClock.h"
 #include "tusb.h"
@@ -77,6 +78,12 @@ void MscBotTap::clearBotEpoch() {
     lastCbwTag_ = 0xFFFFFFFFu;
     cswPending_ = false;
     needResetArmed_ = false;
+}
+
+void MscBotTap::clearNeedReset() {
+    if (!needResetArmed_) return;
+    needResetArmed_ = false;
+    DiagLog::printf("[MSC] need_reset cleared (intentional detach)\n");
 }
 
 void MscBotTap::queue(const Pending& p) {
