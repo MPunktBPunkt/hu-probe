@@ -1,0 +1,878 @@
+{
+  "schema": "hu-probe-analysis/1",
+  "session": "61434_bmw_free",
+  "vehicle": "bmw",
+  "scenario": "free",
+  "fw_version": "0.3.17",
+  "fw_sha": "2318c2923284",
+  "fw_dirty": true,
+  "transport": "tcp_live",
+  "media": {
+    "variant": "cache_b",
+    "source": "media_layout",
+    "files": [
+      {
+        "node": 0,
+        "path": "TRACK1.MP3",
+        "dur_ms": 26514,
+        "size": 158473,
+        "extents": [
+          [
+            289,
+            310
+          ]
+        ]
+      },
+      {
+        "node": 1,
+        "path": "TRACK2.MP3",
+        "dur_ms": 26514,
+        "size": 158473,
+        "extents": [
+          [
+            599,
+            310
+          ]
+        ]
+      },
+      {
+        "node": 2,
+        "path": "TRACK3.MP3",
+        "dur_ms": 26514,
+        "size": 158473,
+        "extents": [
+          [
+            909,
+            310
+          ]
+        ]
+      }
+    ]
+  },
+  "time_base": {
+    "source": "t_us",
+    "label": "MEASURED",
+    "tur_period_s": null
+  },
+  "counts": {
+    "cbw": 102,
+    "read10": 19,
+    "markers": 4
+  },
+  "tur": {
+    "tur_count": 83,
+    "burst_intervals": 40,
+    "idle_n": 42,
+    "label": "MEASURED",
+    "idle_median_s": 2.2388,
+    "idle_p10_s": 2.1805,
+    "idle_p90_s": 2.2392
+  },
+  "probe_tur_stats": {
+    "tur_count": 81,
+    "tur_burst_n": 14,
+    "tur_idle_n": 64,
+    "tur_idle_p10_ms": 2238,
+    "tur_idle_median_ms": 2238,
+    "tur_idle_p90_ms": 2238
+  },
+  "mount_signatures": [],
+  "episodes": [
+    {
+      "node": 0,
+      "file": "TRACK1.MP3",
+      "t_start_s": 0.043,
+      "t_end_s": 0.043,
+      "start_seq": 58,
+      "chunks": [
+        [
+          223,
+          8
+        ]
+      ],
+      "blocks": 8,
+      "origin": null,
+      "first_blk": 223,
+      "coverage": 0.026,
+      "order": "partial_offset",
+      "probe_only": true
+    },
+    {
+      "node": 0,
+      "file": "TRACK1.MP3",
+      "t_start_s": 0.043,
+      "t_end_s": 0.043,
+      "start_seq": 93,
+      "chunks": [
+        [
+          240,
+          70
+        ],
+        [
+          0,
+          240
+        ]
+      ],
+      "blocks": 310,
+      "origin": null,
+      "first_blk": 240,
+      "coverage": 1.0,
+      "order": "tail_then_head",
+      "probe_only": false
+    },
+    {
+      "node": 1,
+      "file": "TRACK2.MP3",
+      "t_start_s": 0.043,
+      "t_end_s": 0.043,
+      "start_seq": 196,
+      "chunks": [
+        [
+          0,
+          240
+        ],
+        [
+          240,
+          70
+        ]
+      ],
+      "blocks": 310,
+      "origin": null,
+      "first_blk": 0,
+      "coverage": 1.0,
+      "order": "head_first",
+      "probe_only": false
+    },
+    {
+      "node": 2,
+      "file": "TRACK3.MP3",
+      "t_start_s": 0.043,
+      "t_end_s": 0.043,
+      "start_seq": 304,
+      "chunks": [
+        [
+          0,
+          240
+        ],
+        [
+          240,
+          70
+        ]
+      ],
+      "blocks": 310,
+      "origin": null,
+      "first_blk": 0,
+      "coverage": 1.0,
+      "order": "head_first",
+      "probe_only": false
+    }
+  ],
+  "prefetch": [
+    {
+      "playing": "TRACK1.MP3",
+      "next": "TRACK2.MP3",
+      "lag_after_start_s": 0.0,
+      "playing_dur_s": 26.514,
+      "lead_before_end_s": 26.514,
+      "next_order": "head_first",
+      "label": "MEASURED"
+    },
+    {
+      "playing": "TRACK2.MP3",
+      "next": "TRACK3.MP3",
+      "lag_after_start_s": 0.0,
+      "playing_dur_s": 26.514,
+      "lead_before_end_s": 26.514,
+      "next_order": "head_first",
+      "label": "MEASURED"
+    }
+  ],
+  "selection_latency": [],
+  "mutation_reactions": [],
+  "read_stalls": {
+    "available": true,
+    "held": [],
+    "timeout_lower_s": null,
+    "timeout_upper_s": null,
+    "menu_latency_s": []
+  },
+  "tail_then_head": {
+    "cases": 1,
+    "of": 3,
+    "files": [
+      "TRACK1.MP3"
+    ]
+  },
+  "markers": [
+    {
+      "name": "first_read",
+      "note": "auto",
+      "t_s": 0.043,
+      "auto": true,
+      "origin": null
+    },
+    {
+      "name": "next_track_read",
+      "note": "auto",
+      "t_s": 0.043,
+      "auto": true,
+      "origin": null
+    },
+    {
+      "name": "mount_done",
+      "note": "auto",
+      "t_s": 0.043,
+      "auto": true,
+      "origin": null
+    },
+    {
+      "name": "next_track_read",
+      "note": "auto",
+      "t_s": 0.043,
+      "auto": true,
+      "origin": null
+    }
+  ],
+  "flash_checkpoints": {
+    "available": false
+  },
+  "media_loss": {
+    "post_finalize_cmds": 0,
+    "ops": []
+  },
+  "tur_phase": {
+    "available": true,
+    "period_ms": 2238.78,
+    "grid_turs": 38,
+    "spans_with_other_cmds": [],
+    "max_abs_residual_ms_across_cmds": null,
+    "label": "MEASURED"
+  },
+  "plug_timeline": [],
+  "atoms": {
+    "available": false
+  },
+  "read_windows": [],
+  "chunk_pacing": {
+    "available": false,
+    "fine_data": null,
+    "reason": "no capture time base"
+  },
+  "integrity": {
+    "dropped": 0
+  },
+  "replay": [
+    {
+      "t_s": 0.0,
+      "op": "read10",
+      "lba": 2,
+      "blocks": 1
+    },
+    {
+      "t_s": 0.0,
+      "op": "read10",
+      "lba": 3,
+      "blocks": 5
+    },
+    {
+      "t_s": 0.0,
+      "op": "read10",
+      "lba": 256,
+      "blocks": 40
+    },
+    {
+      "t_s": 0.0,
+      "op": "read10",
+      "lba": 8,
+      "blocks": 8
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 24,
+      "blocks": 8
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 56,
+      "blocks": 8
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 120,
+      "blocks": 8
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 16,
+      "blocks": 8
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 128,
+      "blocks": 8
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 64,
+      "blocks": 8
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 512,
+      "blocks": 8
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 32,
+      "blocks": 8
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 4096,
+      "blocks": 8
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 529,
+      "blocks": 70
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 289,
+      "blocks": 240
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 599,
+      "blocks": 240
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 839,
+      "blocks": 70
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 909,
+      "blocks": 240
+    },
+    {
+      "t_s": 0.0428,
+      "op": "read10",
+      "lba": 1149,
+      "blocks": 70
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 0.0428,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 1.8689,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 4.1077,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 6.3464,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 8.5853,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 10.8241,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 13.0628,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 15.3664,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 17.5404,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 19.7791,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 22.0179,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 24.2569,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 26.4955,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 28.7343,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 30.9731,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 33.2122,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 35.6845,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 37.6895,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 39.9282,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 42.1671,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 44.4057,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 46.6447,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 48.8833,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 51.1221,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 53.3609,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 55.6,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 57.8384,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 60.2548,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 62.316,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 64.5548,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 66.7936,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 69.0323,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 71.2711,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 73.5099,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 75.7487,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 77.9875,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 80.3049,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 82.4651,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 84.7038,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 86.9426,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 89.1814,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 91.4201,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    },
+    {
+      "t_s": 93.6589,
+      "op": "tur",
+      "lba": 0,
+      "blocks": 0
+    }
+  ]
+}

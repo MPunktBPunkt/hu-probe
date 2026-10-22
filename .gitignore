@@ -97,6 +97,20 @@ sessions/*
 !sessions/20261020-075935_bmw_free/**
 !sessions/20261020-080508_bmw_free/
 !sessions/20261020-080508_bmw_free/**
+!sessions/61434_bmw_free/
+!sessions/61434_bmw_free/**
+!sessions/20261022-065150_lab_debian_free/
+!sessions/20261022-065150_lab_debian_free/**
+!sessions/20261022-080353_bmw_free/
+!sessions/20261022-080353_bmw_free/**
+!sessions/20261022-080544_bmw_free/
+!sessions/20261022-080544_bmw_free/**
+!sessions/20261022-080752_bmw_free/
+!sessions/20261022-080752_bmw_free/**
+!sessions/20261022-081152_bmw_free/
+!sessions/20261022-081152_bmw_free/**
+!sessions/20261022-081410_bmw_free/
+!sessions/20261022-081410_bmw_free/**
 sessions/**/collector.*
 sessions/**/derived/
 

@@ -1,0 +1,59 @@
+{
+  "schema": 2,
+  "session_id": "20261022-065150_lab_debian_free",
+  "started_at": "2026-10-22T06:51:50.144040+02:00",
+  "ended_at": "2026-10-22T06:53:52.611346+02:00",
+  "vehicle": "lab_debian",
+  "profile_id": "lab_debian",
+  "scenario": "free",
+  "fw_version": "0.3.17",
+  "transport": "ram_offline",
+  "fw_type": "hu-probe",
+  "fw_sha": "2318c2923284",
+  "mac": "68:b6:b3:29:33:9c",
+  "clock": {
+    "domain": "probe_monotonic_us",
+    "source": "esp_timer"
+  },
+  "capture": {
+    "dropped": 0,
+    "queue_highwater": 0,
+    "tcp_disconnects": 0,
+    "published": 1419,
+    "stream_lost": 0,
+    "tcp_tx_fail": 0,
+    "msc_sample_overflow": 0,
+    "recv_seq_gaps": [],
+    "recv_events": 56,
+    "parse_errors": 47,
+    "complete": false,
+    "reset_reason": "power_on",
+    "transport": "ram_offline",
+    "transport_epoch": 5,
+    "transport_epoch_start": 3,
+    "transport_epoch_end": 5,
+    "end_reason": "auto_soft_detach",
+    "end_strategy": "soft_detach",
+    "upload_status": "delivered",
+    "offline_records": 199,
+    "offline_bytes": 3704,
+    "offline_overflow": 0,
+    "record_size": 19,
+    "capacity_bytes": 1048576,
+    "integrity_pass": false
+  },
+  "gates": [
+    "HU-PROBE-GATE-01"
+  ],
+  "notes": "",
+  "fw_build_id": "2318c2923284-dirty-20261021T190405Z",
+  "usb_host_kind": "linux_debian",
+  "usb_host_role": "lab_reference",
+  "probe_identity": {
+    "mac": "68:b6:b3:29:33:9c",
+    "usb_serial": "HP0003",
+    "volume_label": "HUPROBE",
+    "board": "ESP32-S3",
+    "hw_type": "esp32s3"
+  }
+}
