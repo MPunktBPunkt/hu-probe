@@ -6,7 +6,8 @@
 **Status:** Live-Leiter **Integrity PASS** (alle BMW-Sessions). Lab-Offline `.88` separat **FAIL** (Replay).  
 **Nachtrag:** Heimfahrt-Modus (`autoCapture`) danach per Config aktiviert — wirkt ab nächstem Boot (LED Lila).
 
-Vergleich: [`artifacts/20261022_bmw_media_ladder_compare.md`](artifacts/20261022_bmw_media_ladder_compare.md) · Analysen unter [`artifacts/20261022-bmw-media-ladder/`](artifacts/20261022-bmw-media-ladder/).
+Vergleich: [`artifacts/20261022_bmw_media_ladder_compare.md`](artifacts/20261022_bmw_media_ladder_compare.md) · Analysen unter [`artifacts/20261022-bmw-media-ladder/`](artifacts/20261022-bmw-media-ladder/).  
+**Gesamtbericht + Wire-Prüfung (Multi-KI):** [`2026-10-22-gesamtbericht-media-ladder-pruefung.md`](2026-10-22-gesamtbericht-media-ladder-pruefung.md).
 
 ---
 
