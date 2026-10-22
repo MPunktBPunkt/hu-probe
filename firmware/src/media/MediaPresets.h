@@ -43,6 +43,28 @@ static const MediaPreset kMediaPresets[] = {
         {"path":"TRACK1.MP3","dur_s":26.5,"seed":1},
         {"path":"TRACK2.MP3","dur_s":26.5,"seed":2},
         {"path":"TRACK3.MP3","dur_s":26.5,"seed":3}]})"},
+    // Cache-Key matrix (0.3.18): pinned baseline + one identity dimension each.
+    // Default SynthFat identity is label HUPROBE / vol 0x48500131 (see SynthFat.cpp).
+    {"cache_a_pin", "wie cache_a, Serial fest HP0A01 (Baseline Cache-Key)",
+     R"({"id":"cache_a_pin","spc":1,"usb_serial":"HP0A01","fs_label":"HUPROBE","volume_id":"0x48500131","files":[
+        {"path":"TRACK1.MP3","dur_s":26.5,"seed":1},
+        {"path":"TRACK2.MP3","dur_s":26.5,"seed":2},
+        {"path":"TRACK3.MP3","dur_s":26.5,"seed":3}]})"},
+    {"ident_serial", "wie cache_a_pin, nur Serial HP0S01",
+     R"({"id":"ident_serial","spc":1,"usb_serial":"HP0S01","fs_label":"HUPROBE","volume_id":"0x48500131","files":[
+        {"path":"TRACK1.MP3","dur_s":26.5,"seed":1},
+        {"path":"TRACK2.MP3","dur_s":26.5,"seed":2},
+        {"path":"TRACK3.MP3","dur_s":26.5,"seed":3}]})"},
+    {"ident_label", "wie cache_a_pin, nur Label HUPROBE_L",
+     R"({"id":"ident_label","spc":1,"usb_serial":"HP0A01","fs_label":"HUPROBE_L","volume_id":"0x48500131","files":[
+        {"path":"TRACK1.MP3","dur_s":26.5,"seed":1},
+        {"path":"TRACK2.MP3","dur_s":26.5,"seed":2},
+        {"path":"TRACK3.MP3","dur_s":26.5,"seed":3}]})"},
+    {"ident_vol", "wie cache_a_pin, nur Volume-ID 0x48500701",
+     R"({"id":"ident_vol","spc":1,"usb_serial":"HP0A01","fs_label":"HUPROBE","volume_id":"0x48500701","files":[
+        {"path":"TRACK1.MP3","dur_s":26.5,"seed":1},
+        {"path":"TRACK2.MP3","dur_s":26.5,"seed":2},
+        {"path":"TRACK3.MP3","dur_s":26.5,"seed":3}]})"},
     {"dur_mix", "Dauer 10/26/60/180 s @48k (Prefetch-Regel)",
      R"({"id":"dur_mix","spc":8,"files":[
         {"path":"D010.MP3","dur_s":10,"seed":1},

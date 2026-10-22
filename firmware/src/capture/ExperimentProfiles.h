@@ -189,6 +189,31 @@ static const SequenceStep kSeqCache[] = {
      "Inhalt A, neue Serial/Label/Volume-ID: TRACK1 waehlen, Autoplay"},
 };
 
+/**
+ * @brief SEQ-IDENT steps: Cache-Key / media identity (one dimension per step).
+ *
+ * Baseline pins Serial HP0A01 so Keep vs. Policy and label/vol-only are comparable.
+ * In-session ID3/seed mutate (I1/I2) is not a sequence step — see feldplan.
+ */
+static const SequenceStep kSeqIdent[] = {
+    {"cache_a_pin", "s3_cache_hit", 90000, 1, SeqSerial::Policy,
+     "I0 Baseline HP0A01: TRACK1, Autoplay T1->T2->T3, dann Replay T1 (Hit?)"},
+    {"cache_a_pin", "s3_cache_hit", 90000, 1, SeqSerial::Keep,
+     "I0b Remount gleiche ID: TRACK1 Autoplay (Erwartung: full reread)"},
+    {"ident_serial", "s6_identity", 90000, 1, SeqSerial::Policy,
+     "I5 Nur Serial HP0S01: TRACK1; Resume/Re-Read + UI notieren"},
+    {"cache_a_pin", "s3_cache_hit", 60000, 1, SeqSerial::Policy,
+     "Baseline zurueck vor Label-Test: TRACK1 kurz Autoplay"},
+    {"ident_label", "s6_identity", 90000, 1, SeqSerial::Keep,
+     "I6 Nur Label HUPROBE_L (Serial Keep): TRACK1"},
+    {"cache_a_pin", "s3_cache_hit", 60000, 1, SeqSerial::Policy,
+     "Baseline zurueck vor Vol-Test: TRACK1 kurz Autoplay"},
+    {"ident_vol", "s6_identity", 90000, 1, SeqSerial::Keep,
+     "I7 Nur Volume-ID 0x48500701 (Serial Keep): TRACK1"},
+    {"ident_b", "s6_identity", 90000, 1, SeqSerial::Policy,
+     "I4 Alle Identity-Felder: TRACK1 Autoplay"},
+};
+
 /** @brief SEQ-STRUCT steps: folders, placement, header variants, fragmentation. */
 static const SequenceStep kSeqStruct[] = {
     {"folders_30", "s2_prefetch", 120000, 1, SeqSerial::Policy,
@@ -248,6 +273,7 @@ static const ExperimentSequence kTable[] = {
     {"seq_dur", "SEQ-DUR Dauer 10/26/60/180 s", kSeqDur, 3},
     {"seq_size", "SEQ-SIZE 1/4/8 MiB + PiDrive L3", kSeqSize, 4},
     {"seq_cache", "SEQ-CACHE Inhalt/Serial/Identitaet", kSeqCache, 4},
+    {"seq_ident", "SEQ-IDENT Cache-Key Serial/Label/Vol (Stand)", kSeqIdent, 8},
     {"seq_struct", "SEQ-STRUCT Ordner/Platzierung/Header/Fragmente", kSeqStruct, 4},
     {"seq_stall", "SEQ-STALL Timeout-Leiter / Menue / Live-Tempo (nur im Stand)", kSeqStall, 11},
 };

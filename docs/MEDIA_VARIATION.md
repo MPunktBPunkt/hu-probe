@@ -28,11 +28,15 @@ Bis FW 0.2.30 gab es nur das Flash-Image `demo_v1` mit drei byte-identischen Tra
 | Fragmentierung | 64-KiB-Fragmente verschränkt | 240-Block-Grenze, Folgen von Cluster-Ketten | `frag_mix` |
 | Inhalt | seed 1/2/3 gegen 11/12/13 | Content-Cache (M3) | `cache_a` / `cache_b` |
 | Platzierung (Lücke) | +100 Cluster vor TRACK1 | LBA-Cache | `cache_place` |
-| Identität | Serial `HP0B01`, Label `HUPROBE_B`, Volume-ID `0x48500B01` | Identity-Cache (S6) | `ident_b` |
+| Identität (alle) | Serial `HP0B01`, Label `HUPROBE_B`, Volume-ID `0x48500B01` | Identity-Cache (S6) | `ident_b` |
+| Identität Baseline | Serial fest `HP0A01`, Label/Vol Default | Cache-Key-Matrix | `cache_a_pin` |
+| Identität nur Serial | `HP0S01`, sonst wie `cache_a_pin` | Serial im Medien-Key? | `ident_serial` |
+| Identität nur Label | `HUPROBE_L`, Serial `HP0A01` | Label im Medien-Key? | `ident_label` |
+| Identität nur Vol | Volume-ID `0x48500701`, Serial `HP0A01` | Vol-ID im Medien-Key? | `ident_vol` |
 | ID3-Texte und Cover | eigene Texte, Cover 1–3, eine Datei mit leerem Cover-Slot, ID3v1 auf COVER2 | zeigt die HU Texte/Cover aus ID3v2 oder ID3v1? Wann liest sie sie neu? | `id3_cover` |
 | Referenz | Flash-Image FAT12, 3 identische Tracks | Vergleich mit Feldläufen bis 0.2.30 | `demo_v1` |
 
-Die Presets `cache_a`, `cache_b`, `cache_place` und `ident_b` unterscheiden sich jeweils in genau einer Dimension von `cache_a`.
+Die Presets `cache_a`, `cache_b`, `cache_place` und `ident_b` unterscheiden sich jeweils in genau einer Dimension von `cache_a`. Ab 0.3.18 gilt dasselbe für `cache_a_pin` → `ident_serial` / `ident_label` / `ident_vol` (eine Identity-Dimension). Sequenz: `seq_ident` ([Feldplan Cache-Key](feld/2026-10-22-feldplan-cache-key-identity.md)).
 
 ## Auswahl
 
@@ -132,9 +136,11 @@ Die Reihenfolge und die Abnahmekriterien stehen in der [Feldsequenz GATE-01 bis 
 
 1. **Content-only:** `cache_a` → `cache_b` bei festgehaltener Serial (SEQ-CACHE Schritt 2/3).
 2. **Replug same:** `cache_a` → Re-Enum → `cache_a` mit gleicher Serial.
-3. **ID-only:** `cache_a` → `ident_b` (Serial, Label, Volume-ID gemeinsam). Einzelne Identitätsmerkmale lassen sich per eigener Spec trennen.
-4. **Placement-only:** `cache_a` → `cache_place`.
-5. **Dauer, Bitrate, Größe, Struktur:** je ein Preset pro Dimension.
+3. **ID-only (alle):** `cache_a` → `ident_b` (Serial, Label, Volume-ID gemeinsam).
+4. **ID-einzeln (0.3.18):** `seq_ident` mit `cache_a_pin` → `ident_serial` / `ident_label` / `ident_vol`.
+5. **Placement-only:** `cache_a` → `cache_place`.
+6. **Dauer, Bitrate, Größe, Struktur:** je ein Preset pro Dimension.
+7. **In-Session ID3/seed:** `POST /api/media/mutate` ohne Remount (Feldplan Cache-Key Block A).
 
 Jede Zelle ist eine eigene Session. `session.json` enthält `media` (Variante, Hash, Geometrie) und `media_layout` (Extents pro Datei). Ausgewertet wird mit `tools/analyze_session.py`.
 
