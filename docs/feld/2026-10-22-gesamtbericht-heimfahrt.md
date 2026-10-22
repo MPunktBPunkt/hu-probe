@@ -4,7 +4,7 @@
 **Collector:** `192.168.178.187:9100` · Upload abends vollständig (`#22`–`#24` `uploaded=true`)  
 **HU:** BMW NBT Evo · Operator: 1–2 Stops, lange Ordner-Schleife, bewusster Wechsel „erster Song“ zwischen Ordnern  
 **Kurznotiz:** [`2026-10-22-heimfahrt-auswertung.md`](2026-10-22-heimfahrt-auswertung.md) · Analyzer unter `sessions/*/derived/`  
-**Review:** GPT-Analyse (2026-10-22) eingearbeitet — Konsens unten §9
+**Reviews:** GPT-Konsens (§9) · Grok-Übergabe [`2026-10-22-uebergabe-heimfahrt-grok.md`](2026-10-22-uebergabe-heimfahrt-grok.md)
 
 ---
 

@@ -1,6 +1,6 @@
 # Heimfahrt 2026-10-22 — Kurzauswertung Auto-Probe `.89`
 
-**Vollbericht:** [`2026-10-22-gesamtbericht-heimfahrt.md`](2026-10-22-gesamtbericht-heimfahrt.md)
+**Vollbericht:** [`2026-10-22-gesamtbericht-heimfahrt.md`](2026-10-22-gesamtbericht-heimfahrt.md) · **Grok-Übergabe:** [`2026-10-22-uebergabe-heimfahrt-grok.md`](2026-10-22-uebergabe-heimfahrt-grok.md)
 
 **FW:** 0.3.17 · Medium `drive_mix` · `autoCapture` war an  
 **Trips:** `#22` (power_loss), `#23` (max_duration), `#24` (power_loss, kurz)  
