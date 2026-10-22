@@ -18,10 +18,12 @@ class StatusLed;
 /**
  * @brief Singleton state machine that turns every boot into a potential recorded trip.
  *
- * Drive mode (0.3.0, config autoCapture): every boot is a potential trip.
+ * Drive mode (0.3.0, config autoCapture): every boot is a potential trip until home clear.
  *   Boot      MSC soft-detached; WLAN (home or phone hotspot, no portal) for ≤15 s;
- *             upload stored trips if the collector answers; GitHub update check;
- *             pre-erase flash; then arm the offline capture with flash journal.
+ *             upload stored trips if the collector answers; GitHub update check.
+ *             Home WLAN: no new capture; if collector ok and journal empty → clear
+ *             autoCapture (one-shot) and go Normal. Else (hotspot / no WLAN): pre-erase
+ *             and arm the offline capture with flash journal.
  *   WaitHost  capture runs, soft re-enum done; no host mount within 20 s → charger,
  *             drop the run and continue as a normal (WLAN) probe.
  *   Capturing until power loss, max duration or stop; then upload or keep it in flash.
@@ -88,12 +90,15 @@ public:
     bool connectWifi(uint32_t timeoutMs);
 
     /**
-     * @brief Blocking part after the WLAN attempt: uploads, update, arm.
+     * @brief Blocking part after the WLAN attempt: uploads, update, arm — or one-shot clear.
      *
      * Marks the OTA image healthy first (pulling the plug during an upload must not trigger a
      * rollback), waits up to 3 s for NTP, uploads pending trips if the collector is reachable,
-     * runs the GitHub update check if autoUpdate is set (restarts on update), pre-erases
-     * kPreEraseBytes of the trip journal and arms the capture.
+     * runs the GitHub update check if autoUpdate is set (restarts on update).
+     *
+     * On **home WLAN**: never arms a new capture (charger / desk). If the collector was reached
+     * and the trip journal has nothing pending, clears config autoCapture (one-shot Heimfahrt)
+     * and falls through to normal probe mode. Hotspot or no WLAN still arms the offline capture.
      */
     void bootPhase();
 
@@ -137,6 +142,17 @@ private:
      * @return true if the collector is enabled, WiFi is connected and the connect succeeded.
      */
     bool collectorReachable() const;
+
+    /**
+     * @brief True when associated to the WiFiManager home SSID (not the phone hotspot).
+     */
+    bool onHomeWifi() const;
+
+    /**
+     * @brief Persist autoCapture=false and log why (home one-shot clear).
+     * @param why Short reason for DiagLog.
+     */
+    void disableAutoCapture(const char* why);
 
     /**
      * @brief Replay up to 8 stored trips to the collector, each bounded by kTripUploadMaxMs.

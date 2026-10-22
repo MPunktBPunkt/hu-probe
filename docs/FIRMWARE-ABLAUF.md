@@ -151,8 +151,8 @@ dann darf `superviseWifi` nicht neu verbinden oder neu starten.
 stateDiagram-v2
     [*] --> Off
     Off --> Boot: autoCapture + begin
-    Boot --> WaitHost: Capture scharf, Soft-Re-Enum
-    Boot --> Normal: Arm fehlgeschlagen oder Journal voll mit WLAN
+    Boot --> WaitHost: kein Heimnetz — Capture scharf
+    Boot --> Normal: Heimnetz (Upload/OTA, ggf. autoCapture aus)\noder Arm fehlgeschlagen
     Boot --> CarIdle: Journal voll ohne WLAN
     WaitHost --> Capturing: Host gemountet
     WaitHost --> Normal: 20 s kein Host, Lauf verworfen
@@ -161,7 +161,8 @@ stateDiagram-v2
 ```
 
 Stromverlust (Zündung aus) ist das normale Ende einer Fahrt: das Image startet neu, lädt
-beim nächsten Heimnetz die Flash-Fahrt hoch und arm't erneut.
+beim nächsten **Heimnetz** die Flash-Fahrt hoch und setzt `autoCapture` zurück, wenn nichts
+mehr aussteht. Am Hotspot/ohne WLAN arm't es erneut.
 
 ## Sequenz (`SequenceRunner`)
 

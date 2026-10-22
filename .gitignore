@@ -111,6 +111,14 @@ sessions/*
 !sessions/20261022-081152_bmw_free/**
 !sessions/20261022-081410_bmw_free/
 !sessions/20261022-081410_bmw_free/**
+# 2026-10-22 heimfahrt (drive_home offline)
+!sessions/12777_bmw_drive_home/
+!sessions/12777_bmw_drive_home/**
+!sessions/20261022-171751_bmw_drive_home/
+!sessions/20261022-171751_bmw_drive_home/**
+!sessions/20261022-173030_bmw_drive_home/
+!sessions/20261022-173030_bmw_drive_home/**
+
 sessions/**/collector.*
 sessions/**/derived/
 # keep analysis next to evidence for 2026-10-22 media ladder

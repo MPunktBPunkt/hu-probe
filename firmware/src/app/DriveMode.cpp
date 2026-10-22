@@ -132,6 +132,24 @@ void DriveMode::uploadPending() {
     }
 }
 
+bool DriveMode::onHomeWifi() const {
+    if (WiFi.status() != WL_CONNECTED || !homeSsid_.length()) return false;
+    // Hotspot alone must not count as "home" — otherwise a phone AP in the car would
+    // clear autoCapture and skip the next trip.
+    if (config_->wifi2Ssid.length() && WiFi.SSID() == config_->wifi2Ssid &&
+        WiFi.SSID() != homeSsid_) {
+        return false;
+    }
+    return WiFi.SSID() == homeSsid_;
+}
+
+void DriveMode::disableAutoCapture(const char* why) {
+    if (!config_->autoCapture) return;
+    config_->autoCapture = false;
+    config_->save();
+    DiagLog::printf("[DRIVE] autoCapture cleared (%s)\n", why ? why : "?");
+}
+
 void DriveMode::bootPhase() {
     DiagLog::persist("drive", true);
     TripStore& ts = TripStore::instance();
@@ -139,6 +157,7 @@ void DriveMode::bootPhase() {
     // must not count as a failed boot and trigger a rollback.
     GithubOta::markHealthy();
     const bool wifi = WiFi.status() == WL_CONNECTED;
+    const bool home = onHomeWifi();
     if (wifi && config_->enableNtp) {
         const unsigned long t0 = millis();
         while (time(nullptr) < 1600000000 && millis() - t0 < 3000) delay(100);
@@ -150,6 +169,25 @@ void DriveMode::bootPhase() {
             uploadPending();
         }
         ts.resetIfDone();
+    }
+    // One-shot Heimfahrt: at home with collector, upload then clear the flag so the next
+    // boot is normal probe mode. Hotspot / no WLAN → keep measuring (arm below).
+    if (home) {
+        if (collectorSeen_ && ts.pendingCount() == 0) {
+            disableAutoCapture("home_collector_done");
+        } else if (collectorSeen_) {
+            DiagLog::printf("[DRIVE] home but %u trip(s) still pending — keep autoCapture\n",
+                            (unsigned)ts.pendingCount());
+        } else {
+            DiagLog::printf("[DRIVE] home WLAN, collector unreachable — keep autoCapture\n");
+        }
+        if (wifi && config_->autoUpdate) {
+            led_->showDrivePhase(StatusLed::DrivePhase::Ota);
+            GithubOta::check(config_->otaManifestUrl, &otaInfo_);  // restarts on update
+        }
+        led_->showDrivePhase(StatusLed::DrivePhase::Check);
+        toNormal();
+        return;
     }
     if (wifi && config_->autoUpdate) {
         led_->showDrivePhase(StatusLed::DrivePhase::Ota);
@@ -268,8 +306,10 @@ void DriveMode::toJson(JsonObject obj) const {
     obj["state"] = stateName();
     obj["wlan"] = lastSsid_;
     obj["home_ssid"] = homeSsid_;
+    obj["on_home_wifi"] = onHomeWifi();
     obj["collector_seen"] = collectorSeen_;
     obj["trips_uploaded"] = uploaded_;
+    obj["auto_capture"] = config_ ? config_->autoCapture : false;
     if (otaInfo_.length()) obj["ota"] = otaInfo_;
     if (lastError_.length()) obj["error"] = lastError_;
     const TripStore& ts = TripStore::instance();

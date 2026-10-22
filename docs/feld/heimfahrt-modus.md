@@ -39,9 +39,15 @@ Das Passwort wird nie zurückgegeben (`wifi2PassSet`); ein leeres Feld behält d
 4. Auto-Update an und WLAN da → Manifest prüfen (LED hell weiß). Bei neuer Version: Download,
    sha256-Prüfung, Neustart. Läuft das neue Image dreimal nicht bis zum Abschluss der WLAN-Phase,
    bootet die Sonde wieder das vorherige Image (`restart_cause=ota_rollback`, WebUI zeigt „ROLLBACK“).
-5. 256 KiB Flash vorlöschen (≤ 8 s), Medium `drive_mix` setzen, Offline-Aufnahme scharf schalten,
-   Soft-Re-Enum → die HU enumeriert zum ersten Mal. LED lila mit weißem Blitz alle 2 s.
-6. Kein Host innerhalb 20 s (z. B. Ladegerät) → Lauf verworfen, normaler Sondenbetrieb.
+5. **Heimnetz** (SSID = WiFiManager-Heimnetz, nicht Hotspot): keine neue Messung. Wenn der
+   Collector gesehen wurde und nichts mehr aussteht → `autoCapture=false` speichern (einmaliger
+   Heimfahrt-Durchlauf), weiter im normalen Sondenbetrieb. Pending übrig oder Collector weg →
+   Flag bleibt an (nächster Boot versucht Upload erneut).
+6. **Kein Heimnetz** (kein WLAN oder nur Hotspot): 256 KiB Flash vorlöschen (≤ 8 s), Medium
+   setzen, Offline-Aufnahme scharf, Soft-Re-Enum → die HU enumeriert zum ersten Mal. LED lila
+   mit weißem Blitz alle 2 s.
+7. Kein Host innerhalb 20 s (z. B. Ladegerät ohne Heimnetz-Erkennung) → Lauf verworfen, normaler
+   Sondenbetrieb; `autoCapture` bleibt an.
 
 ## Während der Fahrt
 
