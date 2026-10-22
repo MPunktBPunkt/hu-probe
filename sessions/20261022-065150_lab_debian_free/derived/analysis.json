@@ -1,0 +1,768 @@
+{
+  "schema": "hu-probe-analysis/1",
+  "session": "20261022-065150_lab_debian_free",
+  "vehicle": "lab_debian",
+  "scenario": "free",
+  "fw_version": "0.3.17",
+  "fw_sha": "2318c2923284",
+  "fw_dirty": true,
+  "transport": "ram_offline",
+  "media": {
+    "variant": "drive_mix",
+    "source": "media_layout",
+    "files": [
+      {
+        "node": 0,
+        "path": "INTRO.MP3",
+        "dur_ms": 15020,
+        "size": 246607,
+        "extents": [
+          [
+            515,
+            512
+          ]
+        ]
+      },
+      {
+        "node": 1,
+        "path": "NOTAG.MP3",
+        "dur_ms": 45008,
+        "size": 718491,
+        "extents": [
+          [
+            1027,
+            1408
+          ]
+        ]
+      },
+      {
+        "node": 3,
+        "path": "ROCK/R01.MP3",
+        "dur_ms": 150021,
+        "size": 3601950,
+        "extents": [
+          [
+            2435,
+            7040
+          ]
+        ]
+      },
+      {
+        "node": 4,
+        "path": "ROCK/R02.MP3",
+        "dur_ms": 180009,
+        "size": 5761652,
+        "extents": [
+          [
+            9475,
+            11264
+          ]
+        ]
+      },
+      {
+        "node": 5,
+        "path": "ROCK/R03.MP3",
+        "dur_ms": 200019,
+        "size": 4800242,
+        "extents": [
+          [
+            20739,
+            9376
+          ]
+        ]
+      },
+      {
+        "node": 6,
+        "path": "ROCK/R04.MP3",
+        "dur_ms": 170004,
+        "size": 6801184,
+        "extents": [
+          [
+            30115,
+            512
+          ],
+          [
+            31139,
+            512
+          ],
+          [
+            32163,
+            512
+          ],
+          [
+            33187,
+            512
+          ],
+          [
+            34211,
+            512
+          ],
+          [
+            35235,
+            512
+          ],
+          [
+            36259,
+            512
+          ],
+          [
+            37283,
+            512
+          ],
+          [
+            38307,
+            512
+          ],
+          [
+            39331,
+            512
+          ],
+          [
+            40355,
+            512
+          ],
+          [
+            41379,
+            512
+          ],
+          [
+            42403,
+            512
+          ],
+          [
+            43427,
+            512
+          ],
+          [
+            44451,
+            512
+          ],
+          [
+            45475,
+            512
+          ],
+          [
+            46499,
+            512
+          ],
+          [
+            47523,
+            512
+          ],
+          [
+            48547,
+            512
+          ],
+          [
+            49571,
+            512
+          ],
+          [
+            50595,
+            512
+          ],
+          [
+            51619,
+            512
+          ],
+          [
+            52643,
+            512
+          ],
+          [
+            53667,
+            512
+          ],
+          [
+            54691,
+            512
+          ],
+          [
+            55715,
+            512
+          ]
+        ]
+      },
+      {
+        "node": 8,
+        "path": "ROCK/CLASSIC/C01.MP3",
+        "dur_ms": 210024,
+        "size": 4203712,
+        "extents": [
+          [
+            58691,
+            8224
+          ]
+        ]
+      },
+      {
+        "node": 9,
+        "path": "ROCK/CLASSIC/C02.MP3",
+        "dur_ms": 190014,
+        "size": 3803860,
+        "extents": [
+          [
+            66915,
+            7456
+          ]
+        ]
+      },
+      {
+        "node": 10,
+        "path": "ROCK/CLASSIC/C03.MP3",
+        "dur_ms": 240013,
+        "size": 3838356,
+        "extents": [
+          [
+            74371,
+            7520
+          ]
+        ]
+      },
+      {
+        "node": 11,
+        "path": "ROCK/CLASSIC/C04.MP3",
+        "dur_ms": 160000,
+        "size": 4484207,
+        "extents": [
+          [
+            81891,
+            8768
+          ]
+        ]
+      },
+      {
+        "node": 13,
+        "path": "ROCK/CLASSIC/LIVE/L01.MP3",
+        "dur_ms": 300016,
+        "size": 7197068,
+        "extents": [
+          [
+            90659,
+            14080
+          ]
+        ]
+      },
+      {
+        "node": 14,
+        "path": "ROCK/CLASSIC/LIVE/L02.MP3",
+        "dur_ms": 260022,
+        "size": 6238036,
+        "extents": [
+          [
+            104739,
+            12192
+          ]
+        ]
+      },
+      {
+        "node": 15,
+        "path": "ROCK/CLASSIC/LIVE/L03.MP3",
+        "dur_ms": 280006,
+        "size": 4340444,
+        "extents": [
+          [
+            116931,
+            8480
+          ]
+        ]
+      },
+      {
+        "node": 17,
+        "path": "ROCK/CLASSIC/LIVE/1977/B01.MP3",
+        "dur_ms": 330004,
+        "size": 11073019,
+        "extents": [
+          [
+            125411,
+            21632
+          ]
+        ]
+      },
+      {
+        "node": 18,
+        "path": "ROCK/CLASSIC/LIVE/1977/B02.MP3",
+        "dur_ms": 290011,
+        "size": 4052510,
+        "extents": [
+          [
+            147043,
+            7936
+          ]
+        ]
+      },
+      {
+        "node": 20,
+        "path": "POP/P01.MP3",
+        "dur_ms": 200019,
+        "size": 6400427,
+        "extents": [
+          [
+            154979,
+            12512
+          ]
+        ]
+      },
+      {
+        "node": 21,
+        "path": "POP/P02.MP3",
+        "dur_ms": 185025,
+        "size": 5921972,
+        "extents": [
+          [
+            167491,
+            11584
+          ]
+        ]
+      },
+      {
+        "node": 22,
+        "path": "POP/P03.MP3",
+        "dur_ms": 210024,
+        "size": 5039872,
+        "extents": [
+          [
+            179075,
+            9856
+          ]
+        ]
+      },
+      {
+        "node": 23,
+        "path": "POP/P04.MP3",
+        "dur_ms": 195004,
+        "size": 7800292,
+        "extents": [
+          [
+            30627,
+            512
+          ],
+          [
+            31651,
+            512
+          ],
+          [
+            32675,
+            512
+          ],
+          [
+            33699,
+            512
+          ],
+          [
+            34723,
+            512
+          ],
+          [
+            35747,
+            512
+          ],
+          [
+            36771,
+            512
+          ],
+          [
+            37795,
+            512
+          ],
+          [
+            38819,
+            512
+          ],
+          [
+            39843,
+            512
+          ],
+          [
+            40867,
+            512
+          ],
+          [
+            41891,
+            512
+          ],
+          [
+            42915,
+            512
+          ],
+          [
+            43939,
+            512
+          ],
+          [
+            44963,
+            512
+          ],
+          [
+            45987,
+            512
+          ],
+          [
+            47011,
+            512
+          ],
+          [
+            48035,
+            512
+          ],
+          [
+            49059,
+            512
+          ],
+          [
+            50083,
+            512
+          ],
+          [
+            51107,
+            512
+          ],
+          [
+            52131,
+            512
+          ],
+          [
+            53155,
+            512
+          ],
+          [
+            54179,
+            512
+          ],
+          [
+            55203,
+            512
+          ],
+          [
+            56227,
+            2464
+          ]
+        ]
+      },
+      {
+        "node": 25,
+        "path": "POP/CHARTS/H01.MP3",
+        "dur_ms": 180009,
+        "size": 7201036,
+        "extents": [
+          [
+            188931,
+            14080
+          ]
+        ]
+      },
+      {
+        "node": 26,
+        "path": "POP/CHARTS/H02.MP3",
+        "dur_ms": 175020,
+        "size": 2800732,
+        "extents": [
+          [
+            203011,
+            5472
+          ]
+        ]
+      },
+      {
+        "node": 27,
+        "path": "POP/CHARTS/H03.MP3",
+        "dur_ms": 190014,
+        "size": 3516981,
+        "extents": [
+          [
+            208483,
+            6880
+          ]
+        ]
+      },
+      {
+        "node": 28,
+        "path": "POP/CHARTS/H04.MP3",
+        "dur_ms": 205008,
+        "size": 5737168,
+        "extents": [
+          [
+            215363,
+            11232
+          ]
+        ]
+      },
+      {
+        "node": 29,
+        "path": "POP/CHARTS/H05.MP3",
+        "dur_ms": 165015,
+        "size": 1977373,
+        "extents": [
+          [
+            226595,
+            3872
+          ]
+        ]
+      },
+      {
+        "node": 31,
+        "path": "JAZZ/J01.MP3",
+        "dur_ms": 320000,
+        "size": 7675332,
+        "extents": [
+          [
+            230467,
+            15008
+          ]
+        ]
+      },
+      {
+        "node": 32,
+        "path": "JAZZ/J02.MP3",
+        "dur_ms": 280006,
+        "size": 5602672,
+        "extents": [
+          [
+            245475,
+            10944
+          ]
+        ]
+      },
+      {
+        "node": 33,
+        "path": "JAZZ/J03.MP3",
+        "dur_ms": 360019,
+        "size": 5753926,
+        "extents": [
+          [
+            256419,
+            11264
+          ]
+        ]
+      },
+      {
+        "node": 35,
+        "path": "JAZZ/QUARTET/Q01.MP3",
+        "dur_ms": 240013,
+        "size": 7678812,
+        "extents": [
+          [
+            267683,
+            15008
+          ]
+        ]
+      },
+      {
+        "node": 36,
+        "path": "JAZZ/QUARTET/Q02.MP3",
+        "dur_ms": 300016,
+        "size": 6599900,
+        "extents": [
+          [
+            282691,
+            12896
+          ]
+        ]
+      },
+      {
+        "node": 37,
+        "path": "JAZZ/QUARTET/Q03.MP3",
+        "dur_ms": 270001,
+        "size": 3772920,
+        "extents": [
+          [
+            295587,
+            7392
+          ]
+        ]
+      },
+      {
+        "node": 40,
+        "path": "HOERBUCH/KAPITEL/K01.MP3",
+        "dur_ms": 300016,
+        "size": 3601637,
+        "extents": [
+          [
+            302979,
+            7040
+          ]
+        ]
+      },
+      {
+        "node": 41,
+        "path": "HOERBUCH/KAPITEL/K02.MP3",
+        "dur_ms": 330004,
+        "size": 3960961,
+        "extents": [
+          [
+            310019,
+            7744
+          ]
+        ]
+      },
+      {
+        "node": 42,
+        "path": "HOERBUCH/KAPITEL/K03.MP3",
+        "dur_ms": 290011,
+        "size": 3481758,
+        "extents": [
+          [
+            317763,
+            6816
+          ]
+        ]
+      },
+      {
+        "node": 43,
+        "path": "HOERBUCH/KAPITEL/K04.MP3",
+        "dur_ms": 310021,
+        "size": 3721644,
+        "extents": [
+          [
+            324579,
+            7296
+          ]
+        ]
+      },
+      {
+        "node": 45,
+        "path": "PODCAST/E01.MP3",
+        "dur_ms": 420022,
+        "size": 5032879,
+        "extents": [
+          [
+            331875,
+            9856
+          ]
+        ]
+      },
+      {
+        "node": 46,
+        "path": "PODCAST/E02.MP3",
+        "dur_ms": 390008,
+        "size": 6226379,
+        "extents": [
+          [
+            341731,
+            12192
+          ]
+        ]
+      },
+      {
+        "node": 47,
+        "path": "PODCAST/E03.MP3",
+        "dur_ms": 450011,
+        "size": 5392179,
+        "extents": [
+          [
+            353923,
+            10560
+          ]
+        ]
+      },
+      {
+        "node": 49,
+        "path": "MIX/M01.MP3",
+        "dur_ms": 200019,
+        "size": 4402628,
+        "extents": [
+          [
+            364483,
+            8608
+          ]
+        ]
+      },
+      {
+        "node": 50,
+        "path": "MIX/M02.MP3",
+        "dur_ms": 220003,
+        "size": 6820908,
+        "extents": [
+          [
+            373091,
+            13344
+          ]
+        ]
+      },
+      {
+        "node": 51,
+        "path": "MIX/M03.MP3",
+        "dur_ms": 240013,
+        "size": 3714818,
+        "extents": [
+          [
+            386435,
+            7264
+          ]
+        ]
+      }
+    ]
+  },
+  "time_base": {
+    "source": "t_us",
+    "label": "MEASURED",
+    "tur_period_s": null
+  },
+  "counts": {
+    "cbw": 0,
+    "read10": 0,
+    "markers": 0
+  },
+  "tur": {
+    "tur_count": 0,
+    "burst_intervals": 0,
+    "idle_n": 0,
+    "label": "MEASURED"
+  },
+  "probe_tur_stats": {
+    "tur_count": 110,
+    "tur_burst_n": 47,
+    "tur_idle_n": 62,
+    "tur_idle_p10_ms": 2002,
+    "tur_idle_median_ms": 2047,
+    "tur_idle_p90_ms": 2048
+  },
+  "mount_signatures": [],
+  "episodes": [],
+  "prefetch": [],
+  "selection_latency": [],
+  "mutation_reactions": [],
+  "read_stalls": {
+    "available": true,
+    "held": [],
+    "timeout_lower_s": null,
+    "timeout_upper_s": null,
+    "menu_latency_s": []
+  },
+  "tail_then_head": {
+    "cases": 0,
+    "of": 0,
+    "files": []
+  },
+  "markers": [],
+  "flash_checkpoints": {
+    "available": false
+  },
+  "media_loss": {
+    "post_finalize_cmds": 0,
+    "ops": []
+  },
+  "tur_phase": {
+    "available": false,
+    "reason": "too_few_idle_turs"
+  },
+  "plug_timeline": [],
+  "atoms": {
+    "available": false
+  },
+  "read_windows": [],
+  "chunk_pacing": {
+    "available": false,
+    "fine_data": false,
+    "reason": "no capture time base"
+  },
+  "integrity": {
+    "complete": false,
+    "integrity_pass": false,
+    "offline_overflow": 0,
+    "dropped": 0,
+    "offline_post_finalize_records": 0,
+    "replay_clock": "capture_t_us"
+  },
+  "replay": []
+}

@@ -91,18 +91,47 @@ Ursache: Replay-Pfad, nicht „keine Datei gewählt“ (TUR 110 am Host). Separa
 
 ---
 
-## 5. Schlussfolgerungen
+## 5. Browse vs Player (`drive_mix`)
+
+Operator: Ordner **ROCK** zeigt zuerst `R01`/`R02`…; nach Auswahl im **Player** „Gitarrenwand“ / „Rueckkopplung“ (= ID3-`title` in `MediaPresets.h`).
+
+| HU-Ansicht | Anzeige | USB-Quelle |
+|---|---|---|
+| Durchsuchen | 8.3 (`R01.MP3`) | Directory-Eintrag |
+| Player | ID3-Titel/Artist | Dateianfang (Tag) |
+
+**Nicht behaupten:** „Ordner wird erst beim Abspielen von Track 1 gelesen.“  
+In `20261022-081410_bmw_free` (~3,5–9 s): Baum-Walk `ROOT`→`ROCK`→`CLASSIC`→`LIVE`→… **und** viele MP3-Köpfe (`file_blk` ab 0) schon beim Scan — vor Hörbuch/Jazz-Play.  
+Browse→Player ist ein **UI-Moduswechsel** (Verzeichnis vs. Metadaten-Anzeige), nicht der erste Struktur-Read.
+
+---
+
+## 6. Cross-Session-Muster (Miner)
+
+- Episode-Blöcke: **8** (Probe) → **160** (Head) → großer Rest.
+- Prefetch früh (`lag<5 s`, oft volle Nachfolger-Dauer) und/oder spät (`lag≈Trackdauer`).
+- Cache-Hit: Datei nur im Mount-Fenster → Quiet-Gap ≈ Spieldauer ohne File-READ.
+- Doppel-Burst: **CONT** (vorwärts, z. B. `B320`/`J01`/`K01`) vs **REWIND** (z. B. `D180`, Scan).
+- `next_track_read`-Δ ≈ Trackdauer (`id3_cover` ~26 s, `bitrate_mix` ~60 s).
+
+Vergleichs-Rohdaten auch unter `derived/20261022_bmw_media_ladder_compare.*`.
+
+---
+
+## 7. Schlussfolgerungen
 
 1. **NBT hält nach erstem Atom stark im Cache** — hörbarer Track 1 oft ohne Grün.
 2. **Prefetch des Nachfolgers ist der Normalfall** — Grün vor Trackwechsel ist erwartbar und in Prefetch-Leads quantifiziert.
 3. **Große/hohe Bitrate-Dateien** (`B320`, lange `drive_mix`-Tracks) erzeugen zusätzliche Read-Wellen (Nachziehen / EOF-Vorlauf), ohne Seek zurück an den Dateianfang.
 4. **ID3-Cover** ändert in dieser Leiter nicht das Cache/Prefetch-Grundmuster gegenüber `NOCOVER`.
-5. Live-TCP auf 0.3.17 trägt die Leiter; Heimfahrt-Flash war in dieser Session **aus** (`autoCapture` erst danach gesetzt).
+5. **Browse≠late folder read** — Struktur/ID3-Köpfe oft schon im Scan; Player zeigt Tags.
+6. Live-TCP auf 0.3.17 trägt die Leiter; Heimfahrt-Flash war in dieser Session **aus** (`autoCapture` erst danach gesetzt).
 
 ---
 
-## 6. Nächste Schritte
+## 8. Nächste Schritte
 
+- [ ] Mehrstufige Auswertung der Sessions unter `sessions/20261022-*` / `61434_*` (roh gepusht).
 - [ ] Heimfahrt-Boot: Lila bestätigen, eine echte Fahrt mit `drive_mix` + Checkpoints.
 - [ ] Lab-Offline-Replay (`.88`) separat debuggen (`replay_records=0` trotz Records).
 - [ ] Optional: `B320`-Doppelburst vs. `COVER*`-Einmal-Prefetch als feste Hypothese (Schwelle Dateigröße/Bitrate).

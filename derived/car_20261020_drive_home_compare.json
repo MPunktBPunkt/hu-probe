@@ -1,0 +1,118 @@
+{
+  "schema": "hu-probe-analysis/1+compare",
+  "sessions": [
+    {
+      "session": "20261020-200324_bmw_drive_home",
+      "vehicle": "bmw",
+      "media": "drive_mix",
+      "time_base": "capture_t_us",
+      "tur_idle_median_s": null,
+      "mount_ref_matches": 0,
+      "mounts": 1,
+      "next_track_reads": 0,
+      "lag_after_start_s": [],
+      "lead_before_end_s": [],
+      "selection_latency_s": [],
+      "tail_then_head": "0/2",
+      "tur_period_ms": null,
+      "plug_to_first_read_s": [
+        1.677
+      ],
+      "atom_end_to_next_read_s": [],
+      "media_loss_detect_s": null
+    },
+    {
+      "session": "20261020-200018_bmw_drive_home",
+      "vehicle": "bmw",
+      "media": "id3_cover",
+      "time_base": "capture_t_us",
+      "tur_idle_median_s": null,
+      "mount_ref_matches": 0,
+      "mounts": 1,
+      "next_track_reads": 2,
+      "lag_after_start_s": [
+        0.09,
+        0.09
+      ],
+      "lead_before_end_s": [
+        26.43,
+        26.43
+      ],
+      "selection_latency_s": [],
+      "tail_then_head": "0/3",
+      "tur_period_ms": null,
+      "plug_to_first_read_s": [
+        1.5881
+      ],
+      "atom_end_to_next_read_s": [
+        0.00737,
+        0.007337
+      ],
+      "media_loss_detect_s": null
+    },
+    {
+      "session": "12065_bmw_drive_home",
+      "vehicle": "bmw",
+      "media": "drive_mix",
+      "time_base": "capture_t_us",
+      "tur_idle_median_s": null,
+      "mount_ref_matches": 0,
+      "mounts": 1,
+      "next_track_reads": 0,
+      "lag_after_start_s": [],
+      "lead_before_end_s": [],
+      "selection_latency_s": [],
+      "tail_then_head": "0/2",
+      "tur_period_ms": null,
+      "plug_to_first_read_s": [
+        1.677
+      ],
+      "atom_end_to_next_read_s": [],
+      "media_loss_detect_s": null
+    },
+    {
+      "session": "19147_bmw_drive_home",
+      "vehicle": "bmw",
+      "media": "id3_cover",
+      "time_base": "capture_t_us",
+      "tur_idle_median_s": null,
+      "mount_ref_matches": 0,
+      "mounts": 1,
+      "next_track_reads": 2,
+      "lag_after_start_s": [
+        0.09,
+        0.09
+      ],
+      "lead_before_end_s": [
+        26.43,
+        26.43
+      ],
+      "selection_latency_s": [],
+      "tail_then_head": "0/3",
+      "tur_period_ms": null,
+      "plug_to_first_read_s": [
+        1.5881
+      ],
+      "atom_end_to_next_read_s": [
+        0.00737,
+        0.007337
+      ],
+      "media_loss_detect_s": null
+    }
+  ],
+  "summary": {
+    "tur_idle_median_s": null,
+    "lead_before_end_s": {
+      "min": 26.43,
+      "max": 26.43,
+      "n": 4
+    },
+    "lag_after_start_s": {
+      "min": 0.09,
+      "max": 0.09,
+      "n": 4
+    },
+    "lead_spread_s": 0.0,
+    "lag_spread_s": 0.0
+  }
+}

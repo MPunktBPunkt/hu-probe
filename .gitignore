@@ -113,6 +113,21 @@ sessions/*
 !sessions/20261022-081410_bmw_free/**
 sessions/**/collector.*
 sessions/**/derived/
+# keep analysis next to evidence for 2026-10-22 media ladder
+!sessions/61434_bmw_free/derived/
+!sessions/61434_bmw_free/derived/**
+!sessions/20261022-065150_lab_debian_free/derived/
+!sessions/20261022-065150_lab_debian_free/derived/**
+!sessions/20261022-080353_bmw_free/derived/
+!sessions/20261022-080353_bmw_free/derived/**
+!sessions/20261022-080544_bmw_free/derived/
+!sessions/20261022-080544_bmw_free/derived/**
+!sessions/20261022-080752_bmw_free/derived/
+!sessions/20261022-080752_bmw_free/derived/**
+!sessions/20261022-081152_bmw_free/derived/
+!sessions/20261022-081152_bmw_free/derived/**
+!sessions/20261022-081410_bmw_free/derived/
+!sessions/20261022-081410_bmw_free/derived/**
 
 # Firmware artifacts (release bins under firmware/dist/ are tracked)
 firmware/.pio/
