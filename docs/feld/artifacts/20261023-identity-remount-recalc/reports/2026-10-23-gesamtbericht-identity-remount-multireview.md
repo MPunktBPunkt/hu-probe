@@ -8,6 +8,7 @@
 **Zweck:** Konsolidierter Gesamtbericht für die nächste KI-/Cursor-Instanz ohne GitHub-Zugriff.  
 **Quellenbasis:** Gesamtbericht, Mistral-Wire-Nachrechnung, GPT-Review, Grok-Zusammenfassung, Claude-Meta-Review und spätere Korrekturen/Konsolidierungen  
 **Operator-Bericht (Roh):** [`2026-10-23-gesamtbericht-identity-remount.md`](2026-10-23-gesamtbericht-identity-remount.md)  
+**Wire-Nachtrag (074319/074455+):** [`2026-10-23-wire-nachtrag-074319-074455.md`](2026-10-23-wire-nachtrag-074319-074455.md)  
 **Self-recalc-Paket:** `docs/feld/artifacts/20261023-identity-remount-recalc/` · Builder `tools/build_identity_remount_recalc_2026_10_23.py`
 
 ---
@@ -97,10 +98,10 @@ Diese Tabelle ist absichtlich konservativ formuliert. Sie trennt zwischen **doku
 
 | Session | Test | Mutation / Zustand | Stimulus | Wire-Befund | Resume / Operator | Zulässige Aussage |
 |---|---|---|---|---|---|---|
-| **074319** | `ident_serial` | Serial-Mutation; später `HP0S01` dokumentiert | **RST** vor bzw. im Versuch | **Head-Scan sichtbar:** pro Datei `32 + 128 = 160` Blocks; danach bekannte Scan-/Prefetch-Grammatik; frischer Start head-first | Start bei Track 1 | **FACT:** Nach RST wurde der bekannte Head-Scan beobachtet. **Nicht zulässig:** „Serial allein löst Scan aus“, da der Versuch durch RST konfundiert ist |
-| **074455** | `ident_label` | Label geändert auf `HUPROBE_L` | kurzer **USB-Cycle** | FS/FAT/Root/Probe-Zugriffe; **kein** 160-Block-Datei-Head-Scan; direkter Wiedereinstieg / Vollatom | Resume blieb erhalten; Operator: Position 1 → 2 → 3 | **FACT:** Label allein verwirft Resume nicht. **FACT:** kurzer Cycle ≠ Datei-Head-Rescan |
-| **074749** | `ident_b` | **Serial + Label + Volume-ID neu:** `HP0B01`, `HUPROBE_B`, `0x48500B01` | kurzer **USB-Cycle** | FS/FAT/Root/Probe-Enum; **kein** Datei-Head-Scan; danach Resume-Atom | Resume bei Position 2 | **FACT:** Selbst die kombinierte Mutation aller drei getesteten Identity-Felder löscht Resume nicht |
-| **074908** | `ident_vol` | Volume-ID geändert auf `0x48500701` | kurzer **USB-Cycle** | FS/FAT/Root/Probe-Enum; **kein** Datei-Head-Scan; direkter Resume-Einstieg | Resume bei Position 3 | **FACT:** Volume-ID allein ist kein ausreichender Resume-Key |
+| **074319** | `ident_serial` | Serial-Mutation; später `HP0S01` dokumentiert | **RST** vor bzw. im Versuch | Früher OOR-Artefaktblock (B56); danach Fresh-Scan **`32+128+6` EOF** je Datei; head-first; body_rest Lead ≈ 7,8 s | Start bei Track 1 | **FACT:** RST-/Reconnect-Fresh-Scan. **Nicht zulässig:** „Serial allein löst Scan aus“. Details: Wire-Nachtrag |
+| **074455** | `ident_label` | Label geändert auf `HUPROBE_L` | kurzer **USB-Cycle** | FS-Enum; **kein** `32+128(+6)`; erster Datei-Atom **`tail70→head240` auf T1**; T2/T3 Vollatom `240+70` | Resume Pos. 1 → 2 → 3 | **FACT:** Label bricht Resume nicht; Cycle ≠ Head-Rescan; Wire-Resume = T1 |
+| **074749** | `ident_b` | **Serial + Label + Volume-ID neu:** `HP0B01`, `HUPROBE_B`, `0x48500B01` | kurzer **USB-Cycle** | wie 074455; Resume-Atom **`tail70→head240` auf T2** | Resume bei Position 2 | **FACT:** kombinierte Identity löscht Resume nicht; Wire-Resume = T2 |
+| **074908** | `ident_vol` | Volume-ID geändert auf `0x48500701` | kurzer **USB-Cycle** | wie 074455; Resume-Atom **`tail70→head240` auf T3** | Resume bei Position 3 | **FACT:** Vol-ID allein kein Resume-Key; Wire-Resume = T3 |
 | **072929** | Offline `seq_ident` / I0 | `cache_a_pin`; Sequenz-/Replay-Kontext | **Offline-Capture / Replay-Kontext** | In den Reviews als Offline-Quelle ausgewertet; zugleich bestehen Replay-/Upload-Probleme und Artefakte (B56/B59) | Operator: Autoplay T1→T2→T3, später Replay/`media_hide` im Verlauf | **Mit Vorsicht verwenden:** nützlich für Muster-/Konsistenzhinweise, aber durch Infrastrukturprobleme konfundiert; nicht gleich stark wie die Live-Wire-Sessions |
 
 ---
@@ -111,11 +112,11 @@ Diese Tabelle ist absichtlich konservativ formuliert. Sie trennt zwischen **doku
 - Firmware: 0.3.19  
 - Mutation: Label `HUPROBE_L`  
 - Stimulus: kurzer USB-Cycle  
-- Wire: FS/FAT/Root/Probe, **kein Datei-Head-Scan**, danach direkter Wiedereinstieg  
+- Wire: FS/FAT/Root/Probe, **kein Datei-Head-Scan**; Wiedereinstieg **T1 `529/70` → `289/240`** (`tail_then_head`); T2/T3 je `240+70`  
 - Operator: Resume Position 1 → 2 → 3
 
 **Bedeutung:**  
-Labelwechsel allein löscht den Resume-Zustand nicht. Gleichzeitig zeigt die Session: kurzer Cycle bedeutet hier **FS-Re-Enum**, aber **kein erneutes Einlesen der Datei-Heads**.
+Labelwechsel allein löscht den Resume-Zustand nicht. Kurzer Cycle = **FS-Re-Enum ohne Bibliotheks-Rescan**; positiv belegt ist die **Resume-Signatur `tail_then_head`** am fortgesetzten Track (Wire-Nachtrag).
 
 ---
 
@@ -149,11 +150,12 @@ Sauberer Retest für die Volume-ID. Diese Session stützt stark, dass Volume-ID 
 - Sessionname: `ident_serial`
 - Wichtig: **RST-Konfundierung**
 - Nach RST wurde der bekannte Scan wieder sichtbar:
-  - `32 + 128` Head-Read je Datei
-  - danach Scan-/Prefetch-Grammatik
+  - **`32 + 128 + 6`** je Datei (6 = EOF-Probe exakt am Dateiende)
+  - danach `body_rest` 144 Blöcke / Lead ≈ 7,8 s
+  - früher Session-Teil: OOR-LBAs = Artefakt (verwerfen)
 
 **Bedeutung:**  
-Diese Session zeigt, dass nach **RST** der bekannte Head-Scan wieder auftritt.  
+Diese Session zeigt, dass nach **RST** der Fresh-Scan wieder auftritt (inkl. EOF-Probes).  
 **Nicht zulässig** ist jedoch die Aussage:
 
 > „Serial wurde geändert und dadurch wurde neu gescannt.“
@@ -259,16 +261,16 @@ Detach / Reconnect
         ▼
 Mount / FS-Enum (FAT, Root, Probes)
         │
-        ├─ kurzer Cycle, bekannter Zustand
+        ├─ kurzer Cycle, bekannter Zustand          ← 074455/074749/074908
         │      ├─ Bibliothek/Heads bleiben
         │      ├─ Resume-Position bleibt
-        │      ├─ kein Datei-Head-Scan
-        │      └─ Wiedereinstieg / Vollatom bei kleinem Medium
+        │      ├─ kein Datei-Head-Scan (kein 32+128+6)
+        │      └─ Resume-Track: tail70 → head240; Folgetracks 240+70
         │
-        └─ RST / längere Abwesenheit / Zustand verloren (?)
-               ├─ Head-Scan 32+128 je Datei
-               ├─ Start bei Track 1
-               └─ frischer Start head-first
+        └─ RST / Power-On / Zustand verloren        ← 074319
+               ├─ Fresh-Scan je Datei: 32 + 128 + 6(EOF)
+               ├─ head-first; Start bei Track 1
+               └─ body_rest_prefetch ≈ 7,8 s vor Trackende
 ```
 
 Ergänzend:
@@ -285,14 +287,15 @@ Ergänzend:
 - Soft-Remount praktisch unsichtbar / kein brauchbarer Reset
 - Kurze USB-Cycles: FS-Enum, aber kein Datei-Head-Scan in den geprüften Sessions
 - Resume überlebt Serial/Label/Volume-ID einzeln und kombiniert
-- RST-Fall zeigt Head-Scan
+- RST-Fall zeigt Fresh-Scan **`32+128+6`** + body_rest-Lead ≈ 7,8 s (074319, bereinigt)
+- Core-Cycles: erster Datei-Wiedereinstieg **`tail70→head240`** am Resume-Track (074455 T1 / 074749 T2 / 074908 T3)
 - TUR ≈ 2238 ms, Chunk-Pace ≈ 3,94 ms p50, FW 0.3.19 clean
 
 ### STRONG INFERENCE
-- tail-first korreliert mit Restore/Resume eines bekannten Zustands
+- tail-first / `tail_then_head` korreliert mit Restore/Resume eines bekannten Zustands (Fresh bleibt head-first)
 - Zweistufiges Prefetch-Modell:
-  - nach Scan ≈ 7,8 s Vorlauf
-  - nach Cycle/Resume ≈ 0 Lead
+  - nach Fresh-Scan: body_rest ≈ 7,8 s vor Trackende
+  - nach kurzem Cycle/Resume: sofortiges Vollatom am Resume-Track, Folgetracks im Trackdauer-Raster
 
 ### HYPOTHESIS
 - Elevator-/Navigationsmodell

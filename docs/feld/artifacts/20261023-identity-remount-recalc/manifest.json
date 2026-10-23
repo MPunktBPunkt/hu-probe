@@ -28,9 +28,11 @@
   ],
   "epistemic_warnings": [
     "074319 is RST-confounded and cannot isolate Serial causality.",
+    "074319 early READ10 with LBA >> sector_count are B56 artifacts (often same t_us); discard before HU analysis.",
+    "074319 fresh scan is 32+128+6 per file (6 = EOF probe), not only 32+128.",
     "072929 is an offline seq_ident run with upload/replay infrastructure problems; do not treat it as equal-strength live-wire evidence.",
     "Do not extrapolate the small 158473-byte files to large MP3s without a size ladder.",
-    "Operator Resume observations are not wire measurements.",
+    "Operator Resume is corroborated by wire: after short cycle, first file atom is tail70→head240 on the resumed track (T1/T2/T3).",
     "Do not write 'Resume keyed on content' as FACT — only Serial/Label/Vol were excluded.",
     "Short cycles in core sessions: FS-enum without file head-scan (074455/074749/074908)."
   ],
@@ -169,13 +171,18 @@
   "reports": [
     {
       "path": "docs/feld/2026-10-23-gesamtbericht-identity-remount-multireview.md",
-      "bytes": 19417,
-      "sha256": "eb475955629652e35f5cb16283468a5e9231b1454c8828b0caa0b945304ca85e"
+      "bytes": 20004,
+      "sha256": "33c14a814b782e606f801e861eea12fc8a0b77926c66df5d8d728fce78de854c"
+    },
+    {
+      "path": "docs/feld/2026-10-23-wire-nachtrag-074319-074455.md",
+      "bytes": 6619,
+      "sha256": "376e86fe3d998bb0b55cb6b918e13444a2541c1f1457cfe440cb6e21d39d0645"
     },
     {
       "path": "docs/feld/2026-10-23-gesamtbericht-identity-remount.md",
-      "bytes": 7932,
-      "sha256": "c48b579a6f669046fe516cb2caa1d02c40b96fafe8e1351082c4909d7bfed3a0"
+      "bytes": 8042,
+      "sha256": "7eaa981833cddc702a8c5ae6fac03b7cfcaec24d5515bdda8e70c3ba8a7d6ccd"
     },
     {
       "path": "docs/feld/2026-10-22-feldplan-cache-key-identity.md",

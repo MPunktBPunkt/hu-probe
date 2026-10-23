@@ -9,8 +9,9 @@ views so another AI/analyst can independently recalculate the findings.
 ## Start here
 
 1. Read `reports/2026-10-23-gesamtbericht-identity-remount-multireview.md`
-2. Use `manifest.json` epistemic_warnings
-3. Recalculate from primary event streams (not derived/)
+2. Read `reports/2026-10-23-wire-nachtrag-074319-074455.md` (32+128+6 vs tail_then_head)
+3. Use `manifest.json` epistemic_warnings
+4. Recalculate from primary event streams (not derived/)
 
 ## Primary evidence
 

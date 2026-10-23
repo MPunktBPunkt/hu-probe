@@ -41,6 +41,7 @@ SESSION_FILES = [
 
 REPORTS = [
     "docs/feld/2026-10-23-gesamtbericht-identity-remount-multireview.md",
+    "docs/feld/2026-10-23-wire-nachtrag-074319-074455.md",
     "docs/feld/2026-10-23-gesamtbericht-identity-remount.md",
     "docs/feld/2026-10-22-feldplan-cache-key-identity.md",
 ]
@@ -384,9 +385,11 @@ def main() -> int:
         ],
         "epistemic_warnings": [
             "074319 is RST-confounded and cannot isolate Serial causality.",
+            "074319 early READ10 with LBA >> sector_count are B56 artifacts (often same t_us); discard before HU analysis.",
+            "074319 fresh scan is 32+128+6 per file (6 = EOF probe), not only 32+128.",
             "072929 is an offline seq_ident run with upload/replay infrastructure problems; do not treat it as equal-strength live-wire evidence.",
             "Do not extrapolate the small 158473-byte files to large MP3s without a size ladder.",
-            "Operator Resume observations are not wire measurements.",
+            "Operator Resume is corroborated by wire: after short cycle, first file atom is tail70→head240 on the resumed track (T1/T2/T3).",
             "Do not write 'Resume keyed on content' as FACT — only Serial/Label/Vol were excluded.",
             "Short cycles in core sessions: FS-enum without file head-scan (074455/074749/074908).",
         ],
@@ -414,8 +417,9 @@ views so another AI/analyst can independently recalculate the findings.
 ## Start here
 
 1. Read `reports/2026-10-23-gesamtbericht-identity-remount-multireview.md`
-2. Use `manifest.json` epistemic_warnings
-3. Recalculate from primary event streams (not derived/)
+2. Read `reports/2026-10-23-wire-nachtrag-074319-074455.md` (32+128+6 vs tail_then_head)
+3. Use `manifest.json` epistemic_warnings
+4. Recalculate from primary event streams (not derived/)
 
 ## Primary evidence
 
