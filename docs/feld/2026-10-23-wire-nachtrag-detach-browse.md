@@ -75,7 +75,7 @@ Medium gewechselt auf `folders_30` (Serial policy → u. a. `HP0002`, nach Cycle
 - Serial neu (`HP0003`)
 - Operator: **liest bei jedem Titel neu** → Browse-Cache **flush**
 - Gleichzeitig: **bei Album 3 und Titel weitergemacht** (Navigator/Resume gemerkt)
-- Album 2 danach gewählt → ebenfalls neu gelesen (Miss, Cache noch leer für 2)
+- Album 2 und Album 1 danach gewählt → jeweils neu gelesen (Miss; Cache nach Cycle leer)
 
 **STRONG:** Zwei Schichten
 
