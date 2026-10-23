@@ -1,0 +1,67 @@
+[
+  {
+    "session_id": "20261023-074319_bmw_free",
+    "checks": {
+      "jsonl_parse": true,
+      "event_seq_non_decreasing": true,
+      "read10_lba_within_sector_count": false,
+      "fw_dirty_false": true,
+      "dropped": 0,
+      "stream_lost": 0,
+      "tcp_tx_fail": 0,
+      "integrity_pass": true
+    }
+  },
+  {
+    "session_id": "20261023-074455_bmw_free",
+    "checks": {
+      "jsonl_parse": true,
+      "event_seq_non_decreasing": true,
+      "read10_lba_within_sector_count": true,
+      "fw_dirty_false": true,
+      "dropped": 0,
+      "stream_lost": 0,
+      "tcp_tx_fail": 0,
+      "integrity_pass": true
+    }
+  },
+  {
+    "session_id": "20261023-074749_bmw_free",
+    "checks": {
+      "jsonl_parse": true,
+      "event_seq_non_decreasing": true,
+      "read10_lba_within_sector_count": true,
+      "fw_dirty_false": true,
+      "dropped": 0,
+      "stream_lost": 0,
+      "tcp_tx_fail": 0,
+      "integrity_pass": true
+    }
+  },
+  {
+    "session_id": "20261023-074908_bmw_free",
+    "checks": {
+      "jsonl_parse": true,
+      "event_seq_non_decreasing": true,
+      "read10_lba_within_sector_count": true,
+      "fw_dirty_false": true,
+      "dropped": 0,
+      "stream_lost": 0,
+      "tcp_tx_fail": 0,
+      "integrity_pass": true
+    }
+  },
+  {
+    "session_id": "20261023-072929_bmw_seq_ident_1r1",
+    "checks": {
+      "jsonl_parse": true,
+      "event_seq_non_decreasing": true,
+      "read10_lba_within_sector_count": true,
+      "fw_dirty_false": true,
+      "dropped": 0,
+      "stream_lost": 0,
+      "tcp_tx_fail": 0,
+      "integrity_pass": null
+    }
+  }
+]

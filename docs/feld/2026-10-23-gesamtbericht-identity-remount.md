@@ -4,7 +4,11 @@
 **Plan:** [`2026-10-22-feldplan-cache-key-identity.md`](2026-10-22-feldplan-cache-key-identity.md) · Presets ab 0.3.18  
 **Collector:** `192.168.178.187:9100` (während Lauf kurz neu gestartet)  
 **Artefakte:** `docs/feld/artifacts/20261023-identity-remount/`  
+**Multi-Review (maßgeblich):** [`2026-10-23-gesamtbericht-identity-remount-multireview.md`](2026-10-23-gesamtbericht-identity-remount-multireview.md)  
+**Self-recalc-Paket:** `docs/feld/artifacts/20261023-identity-remount-recalc/` · Builder `tools/build_identity_remount_recalc_2026_10_23.py`  
 **Methode:** Operator-Beobachtung HU + API-gesteuerte Soft-Remount / USB-Cycle / Preset-Wechsel; `seq_ident` nur teilweise (Upload-Stall)
+
+> **Korrektur Multi-Review:** „Resume keyed am Inhalt“ ist **nicht** FACT — nur Serial/Label/Vol sind ausgeschlossen. Kurze Cycles = FS-Enum **ohne** Datei-Head-Scan (außer RST-Fall `074319`).
 
 ---
 
@@ -18,7 +22,7 @@
 | Label allein bricht Resume | 🔴 verworfen | I6: Remount + Resume |
 | Volume-ID allein bricht Resume | 🔴 verworfen | sauberer Retest: Resume bei 3 |
 | Serial+Label+Vol alle neu bricht Resume | 🔴 verworfen | I4: Resume bei 2 |
-| Resume an Inhalt/Struktur, nicht Identity | 🟢 STRONG | gleiche SynthFat-Tracks (seed 1/2/3) |
+| Resume-Key = Inhalt/Struktur | ⚪ UNKNOWN | Multi-Review: nur Identity-Teil ausgeschlossen; Key offen |
 | Identity-Felder triggern Remount-Wahrnehmung | 🟢 FACT | Cycle bei Preset-Wechsel → weg/neu |
 | Prefetch vor Track-Ende (LED grün) | 🟢 FACT | Ende 1/2 und mitten in 3 |
 | In-Session Cache-Key (I1/I2 mutate) | ⚪ offen | nicht gefahren |
@@ -66,7 +70,8 @@ Heute, kontrolliert mit **byte-gleichem** SynthFat (`cache_a` / seeds 1–2–3)
 - Nach Cycle mit **unverändertem** Inhalt setzt die HU die **Playlist-Position** fort (Track + Stelle).  
 - Das gilt auch, wenn USB-Serial, FS-Label und/oder Volume-ID wechseln (I4, I6, sauberer I7).
 
-**Arbeitshypothese (STRONG):** Die HU keyed Resume/Playlist an **Medieninhalt bzw. Datei-Identität** (Pfad/Größe/Inhalt), nicht an USB-Serial / Volume-Label / Volume-ID. Die Identity-Felder beeinflussen, *dass* neu gemountet/gescannt wird, nicht *ob* die Position verworfen wird.
+**Gesichert:** Serial / Label / Volume-ID (einzeln und kombiniert) reichen **nicht** als Resume-Key.  
+**Nicht gesichert (Multi-Review):** dass der Key „der Inhalt“ ist — verbleibender Schlüsselraum inkl. C1–C8 (ID3/Seed/Size/Pfad/LBA sowie VID/PID/INQUIRY/Kapazität). Identity-Felder + kurzer Cycle lösen FS-Enum aus, löschen aber den Resume-Zustand nicht.
 
 ### 2.3 Vorhersagen aus dem Feldplan — Abgleich
 

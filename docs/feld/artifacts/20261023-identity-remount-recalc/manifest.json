@@ -1,0 +1,186 @@
+{
+  "schema": "hu-probe-self-recalc/1.1",
+  "source_repo": "MPunktBPunkt/hu-probe",
+  "source_ref": "62cb4f88428d2dc8da235e2adf88b0d07e7647f8",
+  "source_commit_url": "https://github.com/MPunktBPunkt/hu-probe/commit/62cb4f88428d2dc8da235e2adf88b0d07e7647f8",
+  "built_from": "local_artifacts",
+  "local_artifact_root": "docs/feld/artifacts/20261023-identity-remount",
+  "sessions": [
+    "20261023-074319_bmw_free",
+    "20261023-074455_bmw_free",
+    "20261023-074749_bmw_free",
+    "20261023-074908_bmw_free",
+    "20261023-072929_bmw_seq_ident_1r1"
+  ],
+  "primary_evidence": [
+    "sessions/*/events.jsonl",
+    "sessions/*/session.json",
+    "events_normalized.jsonl",
+    "read10.jsonl",
+    "media_layout.jsonl",
+    "lifecycle.jsonl"
+  ],
+  "reference_only": [
+    "derived_reference.json",
+    "sessions/*/derived/analysis.json",
+    "sessions/*/derived/analysis.md",
+    "reports/*"
+  ],
+  "epistemic_warnings": [
+    "074319 is RST-confounded and cannot isolate Serial causality.",
+    "072929 is an offline seq_ident run with upload/replay infrastructure problems; do not treat it as equal-strength live-wire evidence.",
+    "Do not extrapolate the small 158473-byte files to large MP3s without a size ladder.",
+    "Operator Resume observations are not wire measurements.",
+    "Do not write 'Resume keyed on content' as FACT — only Serial/Label/Vol were excluded.",
+    "Short cycles in core sessions: FS-enum without file head-scan (074455/074749/074908)."
+  ],
+  "source_manifest": [
+    {
+      "session": "20261023-074319_bmw_free",
+      "role": "ident_serial_RST_confounded",
+      "files": {
+        "session.json": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074319_bmw_free/session.json",
+          "bytes": 2934,
+          "sha256": "ecc62019cb0c0130ba43fd64a686d0eeed489f26a9f0c84519fb975968b21730"
+        },
+        "events.jsonl": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074319_bmw_free/events.jsonl",
+          "bytes": 304331,
+          "sha256": "b7c711dc0b1dcef82304ffaad761f99955a45c88380221eeb3555fa065853e88"
+        },
+        "derived/analysis.json": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074319_bmw_free/derived/analysis.json",
+          "bytes": 22175,
+          "sha256": "d8a60d589325a1ee10fec2e4332396c4fdbae0e05bab6037a7592234dce98a7e"
+        },
+        "derived/analysis.md": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074319_bmw_free/derived/analysis.md",
+          "bytes": 1732,
+          "sha256": "ea7316caeea8bdea84674d716c93acc23cd9c9b7981ed109b9dab1ff01ca9d65"
+        }
+      }
+    },
+    {
+      "session": "20261023-074455_bmw_free",
+      "role": "core_ident_label",
+      "files": {
+        "session.json": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074455_bmw_free/session.json",
+          "bytes": 2939,
+          "sha256": "327fcdeb00c2ce3bd10f6c6ccf48cee49e40ed3939f1ffc38e0d638c57d9c999"
+        },
+        "events.jsonl": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074455_bmw_free/events.jsonl",
+          "bytes": 177997,
+          "sha256": "d546d16d901e92e50dceee18b9e374c2691617e7766a783858ed3779b9229334"
+        },
+        "derived/analysis.json": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074455_bmw_free/derived/analysis.json",
+          "bytes": 16241,
+          "sha256": "d77fa6845658df6047a87a6dd81955e8184107b2922d395b6ebe5bc9f756e021"
+        },
+        "derived/analysis.md": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074455_bmw_free/derived/analysis.md",
+          "bytes": 1270,
+          "sha256": "00e185bb2c6c293890af9a3e4a4cf438978c3d41499e31fc5986b7b29fb77028"
+        }
+      }
+    },
+    {
+      "session": "20261023-074749_bmw_free",
+      "role": "core_ident_b",
+      "files": {
+        "session.json": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074749_bmw_free/session.json",
+          "bytes": 2952,
+          "sha256": "2eaceaf12949f3a9e6ba2a7b8afee07f2bc42d394cd2f238871a7f52046a0547"
+        },
+        "events.jsonl": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074749_bmw_free/events.jsonl",
+          "bytes": 145264,
+          "sha256": "44251df8ede1fda359e99b5c05b8b9942f2b65a2a621338c97eccd0ca3c4b50a"
+        },
+        "derived/analysis.json": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074749_bmw_free/derived/analysis.json",
+          "bytes": 14125,
+          "sha256": "f59065ec8c05680ae7f4950b8f40af2ee01be0f5b875e172b0b8819d7c935286"
+        },
+        "derived/analysis.md": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074749_bmw_free/derived/analysis.md",
+          "bytes": 1021,
+          "sha256": "3b44c0a61c8ef93d7c42f3f8860298445fd244ddc70d2c70b3834b8d4841ebef"
+        }
+      }
+    },
+    {
+      "session": "20261023-074908_bmw_free",
+      "role": "core_ident_vol",
+      "files": {
+        "session.json": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074908_bmw_free/session.json",
+          "bytes": 2909,
+          "sha256": "9d1c3033f49be0588cda713c7c600800dece9d4f9dfaa4a18c85b90d707c3961"
+        },
+        "events.jsonl": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074908_bmw_free/events.jsonl",
+          "bytes": 184090,
+          "sha256": "f9ed309868b1d2a921e08eec1c8182d0b0a7ab0c911dfcf58eb11ee8d74edc25"
+        },
+        "derived/analysis.json": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074908_bmw_free/derived/analysis.json",
+          "bytes": 16956,
+          "sha256": "9a464154d281394a952813e90de5e41bff6e23b21dd00d43704b5a61c1d07d7d"
+        },
+        "derived/analysis.md": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-074908_bmw_free/derived/analysis.md",
+          "bytes": 1290,
+          "sha256": "5c296bccccf90682ad324030b9168b84253620eaa9ae75c89d8a5191e67011e4"
+        }
+      }
+    },
+    {
+      "session": "20261023-072929_bmw_seq_ident_1r1",
+      "role": "offline_I0_contextual",
+      "files": {
+        "session.json": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-072929_bmw_seq_ident_1r1/session.json",
+          "bytes": 1060,
+          "sha256": "b83b438674ed06b0db0de8c6d6dfbe161d4c234935c3b2f1b886c9ccc37c2d3f"
+        },
+        "events.jsonl": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-072929_bmw_seq_ident_1r1/events.jsonl",
+          "bytes": 894466,
+          "sha256": "94e8168c6ad30dccf271fcfea35f54e759384a8b90a5b696b748004595a5051f"
+        },
+        "derived/analysis.json": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-072929_bmw_seq_ident_1r1/derived/analysis.json",
+          "bytes": 32500,
+          "sha256": "ce2e962ebcc45f8418b3946f7dd7ea52e916ca998219dcf565c658205809e775"
+        },
+        "derived/analysis.md": {
+          "source": "docs/feld/artifacts/20261023-identity-remount/20261023-072929_bmw_seq_ident_1r1/derived/analysis.md",
+          "bytes": 10710,
+          "sha256": "c321cbd4693ef50dcc03d6dd151995099acbdf48d02972703b518699ffde69bb"
+        }
+      }
+    }
+  ],
+  "reports": [
+    {
+      "path": "docs/feld/2026-10-23-gesamtbericht-identity-remount-multireview.md",
+      "bytes": 19417,
+      "sha256": "eb475955629652e35f5cb16283468a5e9231b1454c8828b0caa0b945304ca85e"
+    },
+    {
+      "path": "docs/feld/2026-10-23-gesamtbericht-identity-remount.md",
+      "bytes": 7932,
+      "sha256": "c48b579a6f669046fe516cb2caa1d02c40b96fafe8e1351082c4909d7bfed3a0"
+    },
+    {
+      "path": "docs/feld/2026-10-22-feldplan-cache-key-identity.md",
+      "bytes": 7802,
+      "sha256": "dc578f773c5e63c395d32777ea735c59b742e3b0dfd3a6674b6bd72c7f136ab1"
+    }
+  ]
+}
