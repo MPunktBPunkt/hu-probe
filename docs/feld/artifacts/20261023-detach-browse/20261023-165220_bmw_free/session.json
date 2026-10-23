@@ -1,0 +1,621 @@
+{
+  "schema": 2,
+  "session_id": "20261023-165220_bmw_free",
+  "started_at": "2026-10-23T16:52:20.585373+02:00",
+  "ended_at": null,
+  "vehicle": "bmw",
+  "profile_id": "bmw_nbt_evo",
+  "scenario": "free",
+  "fw_version": "0.3.19",
+  "transport": "tcp_live",
+  "fw_type": "hu-probe",
+  "fw_sha": "28249deb6e73",
+  "mac": "68:b6:b3:2b:c5:68",
+  "clock": {
+    "domain": "probe_monotonic_us",
+    "source": "esp_timer"
+  },
+  "capture": {
+    "dropped": 0,
+    "queue_highwater": 37,
+    "tcp_disconnects": 0,
+    "published": 5839,
+    "stream_lost": 0,
+    "tcp_tx_fail": 0,
+    "msc_sample_overflow": 0,
+    "recv_seq_gaps": [],
+    "recv_events": 3901,
+    "parse_errors": 0,
+    "complete": true,
+    "bot_pending_overflow": 141,
+    "reset_reason": "power_on",
+    "restart_cause": "none",
+    "boot_generation": 1,
+    "uptime_ms": 1263085,
+    "transport": "tcp_live",
+    "transport_epoch": 7,
+    "end_reason": "active",
+    "upload_status": "streaming",
+    "hw_module": "N8R2",
+    "tur_count": 408,
+    "tur_burst_n": 62,
+    "tur_idle_n": 64,
+    "tur_idle_p10_ms": 2238,
+    "tur_idle_median_ms": 2238,
+    "tur_idle_p90_ms": 2238,
+    "fw_dirty": false,
+    "collector_parse_errors_total": 4,
+    "integrity_pass": true
+  },
+  "gates": [
+    "HU-PROBE-GATE-01"
+  ],
+  "notes": "",
+  "fw_build_id": "28249deb6e73-20261022T154645Z",
+  "fw_dirty": false,
+  "usb_host_kind": "bmw_nbt_evo",
+  "usb_host_role": "vehicle_hu",
+  "probe_identity": {
+    "mac": "68:b6:b3:2b:c5:68",
+    "usb_serial": "HP0A01",
+    "volume_label": "HUPROBE",
+    "board": "ESP32-S3",
+    "hw_type": "esp32s3"
+  },
+  "media": {
+    "variant": "folders_30",
+    "label": "3 Ordner x 10 Tracks 20 s (Traversierung)",
+    "synthetic": true,
+    "hash": "0x265fa9ab",
+    "fs": "FAT16",
+    "sector_count": 32768,
+    "spc": 8,
+    "reserved": 1,
+    "fat_sectors": 16,
+    "root_lba": 33,
+    "data_lba": 65,
+    "cluster_count": 4087,
+    "volume_id": "0x48500131",
+    "fs_label": "HUPROBE",
+    "usb_serial_override": "",
+    "nodes": 34,
+    "truncated": false,
+    "mutation_gen": 0,
+    "ua_pending": false,
+    "ua_sent": 0
+  },
+  "media_layout": [
+    {
+      "node": 0,
+      "path": "ALBUM1",
+      "dir": true,
+      "size": 4096,
+      "flags": 1,
+      "extents": [
+        [
+          65,
+          8
+        ]
+      ]
+    },
+    {
+      "node": 1,
+      "path": "ALBUM1/T01.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 1,
+      "flags": 16,
+      "extents": [
+        [
+          97,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 2,
+      "path": "ALBUM1/T02.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 2,
+      "flags": 16,
+      "extents": [
+        [
+          337,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 3,
+      "path": "ALBUM1/T03.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 3,
+      "flags": 16,
+      "extents": [
+        [
+          577,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 4,
+      "path": "ALBUM1/T04.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 4,
+      "flags": 16,
+      "extents": [
+        [
+          817,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 5,
+      "path": "ALBUM1/T05.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 5,
+      "flags": 16,
+      "extents": [
+        [
+          1057,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 6,
+      "path": "ALBUM1/T06.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 6,
+      "flags": 16,
+      "extents": [
+        [
+          1297,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 7,
+      "path": "ALBUM1/T07.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 7,
+      "flags": 16,
+      "extents": [
+        [
+          1537,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 8,
+      "path": "ALBUM1/T08.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 8,
+      "flags": 16,
+      "extents": [
+        [
+          1777,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 9,
+      "path": "ALBUM1/T09.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 9,
+      "flags": 16,
+      "extents": [
+        [
+          2017,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 10,
+      "path": "ALBUM1/T10.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 10,
+      "flags": 16,
+      "extents": [
+        [
+          2257,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 11,
+      "path": "ALBUM2",
+      "dir": true,
+      "size": 4096,
+      "flags": 1,
+      "extents": [
+        [
+          73,
+          8
+        ]
+      ]
+    },
+    {
+      "node": 12,
+      "path": "ALBUM2/T01.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 11,
+      "flags": 16,
+      "extents": [
+        [
+          2497,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 13,
+      "path": "ALBUM2/T02.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 12,
+      "flags": 16,
+      "extents": [
+        [
+          2737,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 14,
+      "path": "ALBUM2/T03.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 13,
+      "flags": 16,
+      "extents": [
+        [
+          2977,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 15,
+      "path": "ALBUM2/T04.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 14,
+      "flags": 16,
+      "extents": [
+        [
+          3217,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 16,
+      "path": "ALBUM2/T05.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 15,
+      "flags": 16,
+      "extents": [
+        [
+          3457,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 17,
+      "path": "ALBUM2/T06.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 16,
+      "flags": 16,
+      "extents": [
+        [
+          3697,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 18,
+      "path": "ALBUM2/T07.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 17,
+      "flags": 16,
+      "extents": [
+        [
+          3937,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 19,
+      "path": "ALBUM2/T08.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 18,
+      "flags": 16,
+      "extents": [
+        [
+          4177,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 20,
+      "path": "ALBUM2/T09.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 19,
+      "flags": 16,
+      "extents": [
+        [
+          4417,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 21,
+      "path": "ALBUM2/T10.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 20,
+      "flags": 16,
+      "extents": [
+        [
+          4657,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 22,
+      "path": "ALBUM3",
+      "dir": true,
+      "size": 4096,
+      "flags": 1,
+      "extents": [
+        [
+          81,
+          8
+        ]
+      ]
+    },
+    {
+      "node": 23,
+      "path": "ALBUM3/SUB",
+      "dir": true,
+      "size": 4096,
+      "flags": 1,
+      "extents": [
+        [
+          89,
+          8
+        ]
+      ]
+    },
+    {
+      "node": 24,
+      "path": "ALBUM3/SUB/T01.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 21,
+      "flags": 16,
+      "extents": [
+        [
+          4897,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 25,
+      "path": "ALBUM3/SUB/T02.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 22,
+      "flags": 16,
+      "extents": [
+        [
+          5137,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 26,
+      "path": "ALBUM3/SUB/T03.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 23,
+      "flags": 16,
+      "extents": [
+        [
+          5377,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 27,
+      "path": "ALBUM3/SUB/T04.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 24,
+      "flags": 16,
+      "extents": [
+        [
+          5617,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 28,
+      "path": "ALBUM3/SUB/T05.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 25,
+      "flags": 16,
+      "extents": [
+        [
+          5857,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 29,
+      "path": "ALBUM3/T06.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 26,
+      "flags": 16,
+      "extents": [
+        [
+          6097,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 30,
+      "path": "ALBUM3/T07.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 27,
+      "flags": 16,
+      "extents": [
+        [
+          6337,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 31,
+      "path": "ALBUM3/T08.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 28,
+      "flags": 16,
+      "extents": [
+        [
+          6577,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 32,
+      "path": "ALBUM3/T09.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 29,
+      "flags": 16,
+      "extents": [
+        [
+          6817,
+          240
+        ]
+      ]
+    },
+    {
+      "node": 33,
+      "path": "ALBUM3/T10.MP3",
+      "dir": false,
+      "size": 119629,
+      "kbps": 48,
+      "dur_ms": 20009,
+      "seed": 30,
+      "flags": 16,
+      "extents": [
+        [
+          7057,
+          240
+        ]
+      ]
+    }
+  ]
+}

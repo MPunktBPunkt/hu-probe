@@ -6,6 +6,8 @@
 
 Keine vollständige READ10-Nachrechnung aller Live-TCP-Sessions dieses Nachmittags; Aussagen zu Detach/Browse sind **Operator-FACTs** + API-Timing, konsistent mit dem Zwei-Pfad-/Zwei-Schichten-Modell.
 
+**B70 (nachgeliefert):** Rohsessions unter [`artifacts/20261023-detach-browse/`](artifacts/20261023-detach-browse/) — u. a. `20261023-164249_bmw_free` (`cache_a_pin` / Detach-Leiter), `20261023-165220_bmw_free` (`folders_30`). Gezielter Wire-Check Cycle→Browse→READ10 steht noch aus (P2).
+
 ---
 
 ## 1. Ampel
@@ -85,6 +87,19 @@ Browse- / Datei-Titel-Cache               ← wird durch kurzen Cycle geleert
 ```
 
 Konsistent mit Identity-Nachmittag: Cycle → oft Resume-Position + trotzdem Datei-Reads (`tail_then_head` / Vollatom), nicht Fresh-`32+128+6`.
+
+### 4.3 Wire-Nachrechnung `20261023-165220_bmw_free` (B70 erledigt)
+
+Session `folders_30`, Capture ~13 min; Soft-Cycle @ **t≈582 s** (Serial `HP0002`→`HP0003`); mount_done @ 585,25 s.
+
+| Phase | Wire |
+|---|---|
+| Initial (<10 s) | FS-Enum + Datei-Scan vieler Tracks als **32+128+2** (Datei = 234 Blöcke ≈120 KiB; EOF-Probe hier **2**, nicht 6 — größenabhängig) |
+| Browse/Play vor Cycle | fast nur Body-Rest **`off=160 / blocks=72`** je Titel (Heads aus Initial-Scan noch im Cache) |
+| Nach Cycle | FS-Enum (BOOT/FAT/ROOT) → Dir-Reads ALBUM3/1/2/SUB → **erster Datei-Read = ALBUM3/T08 Vollatom `0/234`** (= Operator-Resume) |
+| Browse nach Cycle | gewählte Titel erneut als **Vollatom 234**, **kein** erneuter Bibliotheks-Scan 32+128+EOF über alle 30 Dateien |
+
+**FACT (Wire):** Cycle flush’t den Titel-/Body-Cache (vor Cycle Rest-72, nach Cycle Full-234), erhält aber die Navigator-Position (erster Atom = Resume-Track). Fresh-Diskriminator bleibt: **kein** flächendeckender Head+EOF-Scan nach Cycle; EOF-Probe-Länge ist dateigrößenabhängig (6 @ ~158 KiB / 2 @ ~120 KiB).
 
 ---
 
