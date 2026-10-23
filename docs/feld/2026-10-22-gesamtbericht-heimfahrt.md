@@ -22,7 +22,7 @@
 | TUR idle **2,2388 s** | 🟢 FACT | drei Heimfahrt-Sessions + Media-Leiter |
 | 4‑KiB-Takt / 240er READ10 / ~1 MiB/s | 🟢 FACT | `#23` p50 3,896 ms, n≈10 k |
 | Play Intent ≠ großer Read | 🟠 | C01–C04 fast komplett ohne Audible-Beweis |
-| Cache-Key / Identity | 🟠 | unverändert offen |
+| Cache-Key / Identity | 🟠 | Identity-Remount Stand 2026-10-23 ausgewertet ([Bericht](2026-10-23-gesamtbericht-identity-remount.md)); In-Session I1/I2 noch offen |
 | Audible GATE | 🔴 | weiter nötig |
 
 ---

@@ -118,15 +118,17 @@ Wie I1, aber `{"file":"TRACK1.MP3","seed":11,"notify":"none"}` (byte-verschieden
 | I7 | `ident_vol` (nur Vol `0x48500701`) | Keep | Nur Volume-ID? |
 | I4 | `ident_b` (Serial+Label+Vol) | Policy | Alle drei zusammen (Regression) |
 
-**Vorhersagen (festgelegt 2026-10-22):**
+**Vorhersagen (festgelegt 2026-10-22) — Messung 2026-10-23 Stand `.89` / FW 0.3.19:**
 
-| ID | Erwartung (offen → nach Messung abhaken) |
-|----|------------------------------------------|
-| I0b | Full Re-Read trotz gleichem Inhalt (bestätigt `remount_full_reread`) |
-| I5 | **offen:** Resume bricht **oder** bleibt — entscheidet Serial im Medien-Key |
-| I6 | **offen:** Label allein |
-| I7 | **offen:** Volume-ID allein |
-| I4 | wie bisher `ident_b`: mind. Mount/Scan neu; Resume-Semantik notieren |
+| ID | Erwartung (offen → nach Messung abhaken) | Ergebnis |
+|----|------------------------------------------|----------|
+| I0b | Full Re-Read trotz gleichem Inhalt (bestätigt `remount_full_reread`) | Soft-Remount unsichtbar; **Cycle:** Neu-Einlesen + **Resume** (kein Cold Start) |
+| I5 | **offen:** Resume bricht **oder** bleibt — entscheidet Serial im Medien-Key | RST vermischt; isoliert offen. Nach I4 eher Resume erwartet |
+| I6 | **offen:** Label allein | **Resume** — Label bricht Instanz nicht |
+| I7 | **offen:** Volume-ID allein | **Resume** (sauberer Retest pin→vol) — Vol bricht Instanz nicht |
+| I4 | wie bisher `ident_b`: mind. Mount/Scan neu; Resume-Semantik notieren | Mount neu + **Resume** |
+
+Vollbericht: [`2026-10-23-gesamtbericht-identity-remount.md`](2026-10-23-gesamtbericht-identity-remount.md).
 
 Messkriterium pro Schritt (binär):
 

@@ -1,0 +1,137 @@
+{
+  "schema": 2,
+  "session_id": "20261023-074319_bmw_free",
+  "started_at": "2026-10-23T07:43:19.453926+02:00",
+  "ended_at": "2026-10-23T07:44:55.862627+02:00",
+  "vehicle": "bmw",
+  "profile_id": "bmw_nbt_evo",
+  "scenario": "free",
+  "fw_version": "0.3.19",
+  "transport": "tcp_live",
+  "fw_type": "hu-probe",
+  "fw_sha": "28249deb6e73",
+  "mac": "68:b6:b3:2b:c5:68",
+  "clock": {
+    "domain": "probe_monotonic_us",
+    "source": "esp_timer"
+  },
+  "capture": {
+    "dropped": 0,
+    "queue_highwater": 85,
+    "tcp_disconnects": 0,
+    "published": 2222,
+    "stream_lost": 0,
+    "tcp_tx_fail": 0,
+    "msc_sample_overflow": 0,
+    "recv_seq_gaps": [],
+    "recv_events": 1150,
+    "parse_errors": 0,
+    "complete": true,
+    "bot_pending_overflow": 822,
+    "reset_reason": "power_on",
+    "restart_cause": "none",
+    "boot_generation": 1,
+    "uptime_ms": 99848,
+    "transport": "tcp_live",
+    "transport_epoch": 3,
+    "end_reason": "active",
+    "upload_status": "streaming",
+    "hw_module": "N8R2",
+    "tur_count": 72,
+    "tur_burst_n": 31,
+    "tur_idle_n": 40,
+    "fw_dirty": false,
+    "collector_parse_errors_total": 4,
+    "integrity_pass": true,
+    "tur_idle_p10_ms": 2238,
+    "tur_idle_median_ms": 2238,
+    "tur_idle_p90_ms": 2238
+  },
+  "gates": [
+    "HU-PROBE-GATE-01"
+  ],
+  "notes": "",
+  "fw_build_id": "28249deb6e73-20261022T154645Z",
+  "fw_dirty": false,
+  "usb_host_kind": "bmw_nbt_evo",
+  "usb_host_role": "vehicle_hu",
+  "probe_identity": {
+    "mac": "68:b6:b3:2b:c5:68",
+    "usb_serial": "HP0S01",
+    "volume_label": "HUPROBE",
+    "board": "ESP32-S3",
+    "hw_type": "esp32s3"
+  },
+  "media": {
+    "variant": "ident_serial",
+    "label": "wie cache_a_pin, nur Serial HP0S01",
+    "synthetic": true,
+    "hash": "0xfa4663d4",
+    "fs": "FAT16",
+    "sector_count": 32768,
+    "spc": 1,
+    "reserved": 1,
+    "fat_sectors": 128,
+    "root_lba": 257,
+    "data_lba": 289,
+    "cluster_count": 32479,
+    "volume_id": "0x48500131",
+    "fs_label": "HUPROBE",
+    "usb_serial_override": "HP0S01",
+    "nodes": 3,
+    "truncated": false,
+    "mutation_gen": 0,
+    "ua_pending": false,
+    "ua_sent": 0
+  },
+  "media_layout": [
+    {
+      "node": 0,
+      "path": "TRACK1.MP3",
+      "dir": false,
+      "size": 158473,
+      "kbps": 48,
+      "dur_ms": 26514,
+      "seed": 1,
+      "flags": 16,
+      "extents": [
+        [
+          289,
+          310
+        ]
+      ]
+    },
+    {
+      "node": 1,
+      "path": "TRACK2.MP3",
+      "dir": false,
+      "size": 158473,
+      "kbps": 48,
+      "dur_ms": 26514,
+      "seed": 2,
+      "flags": 16,
+      "extents": [
+        [
+          599,
+          310
+        ]
+      ]
+    },
+    {
+      "node": 2,
+      "path": "TRACK3.MP3",
+      "dir": false,
+      "size": 158473,
+      "kbps": 48,
+      "dur_ms": 26514,
+      "seed": 3,
+      "flags": 16,
+      "extents": [
+        [
+          909,
+          310
+        ]
+      ]
+    }
+  ]
+}
