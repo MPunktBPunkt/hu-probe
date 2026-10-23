@@ -9,6 +9,7 @@
 **Quellenbasis:** Gesamtbericht, Mistral-Wire-Nachrechnung, GPT-Review, Grok-Zusammenfassung, Claude-Meta-Review und spätere Korrekturen/Konsolidierungen  
 **Operator-Bericht (Roh):** [`2026-10-23-gesamtbericht-identity-remount.md`](2026-10-23-gesamtbericht-identity-remount.md)  
 **Wire-Nachtrag (074319/074455+):** [`2026-10-23-wire-nachtrag-074319-074455.md`](2026-10-23-wire-nachtrag-074319-074455.md)  
+**Detach-/Browse-Nachtrag:** [`2026-10-23-wire-nachtrag-detach-browse.md`](2026-10-23-wire-nachtrag-detach-browse.md)  
 **Self-recalc-Paket:** `docs/feld/artifacts/20261023-identity-remount-recalc/` · Builder `tools/build_identity_remount_recalc_2026_10_23.py`
 
 ---
@@ -289,6 +290,8 @@ Ergänzend:
 - Resume überlebt Serial/Label/Volume-ID einzeln und kombiniert
 - RST-Fall zeigt Fresh-Scan **`32+128+6`** + body_rest-Lead ≈ 7,8 s (074319, bereinigt)
 - Core-Cycles: erster Datei-Wiedereinstieg **`tail70→head240`** am Resume-Track (074455 T1 / 074749 T2 / 074908 T3)
+- Soft-Cycle ≤30 s, ESP-RST, OTG ~30 s und OTG ~99 s+Zündung: Operator-**Resume**; Fresh-Scan damit nicht reproduziert (Detach-Nachtrag)
+- folders_30: In-Session Browse-Hit; nach Cycle Browse-Cache leer, Navigator-Position (Album 3) bleibt
 - TUR ≈ 2238 ms, Chunk-Pace ≈ 3,94 ms p50, FW 0.3.19 clean
 
 ### STRONG INFERENCE

@@ -171,8 +171,8 @@
   "reports": [
     {
       "path": "docs/feld/2026-10-23-gesamtbericht-identity-remount-multireview.md",
-      "bytes": 20004,
-      "sha256": "33c14a814b782e606f801e861eea12fc8a0b77926c66df5d8d728fce78de854c"
+      "bytes": 20373,
+      "sha256": "b9b068448719288ea6c43f2067ea23088b1ab52b65e8eba487c53c1438adf961"
     },
     {
       "path": "docs/feld/2026-10-23-wire-nachtrag-074319-074455.md",
@@ -180,9 +180,14 @@
       "sha256": "376e86fe3d998bb0b55cb6b918e13444a2541c1f1457cfe440cb6e21d39d0645"
     },
     {
+      "path": "docs/feld/2026-10-23-wire-nachtrag-detach-browse.md",
+      "bytes": 4705,
+      "sha256": "4b8c97f0ec4b2f03f85ee4b366964fd3b224e94ee6594f1d2971f9a40dc42953"
+    },
+    {
       "path": "docs/feld/2026-10-23-gesamtbericht-identity-remount.md",
-      "bytes": 8042,
-      "sha256": "7eaa981833cddc702a8c5ae6fac03b7cfcaec24d5515bdda8e70c3ba8a7d6ccd"
+      "bytes": 8134,
+      "sha256": "79b4cafbc01307676a98763f5cf018467c8257ad7fa631814c8ae1c01501c238"
     },
     {
       "path": "docs/feld/2026-10-22-feldplan-cache-key-identity.md",

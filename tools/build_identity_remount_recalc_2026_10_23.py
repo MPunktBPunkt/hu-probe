@@ -42,6 +42,7 @@ SESSION_FILES = [
 REPORTS = [
     "docs/feld/2026-10-23-gesamtbericht-identity-remount-multireview.md",
     "docs/feld/2026-10-23-wire-nachtrag-074319-074455.md",
+    "docs/feld/2026-10-23-wire-nachtrag-detach-browse.md",
     "docs/feld/2026-10-23-gesamtbericht-identity-remount.md",
     "docs/feld/2026-10-22-feldplan-cache-key-identity.md",
 ]
