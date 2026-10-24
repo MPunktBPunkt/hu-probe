@@ -195,6 +195,7 @@
         "fits_pidrive_a7_2x_240_240_32_and_demo_v1_240_69",
         "r21_15_s_may_be_window_refill_not_prefetch",
         "test_with_size_1_4_8",
+        "test_with_seq_size_ladder_p0",
         "analyzer_read_windows"
       ]
     },

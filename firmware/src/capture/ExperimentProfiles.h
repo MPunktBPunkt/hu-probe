@@ -177,6 +177,40 @@ static const SequenceStep kSeqSize[] = {
      "FAVORITE/01ROCK waehlen, durchlaufen lassen (3 min)", nullptr, true},
 };
 
+/**
+ * @brief P0 Größenleiter (PiDrive Q16/B69): 158 KiB → 1 → 4 → 16 MiB.
+ *
+ * Per rung: Fresh (no mid-step cycle) then Cycle+Resume (BOOT double / Soft-Cycle).
+ * freeMarkers: BOOT short = mark, BOOT double = soft replug. Capture 4 min (~180–300 s band).
+ * fine_data on larger rungs for READ10/chunk timing; 16 MiB step notes start latency.
+ */
+static const SequenceStep kSeqSizeLadder[] = {
+    {"size_158", "free", 240000, 1, SeqSerial::Keep,
+     "FRESH 158k: Soft-Cycle vor Arm; TRACK1, 4 min Autoplay; KEIN weiterer Cycle",
+     nullptr, true},
+    {"size_158", "free", 240000, 1, SeqSerial::Keep,
+     "CYCLE 158k: TRACK1; nach ~30s BOOT 2x Soft-Cycle; Resume; ggf. 2. Cycle",
+     nullptr, true},
+    {"size_1m", "free", 240000, 1, SeqSerial::Keep,
+     "FRESH 1MiB: Soft-Cycle vor Arm; TRACK1 4 min; Mitten-Nachladen?",
+     nullptr, true},
+    {"size_1m", "free", 240000, 1, SeqSerial::Keep,
+     "CYCLE 1MiB: TRACK1; ~30s BOOT 2x; Resume vs Fresh; ggf. 2. Cycle",
+     nullptr, true},
+    {"size_4m", "free", 240000, 1, SeqSerial::Keep,
+     "FRESH 4MiB: Soft-Cycle vor Arm; TRACK1 4 min; Plateau/Readahead",
+     nullptr, true},
+    {"size_4m", "free", 240000, 1, SeqSerial::Keep,
+     "CYCLE 4MiB: TRACK1; ~30s BOOT 2x; Resume; ggf. 2. Cycle",
+     nullptr, true},
+    {"size_16m", "free", 300000, 1, SeqSerial::Keep,
+     "FRESH 16MiB: Soft-Cycle vor Arm; BOOT bei Wahl+hoerbar (Startlatenz); 5 min",
+     nullptr, true},
+    {"size_16m", "free", 300000, 1, SeqSerial::Keep,
+     "CYCLE 16MiB: TRACK1; ~60s BOOT 2x; Resume+Nachladen; ggf. 2. Cycle",
+     nullptr, true},
+};
+
 /** @brief SEQ-CACHE steps: content vs. serial vs. identity changes. */
 static const SequenceStep kSeqCache[] = {
     {"cache_a", "s3_cache_hit", 90000, 1, SeqSerial::Policy,
@@ -272,6 +306,7 @@ static const SequenceStep kSeqStall[] = {
 static const ExperimentSequence kTable[] = {
     {"seq_dur", "SEQ-DUR Dauer 10/26/60/180 s", kSeqDur, 3},
     {"seq_size", "SEQ-SIZE 1/4/8 MiB + PiDrive L3", kSeqSize, 4},
+    {"seq_size_ladder", "SEQ-SIZE-P0 Leiter 158k/1/4/16 MiB Fresh+Cycle", kSeqSizeLadder, 8},
     {"seq_cache", "SEQ-CACHE Inhalt/Serial/Identitaet", kSeqCache, 4},
     {"seq_ident", "SEQ-IDENT Cache-Key Serial/Label/Vol (Stand)", kSeqIdent, 8},
     {"seq_struct", "SEQ-STRUCT Ordner/Platzierung/Header/Fragmente", kSeqStruct, 4},

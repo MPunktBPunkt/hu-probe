@@ -21,6 +21,7 @@ Bis FW 0.2.30 gab es nur das Flash-Image `demo_v1` mit drei byte-identischen Tra
 | Dauer | 10 / 26 / 60 / 180 s bei 48 kbit/s | Prefetch-Regel: Vorlauf vor Ende oder Verzögerung nach Start? | `dur_mix` |
 | Bitrate | 32 / 128 / 320 kbit/s bei 60 s | puffert die HU zeit- oder bytebasiert? | `bitrate_mix` |
 | Größe | 1 / 4 / 8 MiB bei 128 kbit/s | Streaming gegen Read-All, Refill-Schwelle, Chunking | `size_1_4_8` |
+| Größe P0-Leiter | ~155 KiB / 1 / 4 / 16 MiB @128k, je 3 Tracks | PiDrive Q16/B69: Nachladen, Plateau, Play-Slot, Fresh vs Cycle | `size_158`, `size_1m`, `size_4m`, `size_16m` (Sequenz `seq_size_ladder`) |
 | PiDrive-Layout | FAVORITE/ 8 MiB + 2 × 512 KiB, MENUE/ | Verhalten auf echter PiDrive-Geometrie (FAT16 16 MiB, spc 8) | `pidrive_l3` |
 | Struktur | 3 Ordner, 30 Dateien, verschachtelt | Scan oder On-Demand, Traversierung, Ordnergrenzen | `folders_30` |
 | Header | plain, ID3v1, APIC 256 KiB, Xing, VBR | entsteht tail_then_head durch Tag-Suche? | `hdr_variants` |

@@ -81,6 +81,28 @@ static const MediaPreset kMediaPresets[] = {
         {"path":"S1M.MP3","size_kib":1024,"kbps":128,"seed":1},
         {"path":"S4M.MP3","size_kib":4096,"kbps":128,"seed":2},
         {"path":"S8M.MP3","size_kib":8192,"kbps":128,"seed":3}]})"},
+    // P0 Größenleiter (PiDrive Q16/B69): homogeneous 3-track media per rung @128k.
+    // ~155 KiB ≈ bekannte Atom-/Fresh-Welt (~158 KiB); 1/4/16 MiB = Nachladen / Plateau / Play-Slot.
+    {"size_158", "P0 Leiter: 3x ~155 KiB @128k (Kontrolle Atom/Fresh)",
+     R"({"id":"size_158","spc":8,"usb_serial":"HP0A01","files":[
+        {"path":"TRACK1.MP3","size_kib":155,"kbps":128,"seed":1},
+        {"path":"TRACK2.MP3","size_kib":155,"kbps":128,"seed":2},
+        {"path":"TRACK3.MP3","size_kib":155,"kbps":128,"seed":3}]})"},
+    {"size_1m", "P0 Leiter: 3x 1 MiB @128k (Mitten-Nachladen)",
+     R"({"id":"size_1m","spc":8,"usb_serial":"HP0A01","files":[
+        {"path":"TRACK1.MP3","size_kib":1024,"kbps":128,"seed":1},
+        {"path":"TRACK2.MP3","size_kib":1024,"kbps":128,"seed":2},
+        {"path":"TRACK3.MP3","size_kib":1024,"kbps":128,"seed":3}]})"},
+    {"size_4m", "P0 Leiter: 3x 4 MiB @128k (Plateau / Readahead)",
+     R"({"id":"size_4m","spc":8,"usb_serial":"HP0A01","files":[
+        {"path":"TRACK1.MP3","size_kib":4096,"kbps":128,"seed":1},
+        {"path":"TRACK2.MP3","size_kib":4096,"kbps":128,"seed":2},
+        {"path":"TRACK3.MP3","size_kib":4096,"kbps":128,"seed":3}]})"},
+    {"size_16m", "P0 Leiter: 3x 16 MiB @128k (Play-Slot + Startlatenz)",
+     R"({"id":"size_16m","spc":8,"volume_mib":64,"usb_serial":"HP0A01","files":[
+        {"path":"TRACK1.MP3","size_kib":16384,"kbps":128,"seed":1},
+        {"path":"TRACK2.MP3","size_kib":16384,"kbps":128,"seed":2},
+        {"path":"TRACK3.MP3","size_kib":16384,"kbps":128,"seed":3}]})"},
     {"pidrive_l3", "PiDrive L3: FAT16 16 MiB, FAVORITE/ 8M+512k+512k, MENUE/",
      R"({"id":"pidrive_l3","volume_mib":16,"spc":8,"stamp":false,"files":[
         {"path":"FAVORITE/01ROCK.MP3","size_kib":8192},

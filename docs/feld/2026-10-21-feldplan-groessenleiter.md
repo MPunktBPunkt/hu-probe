@@ -1,5 +1,9 @@
 # Feldplan BMW NBT Evo: Größenleiter, Rückwärtssprung, LBA 24, Replug-Kontrolle
 
+> **Hinweis 2026-10-24:** Die PiDrive-P0-Leiter (158 KiB / 1 / 4 / 16 MiB, Fresh+Cycle) liegt unter  
+> [`2026-10-24-feldplan-groessenleiter-p0.md`](2026-10-24-feldplan-groessenleiter-p0.md) (`seq_size_ladder`).  
+> Dieser Plan bleibt die ältere `seq_size` / `size_1_4_8`-Matrix (1/4/8 MiB + Nebenachsen).
+
 **Stand:** 2026-10-20 · **Firmware:** 0.2.41 (gegenüber 0.2.40: Fix gelbes Blinken/Neustart nach dem Upload, Diagnose-Log, `seq_size` im Fein-Modus `fine_data`; Presets und Sequenzen sonst wie seit 0.2.31) · **Basis:** [Feld 20.10., Abschnitt 7](2026-10-20-bmw-free-offline-0.2.40.md#7-nachauswertung-rohdaten-nachgerechnet-2026-10-20-nachmittags)
 **Regel:** Die Vorhersagen unten stehen **vor** der Fahrt fest. Nach der Fahrt wird nur abgehakt, welche eingetroffen ist; die Vorhersagen werden nicht nachträglich angepasst.
 **Geltung:** nur BMW NBT Evo. Keine Aussage „Feld PASS“ ohne die hier beschriebene Messung und Auswertung.
