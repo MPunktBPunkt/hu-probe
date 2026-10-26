@@ -81,9 +81,20 @@ void MscBotTap::clearBotEpoch() {
 }
 
 void MscBotTap::clearNeedReset() {
-    if (!needResetArmed_) return;
+    // Intentional soft-detach/cycle: TinyUSB may leave MSC_STAGE_NEED_RESET across a D+
+    // toggle without mscd_reset. poll() would then re-arm needResetArmed_ forever → sticky
+    // magenta + stalled BOT ("kein Medium"). Mirror TinyUSB proc_bot_reset stage/len fields.
+    const bool stageStuck = (itfStage() == kStageNeedReset);
+    if (!needResetArmed_ && !stageStuck) return;
     needResetArmed_ = false;
-    DiagLog::printf("[MSC] need_reset cleared (intentional detach)\n");
+    cswPending_ = false;
+    if (stageStuck) {
+        _mscd_itf[kOffStage] = 0;  // MSC_STAGE_CMD
+        // total_len @52, xferred_len @56 (TinyUSB 0.15 mscd_interface_t)
+        memset(_mscd_itf + 52, 0, 8);
+    }
+    DiagLog::printf("[MSC] need_reset cleared (intentional detach)%s\n",
+                    stageStuck ? " + tinyusb stage" : "");
 }
 
 void MscBotTap::queue(const Pending& p) {
@@ -656,6 +667,7 @@ void MscBotTap::queueUmount() {}
 void MscBotTap::queueEpStall(uint8_t) {}
 void MscBotTap::queueEpClearHalt(uint8_t) {}
 void MscBotTap::clearBotEpoch() {}
+void MscBotTap::clearNeedReset() {}
 uint32_t MscBotTap::currentHostTag() { return 0; }
 uint32_t MscBotTap::currentHostXferLen() { return 0; }
 

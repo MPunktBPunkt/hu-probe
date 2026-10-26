@@ -206,10 +206,14 @@ public:
     static bool needResetLatched() { return needResetArmed_; }
 
     /**
-     * @brief Clear a latched NEED_RESET after an intentional soft-detach (trip upload).
+     * @brief Clear a latched NEED_RESET after an intentional soft-detach / soft-cycle.
      *
      * Without this the magenta LED stays on and coex logic treats the bus as broken even
-     * though we disconnected on purpose so WiFi can TX.
+     * though we disconnected on purpose (trip upload WiFi TX, Lab `/api/usb/cycle`, BOOT
+     * double soft-replug). Also resets TinyUSB `_mscd_itf.stage` when stuck in
+     * MSC_STAGE_NEED_RESET so poll() cannot re-arm the latch across a D+ toggle that
+     * skipped mscd_reset — otherwise Soft-Cycle appears to do nothing and the HU sees
+     * no medium (BOT both-EP stall).
      */
     static void clearNeedReset();
 

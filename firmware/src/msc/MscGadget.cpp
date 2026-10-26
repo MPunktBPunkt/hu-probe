@@ -182,6 +182,7 @@ bool MscGadget::switchMedia(const char* presetId, const String* specJson, bool u
     if (usbCycle && softAttached_) {
         tud_disconnect();
         softAttached_ = false;
+        MscBotTap::clearNeedReset();
         delay(80);
     } else {
         delay(50);
@@ -342,6 +343,8 @@ bool MscGadget::softDetach(uint16_t holdMs) {
     if (ok) {
         softAttached_ = false;
         ReadStall::instance().onUsbReset();
+        // Heal NEED_RESET latch + TinyUSB stage (API cycle / BOOT soft-replug / trip upload).
+        MscBotTap::clearNeedReset();
         if (holdMs) {
             if (holdMs > 5000) holdMs = 5000;
             softReattachAtMs_ = millis() + holdMs;
