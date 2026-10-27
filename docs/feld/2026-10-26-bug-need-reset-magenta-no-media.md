@@ -2,7 +2,7 @@
 
 **Datum:** 2026-10-26 · **Gerät:** Auto-ESP `.89` (ESP32-S3 N8R2) · **FW:** **0.3.20**  
 **Kontext:** P0 Größenleiter [`2026-10-24-feldplan-groessenleiter-p0.md`](2026-10-24-feldplan-groessenleiter-p0.md) · Sequenz `seq_size_ladder`  
-**Status:** Fix in **0.3.21** (Soft-Detach heilt Latch + TinyUSB-Stage) — Feld-Retest offen
+**Status:** Fix in **0.3.21** (Soft-Detach heilt Latch + TinyUSB-Stage) — **Feld 27.10. Soft-Cycle/lila OK** (kein sticky Magenta); Größenleiter-Messung separat fail (Upload/RAM, siehe [`2026-10-27-schritt1-auswertung.md`](2026-10-27-schritt1-auswertung.md))
 
 ---
 

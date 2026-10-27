@@ -1,0 +1,118 @@
+{
+  "schema": 2,
+  "session_id": "20261027-080529_bmw_seq_size_ladder_1r1",
+  "started_at": "2026-10-27T08:05:29.097593+01:00",
+  "ended_at": null,
+  "vehicle": "bmw",
+  "profile_id": "bmw_nbt_evo",
+  "scenario": "seq_size_ladder_1r1",
+  "fw_version": "0.3.21",
+  "transport": "ram_offline",
+  "fw_type": "hu-probe",
+  "fw_sha": "064ebecef96c",
+  "mac": "68:b6:b3:2b:c5:68",
+  "clock": {
+    "domain": "probe_monotonic_us",
+    "source": "esp_timer"
+  },
+  "capture": {
+    "dropped": 0,
+    "queue_highwater": 0,
+    "tcp_disconnects": 0,
+    "published": 0,
+    "stream_lost": 0,
+    "tcp_tx_fail": 0,
+    "msc_sample_overflow": 0,
+    "recv_seq_gaps": [],
+    "recv_events": 0,
+    "parse_errors": 0,
+    "complete": null
+  },
+  "gates": [
+    "HU-PROBE-GATE-01"
+  ],
+  "notes": "",
+  "fw_build_id": "064ebecef96c-dirty-20261026T075517Z",
+  "fw_dirty": true,
+  "usb_host_kind": "bmw_nbt_evo",
+  "usb_host_role": "vehicle_hu",
+  "probe_identity": {
+    "mac": "68:b6:b3:2b:c5:68",
+    "usb_serial": "HP0A01",
+    "volume_label": "HUPROBE",
+    "board": "ESP32-S3",
+    "hw_type": "esp32s3"
+  },
+  "media": {
+    "variant": "size_158",
+    "label": "P0 Leiter: 3x ~155 KiB @128k (Kontrolle Atom/Fresh)",
+    "synthetic": true,
+    "hash": "0x5778a9f3",
+    "fs": "FAT16",
+    "sector_count": 32768,
+    "spc": 8,
+    "reserved": 1,
+    "fat_sectors": 16,
+    "root_lba": 33,
+    "data_lba": 65,
+    "cluster_count": 4087,
+    "volume_id": "0x48500131",
+    "fs_label": "HUPROBE",
+    "usb_serial_override": "HP0A01",
+    "nodes": 3,
+    "truncated": false,
+    "mutation_gen": 0,
+    "ua_pending": false,
+    "ua_sent": 0
+  },
+  "media_layout": [
+    {
+      "node": 0,
+      "path": "TRACK1.MP3",
+      "dir": false,
+      "size": 158593,
+      "kbps": 128,
+      "dur_ms": 9926,
+      "seed": 1,
+      "flags": 16,
+      "extents": [
+        [
+          65,
+          312
+        ]
+      ]
+    },
+    {
+      "node": 1,
+      "path": "TRACK2.MP3",
+      "dir": false,
+      "size": 158593,
+      "kbps": 128,
+      "dur_ms": 9926,
+      "seed": 2,
+      "flags": 16,
+      "extents": [
+        [
+          377,
+          312
+        ]
+      ]
+    },
+    {
+      "node": 2,
+      "path": "TRACK3.MP3",
+      "dir": false,
+      "size": 158593,
+      "kbps": 128,
+      "dur_ms": 9926,
+      "seed": 3,
+      "flags": 16,
+      "extents": [
+        [
+          689,
+          312
+        ]
+      ]
+    }
+  ]
+}

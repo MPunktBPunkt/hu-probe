@@ -1,8 +1,9 @@
 # Feldplan P0 Größenleiter (PiDrive Q16 / B69)
 
-**Stand:** 2026-10-24 · **Quelle:** PiDrive nächster Feldtest · **Messung:** hu-probe (kein Firmware-Feature)  
-**Firmware-Ziel:** **0.3.20** — Presets `size_158` / `size_1m` / `size_4m` / `size_16m` + Sequenz `seq_size_ladder`  
-**OTA-Bin:** `firmware/dist/hu-probe.0.3.20.esp32s3.bin`  
+**Stand:** 2026-10-27 · **Quelle:** PiDrive nächster Feldtest · **Messung:** hu-probe (kein Firmware-Feature)  
+**Firmware-Ziel:** **0.3.21** — Presets `size_158` / `size_1m` / `size_4m` / `size_16m` + Sequenz `seq_size_ladder`  
+**(0.3.20 Feld 26.10.:** sticky Magenta/`NEED_RESET` + HU kein Medium — Fix Soft-Cycle Latch; Retest GO [`2026-10-27-GO-groessenleiter.md`](2026-10-27-GO-groessenleiter.md))  
+**OTA-Bin:** `firmware/dist/hu-probe.0.3.21.esp32s3.bin`  
 **HU:** BMW NBT Evo · **CBR:** ~128 kbit/s · **Capture:** 180–300 s je Lauf (Sequenz: 4 min / 5 min @16 MiB)
 
 **Frage:** Kann PiDrive lange/wachsende Bodies liefern, oder bleibt die HU bei kleinem Prefetch-Fenster?  

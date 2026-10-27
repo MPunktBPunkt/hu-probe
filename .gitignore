@@ -118,6 +118,8 @@ sessions/*
 !sessions/20261022-171751_bmw_drive_home/**
 !sessions/20261022-173030_bmw_drive_home/
 !sessions/20261022-173030_bmw_drive_home/**
+!sessions/20261027-080529_bmw_seq_size_ladder_1r1/
+!sessions/20261027-080529_bmw_seq_size_ladder_1r1/**
 
 sessions/**/collector.*
 sessions/**/derived/
@@ -136,6 +138,8 @@ sessions/**/derived/
 !sessions/20261022-081152_bmw_free/derived/**
 !sessions/20261022-081410_bmw_free/derived/
 !sessions/20261022-081410_bmw_free/derived/**
+!sessions/20261027-080529_bmw_seq_size_ladder_1r1/derived/
+!sessions/20261027-080529_bmw_seq_size_ladder_1r1/derived/**
 
 # Firmware artifacts (release bins under firmware/dist/ are tracked)
 firmware/.pio/
