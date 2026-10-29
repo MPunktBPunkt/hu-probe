@@ -1,7 +1,7 @@
 # C1b-P0.5-A — Control-Tap Instrumentation + Phone-like B1 Prep
 
 **Datum:** 2026-10-29  
-**FW:** **0.3.28** (P0.5-A 0.3.24 · phone-like 0.3.25 · softAttach 0.3.26 · MSC-leak-fix 0.3.27 · **P0_B nur 51/52/53/58** 0.3.28)  
+**FW:** **0.3.28** (P0.5-A … P0_B-Fix); Abend weiter mit **0.3.32** Knock — siehe [B2b-Feldbericht](2026-10-29-c1b-b2b-knock-feld.md)  
 **Audit:** technology-audit PR #28 / `C1b-PLAN.md`
 
 ## Was gebaut wurde
@@ -47,5 +47,6 @@ braucht USB-Device-Node-Passthrough.
 2. Optional zuerst weiter `aoa_observe` + Link-Start → prüfen `setup_count`/`drops` während HU „USB-Modus“
 3. Dann NVS `aoa_phone_like` + Reboot + Link-Start → 51/52/53?
 
-## Nicht tun
-Composite MSC+AOA, Knock-TX, BclFramer-on-wire, Post-53 Re-Enum-Engineering.
+## Nicht tun (Stand Nachmittag; Abend: Knock separat unter B2b)
+Composite MSC+AOA, BclFramer-on-wire, Post-53 Re-Enum-Engineering.  
+Knock-TX: umgesetzt und ausgewertet in [2026-10-29-c1b-b2b-knock-feld.md](2026-10-29-c1b-b2b-knock-feld.md).

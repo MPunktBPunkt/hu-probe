@@ -110,13 +110,13 @@ size_t AoaTransport::write(const uint8_t* src, size_t len) {
         last_event_ = TransportEvent::TransportError;
         return 0;
     }
-    // C1b-P0: no BCL / application TX on wire. Skeleton may account only.
-    if (observe_bound_) {
+    // C1b-P0 default: no wire TX. B2b knock enables wire_tx_enabled_ explicitly.
+    if (observe_bound_ && !wire_tx_enabled_) {
         last_error_ = "p0_tx_disabled";
         last_event_ = TransportEvent::TransportError;
         return 0;
     }
-    if (!connected_) {
+    if (!connected_ && !(observe_bound_ && wire_tx_enabled_)) {
         last_error_ = "not_connected";
         last_event_ = TransportEvent::TransportError;
         return 0;
@@ -125,6 +125,24 @@ size_t AoaTransport::write(const uint8_t* src, size_t len) {
         last_error_ = "null_src";
         last_event_ = TransportEvent::TransportError;
         return 0;
+    }
+    if (observe_bound_ && wire_tx_enabled_) {
+        using huprobe::aoa::AoaObserveGadget;
+        if (!AoaObserveGadget::instance().vendorMounted()) {
+            last_error_ = "vendor_not_mounted";
+            last_event_ = TransportEvent::TransportError;
+            return 0;
+        }
+        const size_t n = AoaObserveGadget::instance().writeVendor(src, len);
+        if (n == 0) {
+            last_error_ = "vendor_write_zero";
+            last_event_ = TransportEvent::TransportError;
+            return 0;
+        }
+        tx_bytes_ += static_cast<uint32_t>(n);
+        last_event_ = TransportEvent::TxBytes;
+        last_error_ = "";
+        return n;
     }
     tx_bytes_ += static_cast<uint32_t>(len);
     last_event_ = TransportEvent::TxBytes;

@@ -122,6 +122,12 @@ size_t AoaObserveGadget::drainVendorRx(uint8_t* dst, size_t maxLen) {
     return g_vendor.read(dst, maxLen);
 }
 
+size_t AoaObserveGadget::writeVendor(const uint8_t* src, size_t len) {
+    if (!ready_ || !src || len == 0) return 0;
+    if (!g_vendor.mounted()) return 0;
+    return g_vendor.write(src, len);
+}
+
 bool AoaObserveGadget::softDetach(uint16_t holdMs) {
     if (!ready_) return false;
     soft_reattach_at_ms_ = 0;
@@ -168,6 +174,7 @@ bool AoaObserveGadget::softDetach(uint16_t) { return false; }
 bool AoaObserveGadget::softAttach() { return false; }
 bool AoaObserveGadget::softCycle(uint16_t) { return false; }
 size_t AoaObserveGadget::drainVendorRx(uint8_t*, size_t) { return 0; }
+size_t AoaObserveGadget::writeVendor(const uint8_t*, size_t) { return 0; }
 bool AoaObserveGadget::vendorMounted() const { return false; }
 
 }  // namespace aoa

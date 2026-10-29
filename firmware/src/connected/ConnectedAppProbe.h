@@ -53,6 +53,17 @@ public:
     bool stopCaC1Link();
 
     /**
+     * @brief B2b gated Knock-TX: one short bulk OUT while link observing.
+     *
+     * Patterns (desk hyp, not NBT FACT): "hex4" (default) | "ascii8" | "bcl_knock" | "bcl_hs".
+     * hex4 = raw 12 34 56 78 (BclCarLink/Lua session-init). ascii8 = REJECTED lookalike.
+     * Does not enable BclFramer on RX. Wire TX only for this call.
+     * @param pattern  Named pattern; nullptr/"hex4" default.
+     * @return true if USBVendor accepted at least one byte.
+     */
+    bool sendKnock(const char* pattern = nullptr);
+
+    /**
      * @brief Lab-only: inject hex bytes into AoaTransport RX (not NBT wire).
      * In P0 observe, inject still goes to ring + optional lab BclFramer path only if
      * feed_framer_lab_ is set; default P0 publishes ca_usb bulk only.

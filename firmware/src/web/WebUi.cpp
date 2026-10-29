@@ -219,7 +219,12 @@ static const char* PAGE =
     "<button class=sec id=caLab onclick=runCaLabBcl()>▶ ca_c1_lab_bcl</button>"
     "<button class=sec id=caLinkStart onclick=runCaLinkStart()>▶ ca_c1_link (P0 observe)</button>"
     "<button class=sec id=caLinkStop onclick=runCaLinkStop()>Stop link</button>"
+    "<button class=sec id=caKnock onclick=runCaKnock()>Knock TX (B2b)</button>"
+    "<select id=caKnockPat><option value=hex4 selected>hex4 (12 34 56 78)</option>"
+    "<option value=ascii8>ascii8 (REJECTED)</option>"
+    "<option value=bcl_knock>bcl_knock</option><option value=bcl_hs>bcl_hs</option></select>"
     "</div>"
+    "<p class=muted>Knock = ein Bulk-OUT. Nur wenn Link observing + Vendor mounted.</p>"
     "<div class=row>"
     "<label>Inject hex (Lab/TEST) <input id=caHex "
     "placeholder='00040000000000080000000000000000' style='min-width:16rem'></label>"
@@ -374,6 +379,7 @@ static const char* PAGE =
     "    const aoaBoot=gadget==='aoa_observe'||gadget==='aoa_phone_like';"
     "    caWarn.style.display=aoaBoot?'none':'block';"
     "    caLinkStart.disabled=!aoaBoot;"
+    "    if(caKnock)caKnock.disabled=!aoaBoot||!ca.link_observing;"
     "    caP0.textContent='P0-0='+!!p0.P0_0+' A='+!!p0.P0_A+' B='+!!p0.P0_B+"
     "      ' C='+!!p0.P0_C+' D='+!!p0.P0_D+' E='+!!p0.P0_E+"
     "      ' · ca_usb='+(ca.ca_usb_count||0)+"
@@ -453,6 +459,18 @@ static const char* PAGE =
     "  const t=await r.text();st.textContent=t;"
     "  let j={};try{j=JSON.parse(t)}catch(_){}"
     "  setPhase(j.ok?'CA INJECT OK':'CA INJECT FAIL',j.ok?'ok':'fail');refresh()"
+    "}"
+    "async function runCaKnock(){"
+    "  setPhase('CA KNOCK…','warn');"
+    "  const pat=(typeof caKnockPat!=='undefined'&&caKnockPat.value)||'hex4';"
+    "  try{"
+    "    const r=await fetch('/api/connected/link/knock',{method:'POST',"
+    "      headers:{'Content-Type':'application/json'},body:JSON.stringify({pattern:pat})});"
+    "    const t=await r.text();st.textContent=t;"
+    "    let j={};try{j=JSON.parse(t)}catch(_){}"
+    "    setPhase(j.ok?('KNOCK '+ (j.pattern||pat)+' OK'):('KNOCK FAIL'),j.ok?'ok':'fail');"
+    "  }catch(e){setPhase('CA KNOCK ERROR','fail')}"
+    "  refresh()"
     "}"
     "async function saveGadget(){"
     "  const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},"
@@ -607,6 +625,7 @@ void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
     server_.on("/api/connected/link/start", HTTP_POST, [this]() { handleConnectedLinkStart(); });
     server_.on("/api/connected/link/stop", HTTP_POST, [this]() { handleConnectedLinkStop(); });
     server_.on("/api/connected/link/inject", HTTP_POST, [this]() { handleConnectedLinkInject(); });
+    server_.on("/api/connected/link/knock", HTTP_POST, [this]() { handleConnectedLinkKnock(); });
     server_.on("/api/connected/gadget/reboot", HTTP_POST, [this]() { handleConnectedGadgetReboot(); });
     server_.on("/api/usb/cycle", HTTP_POST, [this]() { handleUsbCycle(); });
     server_.on("/api/usb/remount", HTTP_POST, [this]() { handleUsbRemount(); });
@@ -992,6 +1011,14 @@ void WebUi::handleStatus() {
     doc["ip"] = WiFi.localIP().toString();
     doc["hub_ok"] = hub_ ? hub_->lastOk() : false;
     doc["tcp_ok"] = tcp_ ? tcp_->connected() : false;
+    {
+        JsonObject wifi = doc["wifi"].to<JsonObject>();
+        const bool up = WiFi.status() == WL_CONNECTED;
+        wifi["connected"] = up;
+        wifi["rssi"] = up ? WiFi.RSSI() : 0;
+        wifi["ssid"] = up ? WiFi.SSID() : "";
+        wifi["channel"] = up ? WiFi.channel() : 0;
+    }
     if (msc_) {
         doc["msc_ready"] = msc_->ready();
         doc["msc_plugged"] = msc_->plugged();
@@ -1437,6 +1464,29 @@ void WebUi::handleConnectedLinkInject() {
     sendJson(ok ? 200 : 409, out);
 }
 
+void WebUi::handleConnectedLinkKnock() {
+    JsonDocument out;
+    String pattern = "hex4";
+    if (server_.hasArg("plain") && server_.arg("plain").length() > 0) {
+        JsonDocument in;
+        if (!deserializeJson(in, server_.arg("plain"))) {
+            const char* p = in["pattern"].is<const char*>() ? in["pattern"].as<const char*>() : nullptr;
+            if (p && p[0]) pattern = p;
+        }
+    }
+    ConnectedAppProbe& ca = ConnectedAppProbe::instance();
+    const bool ok = ca.sendKnock(pattern.c_str());
+    out["ok"] = ok;
+    out["action"] = "ca_c1_link_knock";
+    out["gate"] = "B2b";
+    out["pattern"] = pattern;
+    out["evidence_level"] = "HYP";
+    out["note"] = "gated_bulk_out_not_nbt_fact";
+    if (ca.lastErr() && ca.lastErr()[0]) out["err"] = ca.lastErr();
+    ca.toStatusJson(out["connected_app"].to<JsonObject>());
+    sendJson(ok ? 200 : 409, out);
+}
+
 void WebUi::handleUsbCycle() {
     uint16_t holdMs = 600;
     if (server_.hasArg("plain")) {
@@ -1745,6 +1795,11 @@ void WebUi::handleOfflineStop() {
 void WebUi::handleOtaUpload() {
     HTTPUpload& upload = server_.upload();
     if (upload.status == UPLOAD_FILE_START) {
+        // Previous failed attempt can leave Update running/errored — without abort,
+        // begin() fails forever until reboot (looks like "OTA dead at same spot").
+        if (Update.isRunning() || Update.hasError()) {
+            Update.abort();
+        }
         Serial.printf("[OTA] upload start %s\n", upload.filename.c_str());
         if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
             Update.printError(Serial);
@@ -1759,13 +1814,20 @@ void WebUi::handleOtaUpload() {
         } else {
             Serial.printf("[OTA] %u bytes\n", upload.totalSize);
         }
+    } else if (upload.status == UPLOAD_FILE_ABORTED) {
+        Update.abort();
+        Serial.println("[OTA] upload aborted");
     }
 }
 
 void WebUi::handleOtaDone() {
     server_.sendHeader(F("Connection"), F("close"));
     if (Update.hasError()) {
-        server_.send(500, F("text/plain"), F("OTA fail"));
+        const uint8_t err = Update.getError();
+        Update.abort();
+        char body[48];
+        snprintf(body, sizeof(body), "OTA fail err=%u", (unsigned)err);
+        server_.send(500, F("text/plain"), body);
         return;
     }
     server_.send(200, F("text/plain"), F("OK"));

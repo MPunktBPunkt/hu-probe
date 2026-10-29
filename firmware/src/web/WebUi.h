@@ -130,6 +130,13 @@ private:
     void handleConnectedLinkInject();
 
     /**
+     * @brief POST /api/connected/link/knock: B2b gated bulk OUT (ascii8|bcl_knock|bcl_hs).
+     *
+     * Body optional {pattern}. Requires observing + vendor mounted. HTTP 409 if not armed.
+     */
+    void handleConnectedLinkKnock();
+
+    /**
      * @brief POST /api/connected/gadget/reboot: restart after NVS usbGadget save.
      *
      * Responds JSON then ESP.restart(). Soft-detach is not a mode switch.

@@ -98,11 +98,20 @@ void App::buildHeartbeat(JsonDocument& doc) {
     doc["name"] = a.config_.deviceName;
     doc["fwType"] = FW_TYPE;
     doc["fwVersion"] = FW_VERSION;
+    // esp-hub UI maps `version` / `rssi` / `uptime` — without these keys the hub keeps
+    // stale values from the last firmware that sent them (e.g. RF-monitor).
+    doc["version"] = FW_VERSION;
     doc["fwSha"] = FW_GIT_SHA;
     doc["fwBuildId"] = FW_BUILD_ID;
     doc["chipModel"] = HUPROBE_BOARD_LABEL;
     doc["hwType"] = HUPROBE_HW_TYPE;
     doc["hwModule"] = HwInfo::moduleGuess();
+    doc["rssi"] = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
+    doc["uptime"] = static_cast<uint32_t>(millis() / 1000UL);
+    doc["freeHeap"] = ESP.getFreeHeap();
+    doc["freeSketch"] = ESP.getFreeSketchSpace();
+    doc["freePsram"] = ESP.getFreePsram();
+    doc["psramSize"] = ESP.getPsramSize();
 
     JsonObject ios = doc["ios"].to<JsonObject>();
     ios["probe_state"] = a.session_.active() ? a.session_.phase() : "idle";

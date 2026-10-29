@@ -61,6 +61,12 @@ public:
     /** @brief Drain USBVendor RX into AoaTransport ring (called by transport poll). */
     size_t drainVendorRx(uint8_t* dst, size_t maxLen);
 
+    /**
+     * @brief Bulk OUT via USBVendor (B2b knock / gated TX). Observe path only.
+     * @return Bytes accepted by TinyUSB, or 0 on error.
+     */
+    size_t writeVendor(const uint8_t* src, size_t len);
+
     bool vendorMounted() const;
 
     uint32_t attachCount() const { return attach_count_; }

@@ -501,6 +501,95 @@ bool ConnectedAppProbe::stopCaC1Link() {
     return true;
 }
 
+bool ConnectedAppProbe::sendKnock(const char* pattern) {
+    if (!link_observing_ || !aoa_.armed()) {
+        lastErr_ = "not_observing";
+        return false;
+    }
+    if (!aoa_observe_boot_ || !aoa_.usbStackBound()) {
+        lastErr_ = "wrong_usb_gadget";
+        return false;
+    }
+    if (!AoaObserveGadget::instance().vendorMounted()) {
+        lastErr_ = "vendor_not_mounted";
+        return false;
+    }
+
+    const char* name = (pattern && pattern[0]) ? pattern : "hex4";
+    uint8_t buf[16];
+    size_t len = 0;
+
+    // Desk hypotheses — not NBT wire FACT until observed on this HU.
+    if (!strcmp(name, "hex4") || !strcmp(name, "init") || !strcmp(name, "session_init") ||
+        !strcmp(name, "12345678")) {
+        // BclCarLink / wireshark_bmw_bcl: 4 raw bytes 12 34 56 78 (NOT ASCII).
+        buf[0] = 0x12;
+        buf[1] = 0x34;
+        buf[2] = 0x56;
+        buf[3] = 0x78;
+        len = 4;
+    } else if (!strcmp(name, "ascii8")) {
+        // REJECTED lookalike — literal "12345678" (31 32 …). Kept for A/B only.
+        static const char kAscii[] = "12345678";
+        len = 8;
+        std::memcpy(buf, kAscii, len);
+    } else if (!strcmp(name, "bcl_knock")) {
+        // BCL Knock cmd=8, src/dest/len = 0 (empty) — 8-byte BE header only.
+        buf[0] = 0;
+        buf[1] = 8;  // Knock
+        buf[2] = 0;
+        buf[3] = 0;
+        buf[4] = 0;
+        buf[5] = 0;
+        buf[6] = 0;
+        buf[7] = 0;
+        len = 8;
+    } else if (!strcmp(name, "bcl_hs") || !strcmp(name, "bcl_handshake")) {
+        buf[0] = 0;
+        buf[1] = 4;  // Handshake
+        buf[2] = 0;
+        buf[3] = 0;
+        buf[4] = 0;
+        buf[5] = 0;
+        buf[6] = 0;
+        buf[7] = 0;
+        len = 8;
+    } else {
+        lastErr_ = "unknown_knock_pattern";
+        return false;
+    }
+
+    aoa_.enableWireTx(true);
+    const size_t n = aoa_.write(buf, len);
+    aoa_.enableWireTx(false);
+
+    JsonDocument extra;
+    extra["pattern"] = name;
+    extra["tx_req"] = static_cast<uint32_t>(len);
+    extra["tx_ok"] = static_cast<uint32_t>(n);
+    extra["gate"] = "B2b";
+    char hex[40];
+    size_t hp = 0;
+    for (size_t i = 0; i < len && hp + 2 < sizeof(hex); ++i) {
+        snprintf(hex + hp, sizeof(hex) - hp, "%02x", buf[i]);
+        hp += 2;
+    }
+    hex[hp] = '\0';
+    extra["hex"] = hex;
+    publishCaUsb("P0-E", "knock_tx", true, true, extra);
+    publishTransportEvent(TransportEvent::TxBytes, static_cast<uint32_t>(n), name);
+
+    if (n == 0) {
+        lastErr_ = aoa_.lastError();
+        if (!lastErr_ || !lastErr_[0]) lastErr_ = "knock_tx_zero";
+        DiagLog::printf("[CA] knock FAIL pattern=%s err=%s\n", name, lastErr_);
+        return false;
+    }
+    lastErr_ = "";
+    DiagLog::printf("[CA] knock OK pattern=%s n=%u\n", name, (unsigned)n);
+    return true;
+}
+
 bool ConnectedAppProbe::injectRxHex(const char* hex) {
     if (!link_observing_ || !aoa_.armed()) {
         lastErr_ = "not_observing";

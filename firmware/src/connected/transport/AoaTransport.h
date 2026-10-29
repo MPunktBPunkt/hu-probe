@@ -49,7 +49,15 @@ public:
 
     void poll() override;
     size_t read(uint8_t* dst, size_t maxLen) override;
+    /**
+     * @brief Skeleton TX accounting, or observe wire TX when wireTxEnabled().
+     * Default observe path keeps TX disabled (p0_tx_disabled) until enableWireTx().
+     */
     size_t write(const uint8_t* src, size_t len) override;
+
+    /** @brief Gate for B2b Knock-TX on observe stack (off by default). */
+    void enableWireTx(bool on) { wire_tx_enabled_ = on; }
+    bool wireTxEnabled() const { return wire_tx_enabled_; }
 
     uint32_t rxBytes() const override { return rx_bytes_; }
     uint32_t txBytes() const override { return tx_bytes_; }
@@ -78,6 +86,7 @@ private:
     bool armed_ = false;
     bool connected_ = false;
     bool lab_link_ = false;
+    bool wire_tx_enabled_ = false;
     uint8_t rx_ring_[kRxRingSize];
     size_t rx_head_ = 0;
     size_t rx_tail_ = 0;
