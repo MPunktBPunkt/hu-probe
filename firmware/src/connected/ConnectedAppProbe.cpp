@@ -452,7 +452,16 @@ bool ConnectedAppProbe::startCaC1Link() {
 
     msc_detached_for_link_ = false;  // MSC never present in aoa_observe
 
-    session_->start("lab", "ca_c1_link", "bmw_nbt_evo", nullptr, nullptr, "aoa_observe");
+    // Lab boots soft-detached (WiFi-first). Attach D+ so the host can see the gadget
+    // without Soft-Cycle (Soft-Cycle under OTG often kills WiFi / reboots).
+    AoaObserveGadget& g = AoaObserveGadget::instance();
+    bool attached_now = false;
+    if (!g.softAttached()) {
+        attached_now = g.softAttach();
+        DiagLog::printf("[CA] link/start softAttach=%d (was detached)\n", attached_now ? 1 : 0);
+    }
+
+    session_->start("lab", "ca_c1_link", "bmw_nbt_evo", nullptr, nullptr, usb_gadget_.c_str());
     last_sid_ = session_->id();
     session_->setPhase("ca_link_observe", "c1b_p0_observe");
     link_observing_ = true;
@@ -465,6 +474,8 @@ bool ConnectedAppProbe::startCaC1Link() {
         extra["msc_interface_present"] = false;
         extra["vendor_interface_present"] = true;
         extra["usb_gadget"] = usb_gadget_;
+        extra["soft_attached"] = g.softAttached();
+        extra["soft_attach_on_start"] = attached_now;
         publishCaUsb("P0-0", "gadget_isolation", false, true, extra);
     }
     publishTransportEvent(TransportEvent::Disconnected, 0, "armed_p0_observe_waiting");

@@ -56,8 +56,19 @@ void MscGadget::mark(const char* name, const char* note, int64_t tUs) {
 /** @brief Gadget instance receiving the C-style USB callbacks; set in MscGadget::begin(). */
 static MscGadget* g_msc = nullptr;
 
-/** @brief Arduino USBMSC device backing the single LUN. */
-static USBMSC MSC;
+/**
+ * @brief Arduino USBMSC device backing the single LUN.
+ *
+ * CRITICAL: USBMSC ctor calls tinyusb_enable_interface(MSC). A static instance would
+ * always add an MSC interface to the descriptor — even in aoa_observe boot (P0-0 break).
+ * Construct only from MscGadget::begin().
+ */
+static USBMSC* g_usb_msc = nullptr;
+
+static USBMSC& mscDev() {
+    // begin() must have allocated; callers after begin are safe.
+    return *g_usb_msc;
+}
 
 /**
  * @brief TinyUSB callback: report the LUN as read-only.
@@ -130,6 +141,12 @@ void MscGadget::begin(Session* session, ReadInstrument* instrument, bool startDe
     MscBotTap::begin(instrument);
     MscBotTap::setProbeSerial(serial_);
 
+    // Enable MSC interface only on MSC boot (not during static init).
+    if (!g_usb_msc) {
+        g_usb_msc = new USBMSC();
+    }
+    USBMSC& MSC = mscDev();
+
     USB.onEvent(usb_event_cb);
     MSC.vendorID("HUPROBE");
     MSC.productID("HU_PROBE");
@@ -139,7 +156,7 @@ void MscGadget::begin(Session* session, ReadInstrument* instrument, bool startDe
     MSC.onWrite(huprobe_msc_write);
 
     // Active medium (demo image or SynthFat variant) is the whole LUN.
-    MSC.mediaPresent(false);
+    mscDev().mediaPresent(false);
     if (!MSC.begin(media.sectorCount(), 512)) {
         DiagLog::printf("[MSC] begin failed");
         return;
@@ -175,7 +192,7 @@ bool MscGadget::switchMedia(const char* presetId, const String* specJson, bool u
     // LUN off while rebuilding. Full USB disconnect only for cycle=true (re-enum);
     // remount keeps the link so WiFi/OTG coexistence stays up on the lab host.
     const bool wasPresented = mediaPresented_;
-    MSC.mediaPresent(false);
+    mscDev().mediaPresent(false);
     mediaPresented_ = false;
     remountHoldUntilMs_ = 0;
     softReattachAtMs_ = 0;
@@ -199,7 +216,7 @@ bool MscGadget::switchMedia(const char* presetId, const String* specJson, bool u
         return false;
     }
     PanicTail::breadcrumb(PanicTail::MediaSwitch, 2);
-    MSC.begin(media.sectorCount(), 512);
+    mscDev().begin(media.sectorCount(), 512);
     applyMediaIdentity();
     lastReadEndUs_ = 0;
     if (session_ && session_->active()) {
@@ -311,7 +328,7 @@ void MscGadget::pollUnitAttention() {
 
 void MscGadget::presentMedia(const char* reason) {
     if (mediaPresented_) return;
-    MSC.mediaPresent(true);
+    mscDev().mediaPresent(true);
     mediaPresented_ = true;
     AutoMarker::onMediaPresent(ProbeClock::nowUs());
     DiagLog::printf("[MSC] mediaPresent=true (%s)\n", reason ? reason : "");
@@ -382,7 +399,7 @@ bool MscGadget::softCycle(uint16_t holdMs) {
 
 bool MscGadget::hideMedia() {
     if (!ready_ || !mediaPresented_) return ready_;
-    MSC.mediaPresent(false);
+    mscDev().mediaPresent(false);
     mediaPresented_ = false;
     remountHoldUntilMs_ = 0;
     AutoMarker::onMediaHide(ProbeClock::nowUs());
@@ -399,7 +416,7 @@ bool MscGadget::restoreMedia() {
 void MscGadget::remountMedia(bool bumpIdentity) {
     if (!ready_) return;
     if (bumpIdentity) bumpSerial();
-    MSC.mediaPresent(false);
+    mscDev().mediaPresent(false);
     mediaPresented_ = false;
     remountHoldUntilMs_ = millis() + 600;
     // Flush deferred Capture-tUs BOT before remount phase stamp.

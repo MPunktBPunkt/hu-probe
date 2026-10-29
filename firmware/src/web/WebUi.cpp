@@ -1466,6 +1466,19 @@ void WebUi::handleUsbCycle() {
 }
 
 void WebUi::handleUsbRemount() {
+    // AOA observe boots: remount = softAttach (D+), not MSC media bump.
+    if (cfg_ && cfg_->isAoaObserve()) {
+        const bool ok = huprobe::aoa::AoaObserveGadget::instance().softAttach();
+        JsonDocument out;
+        out["ok"] = ok;
+        out["action"] = "aoa_soft_attach";
+        out["via"] = cfg_->isAoaPhoneLike() ? "aoa_phone_like" : "aoa_observe";
+        out["note"] = "D+_pullup_on_no_cycle";
+        String body;
+        serializeJson(out, body);
+        server_.send(ok ? 200 : 500, "application/json", body);
+        return;
+    }
     bool bump = true;
     if (server_.hasArg("plain")) {
         JsonDocument doc;

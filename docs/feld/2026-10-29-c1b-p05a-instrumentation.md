@@ -1,7 +1,7 @@
 # C1b-P0.5-A — Control-Tap Instrumentation + Phone-like B1 Prep
 
 **Datum:** 2026-10-29  
-**FW:** **0.3.25** (P0.5-A in 0.3.24; phone-like + Lab-Check in 0.3.25)  
+**FW:** **0.3.27** (P0.5-A 0.3.24 · phone-like 0.3.25 · softAttach-on-link 0.3.26 · **P0-0 MSC leak fix** 0.3.27)  
 **Audit:** technology-audit PR #28 / `C1b-PLAN.md`
 
 ## Was gebaut wurde
@@ -18,6 +18,15 @@
 - Gleicher USBVendor-only Stack (kein MSC)
 - Ziel: HU kann klassischen 51→52→53-Pfad versuchen (Desk-Hypothese)
 
+## Lab-Fund 2026-10-29: P0-0 MSC-Leak (behoben in 0.3.27)
+
+Host sah unter `aoa_observe` trotzdem **Composite MSC(08)+Vendor(ff)**, weil `static USBMSC`
+im Konstruktor `tinyusb_enable_interface(MSC)` aufruft — auch ohne `MscGadget::begin()`.
+Fix: USBMSC erst in `MscGadget::begin()` allokieren. Verifikation: Host nur noch 1× Interface class=ff.
+
+Soft-Cycle unter OTG am Lab kann WiFi/Reboot auslösen — lieber `link/start` softAttach oder
+`POST /api/usb/remount` → `aoa_soft_attach`.
+
 ## Lab-Instrument-Check
 
 ```bash
@@ -27,6 +36,10 @@ python3 -m venv .venv-lab && .venv-lab/bin/pip install pyusb
 ```
 
 Erwartet: `aoa51` steigt nach Host-`GET_PROTOCOL`; zeigt, dass der Tap Vendor-SETUPs sieht.
+
+**Lab-Host-Hinweis (DebianCursor LXC):** sysfs zeigt `18d1:2d00`, aber `/dev/bus/usb/00x/0yy`
+fehlt → pyusb `ctrl_transfer` = ENODEV. Descriptor-Check (Interface-Anzahl) geht; Control-Tap-Check
+braucht USB-Device-Node-Passthrough.
 
 ## Feld (Auto) — wenn .89 online
 
