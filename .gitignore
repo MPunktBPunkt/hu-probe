@@ -152,3 +152,4 @@ firmware/.pio/
 # Host C1a BCL tools (built binaries)
 tools/bcl_c1a/test_bcl_framer
 tools/bcl_c1a/scenario_ca_c1_lab_bcl
+.venv-lab/

@@ -21,9 +21,9 @@
 ## Lab-Instrument-Check
 
 ```bash
-# Probe .88, OTG Host↔Probe, pyusb
-pip install --user pyusb
-python3 tools/lab_aoa_control_tap_check.py --ip 192.168.178.88
+# Probe .88, OTG Host↔Probe, pyusb (venv)
+python3 -m venv .venv-lab && .venv-lab/bin/pip install pyusb
+.venv-lab/bin/python tools/lab_aoa_control_tap_check.py --ip 192.168.178.88
 ```
 
 Erwartet: `aoa51` steigt nach Host-`GET_PROTOCOL`; zeigt, dass der Tap Vendor-SETUPs sieht.
