@@ -200,20 +200,21 @@ static const char* PAGE =
     "<div class=row>"
     "<label>usb_gadget <select id=caGadget>"
     "<option value=msc>msc (Golden Path)</option>"
-    "<option value=aoa_observe>aoa_observe (kein MSC)</option>"
+    "<option value=aoa_observe>aoa_observe (0x18D1:2D00)</option>"
+    "<option value=aoa_phone_like>aoa_phone_like (B1 04E8:6860)</option>"
     "</select></label>"
     "<button class=sec onclick=saveGadget()>NVS speichern</button>"
     "<button onclick=rebootGadget()>Speichern + Reboot</button>"
     "</div>"
     "<p class=muted>Umschalten nur NVS + Reboot. Soft-Detach ist kein Moduswechsel. "
-    "aoa_observe bootet ohne MSC-Interface.</p>"
+    "aoa_* bootet ohne MSC-Interface. phone_like = B1 Switch-Hypothese.</p>"
     "</div>"
     "<div class=card>"
     "<h2>Connected App Probe</h2>"
     "<p class=muted id=caNow>…</p>"
     "<p class=muted id=caP0>P0: –</p>"
     "<div class=warnbox id=caWarn style='display:none'>Link Observe braucht Boot "
-    "<code>usb_gadget=aoa_observe</code>. Aktuell MSC — Gadget setzen und rebooten.</div>"
+    "<code>aoa_observe</code> oder <code>aoa_phone_like</code>. Aktuell MSC — Gadget setzen und rebooten.</div>"
     "<div class=row>"
     "<button class=sec id=caLab onclick=runCaLabBcl()>▶ ca_c1_lab_bcl</button>"
     "<button class=sec id=caLinkStart onclick=runCaLinkStart()>▶ ca_c1_link (P0 observe)</button>"
@@ -370,11 +371,15 @@ static const char* PAGE =
     "      ' · MSC if='+!!ca.msc_interface_present+' · Vendor if='+!!ca.vendor_interface_present+"
     "      ' · stack_bound='+!!tr.usb_stack_bound;"
     "    if(caGadget.value!==gadget)caGadget.value=gadget;"
-    "    caWarn.style.display=gadget==='aoa_observe'?'none':'block';"
-    "    caLinkStart.disabled=gadget!=='aoa_observe';"
+    "    const aoaBoot=gadget==='aoa_observe'||gadget==='aoa_phone_like';"
+    "    caWarn.style.display=aoaBoot?'none':'block';"
+    "    caLinkStart.disabled=!aoaBoot;"
     "    caP0.textContent='P0-0='+!!p0.P0_0+' A='+!!p0.P0_A+' B='+!!p0.P0_B+"
     "      ' C='+!!p0.P0_C+' D='+!!p0.P0_D+' E='+!!p0.P0_E+"
-    "      ' · ca_usb='+(ca.ca_usb_count||0)+' · aoa51='+(tr.aoa51||0)+"
+    "      ' · ca_usb='+(ca.ca_usb_count||0)+"
+    "      ' · setup='+(tr.setup_count||0)+'/'+(tr.vendor_setup_count||0)+"
+    "      ' drops='+(tr.drops||0)+"
+    "      ' · aoa51='+(tr.aoa51||0)+"
     "      ' 52='+(tr.aoa52||0)+' 53='+(tr.aoa53||0)+' · bulk_rx_ev='+(tr.bulk_rx_events||0);"
     "    caNow.textContent='Gate '+(ca.gate||'?')+' · '+(ca.scenario||'')+' · State '+(ca.state||'idle')+"
     "      ' · AOA '+(tr.impl||'?')+' armed='+!!tr.armed+' conn='+!!tr.connected+"
@@ -1363,7 +1368,7 @@ void WebUi::handleConnectedLinkStart() {
     out["action"] = "ca_c1_link_start";
     out["gate"] = ca.aoaObserveBoot() ? "C1b-P0" : "C1b-0";
     out["note"] = ca.aoaObserveBoot() ? "aoa_observe_passive_no_bcl_tx"
-                                      : "wrong_usb_gadget_need_aoa_observe_reboot";
+                                      : "wrong_usb_gadget_need_aoa_observe_or_phone_like_reboot";
     out["direct_observation"] = ca.aoaObserveBoot();
     const char* err = ca.lastErr();
     if (err && err[0]) out["err"] = err;
@@ -1444,7 +1449,7 @@ void WebUi::handleUsbCycle() {
     const char* via = "none";
     if (cfg_ && cfg_->isAoaObserve()) {
         ok = huprobe::aoa::AoaObserveGadget::instance().softCycle(holdMs);
-        via = "aoa_observe";
+        via = cfg_->isAoaPhoneLike() ? "aoa_phone_like" : "aoa_observe";
     } else if (msc_) {
         ok = msc_->softCycle(holdMs);
         via = "msc";

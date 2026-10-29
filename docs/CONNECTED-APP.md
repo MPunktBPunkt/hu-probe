@@ -175,12 +175,15 @@ ITransport ← AoaTransport (skeleton)
 
 ### C1b-P0 — Boot-Mode AOA Observe — software implemented / Wire OPEN
 
-**Isolation (P0-0):** `ConfigStore.usbGadget` = `msc` | `aoa_observe` — Umschalten nur NVS + Reboot.
+**Isolation (P0-0):** `ConfigStore.usbGadget` = `msc` | `aoa_observe` | `aoa_phone_like` — Umschalten nur NVS + Reboot.
 
 | Boot | USB |
 |------|-----|
 | `msc` | USBMSC Golden Path, kein Vendor |
-| `aoa_observe` | USBVendor only (`AoaObserveGadget`), kein MSC |
+| `aoa_observe` | USBVendor only, Already-Accessory `0x18D1:0x2D00` |
+| `aoa_phone_like` | USBVendor only, B1 phone-like `0x04E8:0x6860` (kein MSC) |
+
+**P0.5-A (FW ≥0.3.24):** `AoaControlTap` publiziert alle Callback-SETUPs; Status `setup_count` / `vendor_setup_count` / `drops`.
 
 ```
 NBT Evo (Host) ──USB──► AoaObserveGadget
@@ -193,7 +196,7 @@ NBT Evo (Host) ──USB──► AoaObserveGadget
 | API | Wirkung |
 |-----|---------|
 | Config `usbGadget` + `POST /api/connected/gadget/reboot` | Moduswechsel |
-| `POST /api/connected/link/start` | nur bei `aoa_observe`; sonst 409 `wrong_usb_gadget` |
+| `POST /api/connected/link/start` | nur bei `aoa_observe`/`aoa_phone_like`; sonst 409 `wrong_usb_gadget` |
 | `POST /api/connected/link/inject` `{hex}` | Lab/TEST → Framer |
 | `POST /api/connected/link/stop` | disarm + session stop |
 

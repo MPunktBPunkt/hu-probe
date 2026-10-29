@@ -74,7 +74,8 @@ void ConfigStore::load() {
         autoUpdate = prefs.getBool("auto_upd", autoUpdate);
         otaManifestUrl = prefs.getString("ota_url", otaManifestUrl);
         usbGadget = prefs.getString("usb_gadget", usbGadget);
-        if (usbGadget != "msc" && usbGadget != "aoa_observe") {
+        if (usbGadget != "msc" && usbGadget != "aoa_observe" &&
+            usbGadget != "aoa_phone_like") {
             usbGadget = "msc";
         }
         prefs.end();
@@ -194,7 +195,7 @@ bool ConfigStore::fromJson(JsonVariantConst obj) {
     if (obj["otaManifestUrl"].is<const char*>()) otaManifestUrl = obj["otaManifestUrl"].as<String>();
     if (obj["usbGadget"].is<const char*>()) {
         String g = obj["usbGadget"].as<String>();
-        if (g == "msc" || g == "aoa_observe") usbGadget = g;
+        if (g == "msc" || g == "aoa_observe" || g == "aoa_phone_like") usbGadget = g;
     }
     return true;
 }

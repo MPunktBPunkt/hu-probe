@@ -33,14 +33,18 @@ ConnectedAppProbe& ConnectedAppProbe::instance() {
     return p;
 }
 
-void ConnectedAppProbe::begin(Session* session, MscGadget* msc, bool aoa_observe_boot) {
+void ConnectedAppProbe::begin(Session* session, MscGadget* msc, bool aoa_observe_boot,
+                              const char* usb_gadget) {
     session_ = session;
     msc_ = msc;
     aoa_observe_boot_ = aoa_observe_boot;
+    usb_gadget_ = (usb_gadget && usb_gadget[0]) ? usb_gadget
+                                               : (aoa_observe_boot ? "aoa_observe" : "msc");
     state_ = "idle";
     lastErr_ = "";
-    DiagLog::printf("[CA] ConnectedAppProbe begin (%s)\n",
-                    aoa_observe_boot_ ? "C1b-P0 aoa_observe" : "C1a.5/C1b-0 msc boot");
+    DiagLog::printf("[CA] ConnectedAppProbe begin (%s gadget=%s)\n",
+                    aoa_observe_boot_ ? "C1b-P0 observe" : "C1a.5/C1b-0 msc boot",
+                    usb_gadget_.c_str());
 }
 
 void ConnectedAppProbe::bindAoaObserveStack() {
@@ -429,7 +433,7 @@ bool ConnectedAppProbe::startCaC1Link() {
     if (!aoa_observe_boot_) {
         lastErr_ = "wrong_usb_gadget";
         state_ = "blocked";
-        DiagLog::printf("[CA] ca_c1_link rejected: need usb_gadget=aoa_observe + reboot\n");
+        DiagLog::printf("[CA] ca_c1_link rejected: need usb_gadget=aoa_observe|aoa_phone_like + reboot\n");
         return false;
     }
     if (!aoa_.usbStackBound() || !AoaObserveGadget::instance().ready()) {
@@ -460,7 +464,7 @@ bool ConnectedAppProbe::startCaC1Link() {
         JsonDocument extra;
         extra["msc_interface_present"] = false;
         extra["vendor_interface_present"] = true;
-        extra["usb_gadget"] = "aoa_observe";
+        extra["usb_gadget"] = usb_gadget_;
         publishCaUsb("P0-0", "gadget_isolation", false, true, extra);
     }
     publishTransportEvent(TransportEvent::Disconnected, 0, "armed_p0_observe_waiting");
@@ -553,10 +557,17 @@ void ConnectedAppProbe::toStatusJson(JsonObject obj) const {
     obj["state"] = state_;
     obj["running"] = running_;
     obj["link_observing"] = link_observing_;
-    obj["usb_gadget"] = aoa_observe_boot_ ? "aoa_observe" : "msc";
+    obj["usb_gadget"] = usb_gadget_;
     obj["msc_interface_present"] = !aoa_observe_boot_;
     obj["vendor_interface_present"] =
         aoa_observe_boot_ && AoaObserveGadget::instance().vendorInterfacePresent();
+    if (aoa_observe_boot_) {
+        obj["aoa_identity_profile"] =
+            AoaObserveGadget::instance().profile() ==
+                    huprobe::aoa::AoaIdentityProfile::PhoneLike
+                ? "phone_like"
+                : "accessory";
+    }
     obj["frames"] = frames_;
     obj["malformed"] = malformed_;
     obj["incomplete"] = incomplete_obs_;
@@ -566,7 +577,7 @@ void ConnectedAppProbe::toStatusJson(JsonObject obj) const {
     obj["ca_usb_count"] = ca_usb_count_;
     if (last_sid_.length()) obj["last_sid"] = last_sid_;
     if (lastErr_ && lastErr_[0]) obj["last_err"] = lastErr_;
-    obj["claims"] = aoa_observe_boot_ ? "aoa_observe_p0_usb_only"
+    obj["claims"] = aoa_observe_boot_ ? "aoa_observe_p0_usb_only_no_msc"
                                       : (link_observing_ ? "aoa_transport_skeleton_only"
                                                          : "synthetic_parser_device_integration_only");
     obj["not_claimed"] = "nbt_wire_bcl,sas,rhmi,cds,av,aoa_equals_bcl";

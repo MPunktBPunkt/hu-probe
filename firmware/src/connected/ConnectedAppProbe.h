@@ -5,7 +5,7 @@
  * @brief Control-plane probe: C1a.5 lab BCL + C1b-0 skeleton + C1b-P0 AOA observe.
  *
  * No SAS/Etch/RHMI. BCL-on-wire is C1b-P1 (not auto-fed in P0).
- * Gadget mode isolation: link observe requires usb_gadget=aoa_observe boot.
+ * Gadget mode isolation: link observe requires aoa_observe or aoa_phone_like boot.
  */
 
 #include "connected/bcl/BclFramer.h"
@@ -24,9 +24,11 @@ public:
 
     /**
      * @brief Bind session, optional MSC, and gadget mode from config.
-     * @param aoa_observe_boot  true when NVS usb_gadget=aoa_observe for this boot.
+     * @param aoa_observe_boot  true for aoa_observe / aoa_phone_like boots.
+     * @param usb_gadget        NVS usb_gadget string for this boot (status/reporting).
      */
-    void begin(Session* session, MscGadget* msc = nullptr, bool aoa_observe_boot = false);
+    void begin(Session* session, MscGadget* msc = nullptr, bool aoa_observe_boot = false,
+               const char* usb_gadget = nullptr);
 
     /** @brief After AoaObserveGadget::begin — bind transport stack (P0). */
     void bindAoaObserveStack();
@@ -43,7 +45,7 @@ public:
     /**
      * @brief Scenario ca_c1_link: arm AOA observe (P0) or skeleton (msc boot → fail).
      *
-     * Requires aoa_observe boot for live stack. Passive: no BCL TX / no auto-BclFramer.
+     * Requires aoa_* observe boot for live stack. Passive: no BCL TX / no auto-BclFramer.
      */
     bool startCaC1Link();
 
@@ -86,6 +88,7 @@ private:
     huprobe::transport::AoaTransport aoa_;
 
     bool aoa_observe_boot_ = false;
+    String usb_gadget_ = "msc";
     bool running_ = false;
     bool link_observing_ = false;
     bool feed_framer_on_inject_ = true;  // lab inject still exercises framer (TEST)

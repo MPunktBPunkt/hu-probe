@@ -182,15 +182,21 @@ void App::begin() {
         DiagLog::printf("[CA] autoCapture ignored: usb_gadget=aoa_observe (P0-0 isolation)\n");
     }
 
-    ConnectedAppProbe::instance().begin(&session_, aoaObserve ? nullptr : &msc_, aoaObserve);
+    ConnectedAppProbe::instance().begin(&session_, aoaObserve ? nullptr : &msc_, aoaObserve,
+                                        config_.usbGadget.c_str());
 
     if (aoaObserve) {
         // C1b-P0: USBVendor only — never enable USBMSC (fingerprint isolation).
         using huprobe::aoa::AoaObserveGadget;
+        using huprobe::aoa::AoaIdentityProfile;
         const bool labWifiFirst = isLabDebian();
-        AoaObserveGadget::instance().begin(&session_, labWifiFirst);
+        const AoaIdentityProfile profile = config_.isAoaPhoneLike()
+                                               ? AoaIdentityProfile::PhoneLike
+                                               : AoaIdentityProfile::Accessory;
+        AoaObserveGadget::instance().begin(&session_, labWifiFirst, profile);
         ConnectedAppProbe::instance().bindAoaObserveStack();
-        DiagLog::printf("[USB] gadget=aoa_observe msc_interface=0 vendor=1\n");
+        DiagLog::printf("[USB] gadget=%s msc_interface=0 vendor=1\n",
+                        config_.usbGadget.c_str());
     } else {
         // MSC first so the HU sees a stick even while WiFi portal runs. Drive mode keeps it
         // detached until the capture is armed, so the HU's first enumeration is recorded.

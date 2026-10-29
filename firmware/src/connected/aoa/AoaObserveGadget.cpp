@@ -56,18 +56,35 @@ void AoaObserveGadget::notifyUsbStopped() {
     DiagLog::printf("[AOA] USB STOPPED\n");
 }
 
-void AoaObserveGadget::begin(Session* session, bool startDetached) {
+void AoaObserveGadget::begin(Session* session, bool startDetached, AoaIdentityProfile profile) {
     session_ = session;
+    profile_ = profile;
     g_self = this;
     AoaControlTap::instance().begin();
     AoaControlTap::instance().setHypothesisRespond(true);
 
-    // Desk HYPOTHESIS: already-in-accessory-mode Google VID/PID. Not NBT FACT.
-    USB.VID(vid_);
-    USB.PID(pid_);
-    USB.manufacturerName("Google");
-    USB.productName("AOA Observe");
-    USB.serialNumber("HUPROBE-AOA0");
+    if (profile_ == AoaIdentityProfile::PhoneLike) {
+        // B1 desk hypothesis: non-accessory IDs so HU may run classic 51→52→53.
+        // Samsung-ish VID/PID + Android strings — NOT NBT FACT; observation only.
+        vid_ = 0x04E8;
+        pid_ = 0x6860;
+        identity_note_ = "hypothesis_phone_like_0x04E8_0x6860_b1";
+        USB.VID(vid_);
+        USB.PID(pid_);
+        USB.manufacturerName("Android");
+        USB.productName("AOA Phone-like");
+        USB.serialNumber("HUPROBE-AOA1");
+    } else {
+        // Desk HYPOTHESIS: already-in-accessory-mode Google VID/PID. Not NBT FACT.
+        vid_ = 0x18D1;
+        pid_ = 0x2D00;
+        identity_note_ = "hypothesis_google_accessory_0x18D1_0x2D00";
+        USB.VID(vid_);
+        USB.PID(pid_);
+        USB.manufacturerName("Google");
+        USB.productName("AOA Observe");
+        USB.serialNumber("HUPROBE-AOA0");
+    }
     USB.usbClass(0xFF);
     USB.usbSubClass(0xFF);
     USB.usbProtocol(0x00);
@@ -83,7 +100,8 @@ void AoaObserveGadget::begin(Session* session, bool startDetached) {
     ready_ = true;
     soft_attached_ = true;
     if (startDetached && tud_disconnect()) soft_attached_ = false;
-    DiagLog::printf("[AOA] aoa_observe ready vid=0x%04X pid=0x%04X (%s) soft=%d\n",
+    DiagLog::printf("[AOA] observe ready profile=%s vid=0x%04X pid=0x%04X (%s) soft=%d\n",
+                    profile_ == AoaIdentityProfile::PhoneLike ? "phone_like" : "accessory",
                     (unsigned)vid_, (unsigned)pid_, identityNote(), soft_attached_ ? 1 : 0);
 }
 
@@ -142,7 +160,7 @@ AoaObserveGadget& AoaObserveGadget::instance() {
     static AoaObserveGadget g;
     return g;
 }
-void AoaObserveGadget::begin(Session*, bool) {}
+void AoaObserveGadget::begin(Session*, bool, AoaIdentityProfile) {}
 void AoaObserveGadget::loop() {}
 void AoaObserveGadget::notifyUsbStarted() {}
 void AoaObserveGadget::notifyUsbStopped() {}
