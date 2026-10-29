@@ -97,7 +97,10 @@ C1b wird **gestuft** gewertet — ein erfolgreicher USB-AOA-Link ist *nicht* „
 
 ### HU-PROBE-GATE-C1b-P0 — USB/AOA Observability (passive)
 
-**Status:** OPEN (software gate implemented; NBT Wire-Captures ausstehend)
+**Status:** PARTIAL — P0-0/A/C/D **PASS** am NBT (Feld 2026-10-29); P0-E **FAIL/absent**.  
+B1 phone_like **NEGATIVE** (Fingerprint rejected). B2b hex4 **TX ok / keine HU-Antwort**.  
+Blind-Knock beendet → FOLLOW-ON #9 Referenz-Capture ([Maßnahmen](feld/2026-10-29-c1b-massnahmen-nach-b1-b2b.md)).  
+Note: `51/52/53=0` bei Already-Accessory `18D1:2D00` ≠ AOA-FAIL (AOSP: Transition-Requests).
 
 **Boot-Mode Isolation (P0-0) — Voraussetzung:**
 

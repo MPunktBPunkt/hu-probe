@@ -66,21 +66,29 @@ WLAN im Auto ~−77…−79 dBm (echt); Hub-Anzeige −85 war zuvor **stale** (k
 
 ## Auswertung
 
-1. **USB-Rohr ≠ Connected.** Enum + Vendor-Mount reichen für Zubehör-UI; Connected braucht App-Protokoll.
-2. **Device-first bestätigt als Arbeitshypothese, Wire negativ.** Probe sendet Session-Init; HU sendet nichts zurück → entweder falscher/zu früher Byte-Stream, kein BCL auf diesem USB-Pfad, oder zusätzliche Vorbedingungen (BT-Paarung, Cert, andere Identity).
-3. **hex4 vs ascii8.** Audit-Fund (BimmerGestalt): Init = 4 Raw-Bytes, nicht ASCII-8. Feld testete hex4 — negativ. ASCII-Lookalike wäre kein besserer Kandidat.
-4. **B1 phone_like** am Nachmittag negativ → weiteres Enum-Tuning nachrangig gegenüber Referenz-Capture.
-5. **OTA-Störungen** heute: primär sticky `Update` nach Fail + falscher Hub-RSSI; an Bankposition (−24) OTA stabil (0.3.29–0.3.32).
+### AOA-Reklassifizierung (wichtig)
+
+`aoa_observe` bootet schon als **`18D1:2D00`** (Already-Accessory). Laut AOSP gehören **51→52→53** zum Übergang *in* den Accessory Mode — nicht zur normalen Kommunikation mit einem bereits so enumerierten Gerät.  
+→ **`setup/51–53 = 0` bei `aoa_observe` ist kein AOA-Negativbefund.** Belastbar ist: Enum/UI PASS, **kein beobachteter Application-Bulk-RX**.
+
+1. **USB-Rohr ≠ Connected.** Enum + Vendor-Mount reichen für Zubehör-UI; Connected-Transport unbewiesen.
+2. **Auf dem getesteten Bulk-Pfad keine HU-Antwort** (`rx=0`) — nicht „HU lauscht nie“, sondern: unser Knock erreichte keinen beobachtbaren Response-Pfad.
+3. **Spinner = weiterer Interaktionsschritt** nur **INFERENCE** (nicht bewiesen „warte auf BCL“).
+4. **hex4** Desk-korrekt getestet, Wire negativ. Blind-Knock-Kette **beendet**.
+5. **B1 phone_like** = Fingerprint-REJECT („USB nicht unterstützt“), kein AOA-Kill.
+6. **OTA:** sticky `Update` + stale Hub-RSSI; Bank (−24) stabil.
 
 ### Claims
 
 | Claim | Klasse |
 |-------|--------|
 | HU erkennt `aoa_observe` als Zubehör / Spinner | MEASURED |
-| Klassischer AOA 51–53 von HU bei phone_like | absent (diese Sessions) |
-| BCL Session-Init hex4 auf Bulk OUT von Probe | MEASURED (TX) |
-| HU HANDSHAKE / Bulk RX nach hex4 | **absent** |
-| USB trägt BCL wie BT RFCOMM am NBT Evo | weiter **UNKNOWN** (HYP geschwächt) |
+| Fehlen 51–53 bei `18D1:2D00` widerlegt AOA | **REJECTED** |
+| Klassischer AOA 51–53 bei phone_like | NOT OBSERVED (HU rejected vorher) |
+| BCL Session-Init hex4 Bulk OUT | MEASURED (TX) |
+| HU-Antwort auf getestetem Bulk-Pfad | **ABSENT** |
+| USB trägt BCL am NBT Evo | **UNKNOWN** |
+| BCL primär BT RFCOMM | HYPOTHESIS (code-supported, gestärkt) |
 
 ---
 
@@ -92,18 +100,14 @@ WLAN im Auto ~−77…−79 dBm (echt); Hub-Anzeige −85 war zuvor **stale** (k
 
 ---
 
-## Nächste Schritte (priorisiert)
+## Nächste Schritte
 
-1. **FOLLOW-ON Referenz-Capture** — echtes Phone + Connected/MyBMW am NBT, USB-Sniffer oder Phone-Log der ersten Bulk-Bytes (Gate für USB-BCL).
-2. Optional: Knock-Timing (sofort nach Mount vs. nach Spinner-N Sekunden); `bcl_hs` vor Knock — nur wenn Referenz es nahelegt.
-3. **Nicht:** weiteres phone_like-/VID-PID-Tuning ohne Referenz; kein Soft-Composite MSC+AOA; kein Etch/SAS ohne BCL-RX.
-4. Security/Cert bleibt harte Grenze nach erstem erfolgreichen Tunnel (Desk).
+Siehe Maßnahmenkatalog: [2026-10-29-c1b-massnahmen-nach-b1-b2b.md](2026-10-29-c1b-massnahmen-nach-b1-b2b.md).  
+**Einzig priorisiert:** FOLLOW-ON **#9** Phone+Connected Referenz-Capture. Kein Blind-Knock.
 
 ---
 
 ## Kurzfazit
 
-C1b-P0 Rohr-Sichtbarkeit **PASS** (Attach/Mount/UI).  
-B2b hex4-TX **PASS** (Bytes akzeptiert).  
-App-Antwort / BCL-on-USB **FAIL** diese Runde.  
-Nächstes Erkenntnisobjekt: **Referenz-Wire**, nicht mehr Blind-Knock.
+Rohr **PASS** · Knock-TX **PASS** · HU-Antwort auf getestetem Bulk **ABSENT**.  
+AOA nicht widerlegt; USB-BCL nicht bewiesen. **Referenz-Capture**, nicht Blind-Tuning.
