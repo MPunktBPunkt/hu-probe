@@ -1,6 +1,6 @@
 /**
  * @file AoaControlTap.cpp
- * @brief C1b-P0 vendor control tap + optional AOA 51/52/53 hypothesis replies.
+ * @brief C1b-P0 / P0.5-A control tap: publish callback SETUPs; optional AOA hypothesis replies.
  */
 
 #include "connected/aoa/AoaControlTap.h"
@@ -26,7 +26,7 @@ void AoaControlTap::begin() {
 
 void AoaControlTap::reset() {
     head_ = tail_ = 0;
-    control_count_ = aoa51_ = aoa52_ = aoa53_ = drops_ = 0;
+    setup_count_ = vendor_setup_count_ = aoa51_ = aoa52_ = aoa53_ = drops_ = 0;
     string_scratch_len_ = 0;
     pending_string_index_ = 0xff;
     std::memset(string_scratch_, 0, sizeof(string_scratch_));
@@ -66,11 +66,16 @@ bool AoaControlTap::onControlRequest(uint8_t rhport, uint8_t stage, uint8_t bmRe
     s.str_len = 0;
 
     const bool vendor = ((bmRequestType >> 5) & 0x3) == 2;
-    if (vendor && stage == REQUEST_STAGE_SETUP) {
-        control_count_++;
-        if (bRequest == 51) aoa51_++;
-        else if (bRequest == 52) aoa52_++;
-        else if (bRequest == 53) aoa53_++;
+
+    // P0.5-A: count/publish every SETUP that reaches this callback (still not full EP0).
+    if (stage == REQUEST_STAGE_SETUP) {
+        setup_count_++;
+        if (vendor) {
+            vendor_setup_count_++;
+            if (bRequest == 51) aoa51_++;
+            else if (bRequest == 52) aoa52_++;
+            else if (bRequest == 53) aoa53_++;
+        }
     }
 
     // After OUT data stage of SEND_STRING: publish captured identity (audit B3).
@@ -126,7 +131,7 @@ bool AoaControlTap::onControlRequest(uint8_t rhport, uint8_t stage, uint8_t bmRe
         }
     }
 
-    if (vendor && stage == REQUEST_STAGE_SETUP) {
+    if (stage == REQUEST_STAGE_SETUP) {
         push(s);
     }
     return handled;

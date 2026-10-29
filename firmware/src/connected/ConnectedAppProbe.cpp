@@ -257,12 +257,18 @@ void ConnectedAppProbe::drainControlTap() {
     while (AoaControlTap::instance().pop(s)) {
         if (!p0_b_) p0_b_ = true;
         const bool aoa_req = (s.b_request == 51 || s.b_request == 52 || s.b_request == 53);
+        const uint8_t req_type = (s.bm_request_type >> 5) & 0x3;
         JsonDocument extra;
         extra["bm_request_type"] = s.bm_request_type;
         extra["b_request"] = s.b_request;
         extra["w_value"] = s.w_value;
         extra["w_index"] = s.w_index;
         extra["w_length"] = s.w_length;
+        extra["stage"] = s.stage;
+        extra["request_type"] = req_type == 0   ? "standard"
+                                : req_type == 1 ? "class"
+                                : req_type == 2 ? "vendor"
+                                                : "reserved";
         extra["hypothesis_handled"] = s.hypothesis_handled;
         if (aoa_req) {
             extra["aoa_desk_name"] =
@@ -598,7 +604,11 @@ void ConnectedAppProbe::toStatusJson(JsonObject obj) const {
         tr["vendor_mounted"] = g.vendorMounted();
         tr["attach_count"] = g.attachCount();
         const AoaControlTap& tap = AoaControlTap::instance();
-        tr["aoa_control_count"] = tap.controlCount();
+        tr["setup_count"] = tap.setupCount();
+        tr["vendor_setup_count"] = tap.vendorSetupCount();
+        tr["drops"] = tap.dropCount();
+        // Legacy: historically Vendor-SETUPs only (= vendor_setup_count).
+        tr["aoa_control_count"] = tap.vendorSetupCount();
         tr["aoa51"] = tap.aoa51Count();
         tr["aoa52"] = tap.aoa52Count();
         tr["aoa53"] = tap.aoa53Count();

@@ -2,10 +2,11 @@
 
 /**
  * @file AoaControlTap.h
- * @brief Queue USB vendor control SETUPs for C1b-P0 AOA observe (USB task → loop).
+ * @brief Queue USB control SETUPs that reach USBVendor.onRequest (C1b-P0 / P0.5-A).
  *
- * Desk hypothesis (NOT NBT FACT until captured): AOA GET_PROTOCOL=51, SEND_STRING=52,
- * START=53. Responses are optional behind hypothesisRespond().
+ * Publishes every SETUP that arrives on this callback (not a full EP0 sniffer).
+ * AOA GET_PROTOCOL=51 / SEND_STRING=52 / START=53 are counted when vendor.
+ * Desk hypothesis responses remain optional behind hypothesisRespond().
  */
 
 #include <cstddef>
@@ -56,7 +57,15 @@ public:
     /** @brief Pop one sample for EventBus publish (Arduino loop). */
     bool pop(AoaControlSample& out);
 
-    uint32_t controlCount() const { return control_count_; }
+    /** @brief All REQUEST_STAGE_SETUP samples that reached this callback. */
+    uint32_t setupCount() const { return setup_count_; }
+    /** @brief Vendor-type SETUPs only (type bits == 2). */
+    uint32_t vendorSetupCount() const { return vendor_setup_count_; }
+    /**
+     * @brief Legacy alias of vendorSetupCount().
+     * Historically named control_count; always meant Vendor-SETUPs only.
+     */
+    uint32_t controlCount() const { return vendor_setup_count_; }
     uint32_t aoa51Count() const { return aoa51_; }
     uint32_t aoa52Count() const { return aoa52_; }
     uint32_t aoa53Count() const { return aoa53_; }
@@ -71,7 +80,8 @@ private:
     volatile uint32_t head_ = 0;
     volatile uint32_t tail_ = 0;
     AoaControlSample q_[kQueueDepth];
-    uint32_t control_count_ = 0;
+    uint32_t setup_count_ = 0;
+    uint32_t vendor_setup_count_ = 0;
     uint32_t aoa51_ = 0;
     uint32_t aoa52_ = 0;
     uint32_t aoa53_ = 0;
