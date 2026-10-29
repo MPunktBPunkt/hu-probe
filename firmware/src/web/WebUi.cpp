@@ -8,6 +8,8 @@
 #include "app/DriveMode.h"
 #include "capture/OfflineCapture.h"
 #include "capture/ExperimentProfiles.h"
+#include "connected/ConnectedAppProbe.h"
+#include "connected/aoa/AoaObserveGadget.h"
 #include "capture/SequenceRunner.h"
 #include "capture/TripStore.h"
 #include "core/DiagLog.h"
@@ -42,11 +44,22 @@ static const char* PAGE =
     ".bar>i{display:block;height:100%;background:#3a8;width:0;transition:width .3s}"
     "#phase{font-weight:600;letter-spacing:.02em} #integrity{font-size:1.1rem;font-weight:700}"
     "label{display:flex;flex-direction:column;gap:.15rem;font-size:.82rem;color:#9aa}"
+    ".tabs{display:flex;gap:.35rem;margin:1rem 0 .6rem;flex-wrap:wrap}"
+    ".tabs button{background:#243041;color:#cde;padding:.4rem .85rem}"
+    ".tabs button.on{background:#2a6;color:#fff}"
+    ".pane{display:none}.pane.on{display:block}"
+    ".warnbox{background:#2a2210;border:1px solid #664;border-radius:8px;padding:.6rem .8rem;margin:.5rem 0;color:#dc6}"
     "</style></head><body>"
     "<h1>hu-probe</h1>"
     "<p class=muted>Head-Unit MSC Messsonde · " FW_VERSION " · Offline-First Experiment</p>"
     "<p class=muted id=hwNow>Hardware: …</p>"
+    "<div class=tabs>"
+    "<button type=button class=on id=tabBtnMessung onclick=showTab('messung')>Messung</button>"
+    "<button type=button id=tabBtnConnected onclick=showTab('connected')>Connected</button>"
+    "<button type=button id=tabBtnSystem onclick=showTab('system')>System</button>"
+    "</div>"
 
+    "<div class='pane on' id=paneMessung>"
     "<div class=card>"
     "<h2>Messlauf</h2>"
     "<div class=row>"
@@ -79,40 +92,6 @@ static const char* PAGE =
     "<p class=muted id=budget></p>"
     "<p id=integrity></p>"
     "<pre id=lastRun class=muted>noch kein Lauf</pre>"
-    "</div>"
-
-    "<div class=card>"
-    "<h2>Heimfahrt-Modus</h2>"
-    "<p class=muted id=driveNow>…</p>"
-    "<div class=row>"
-    "<label style='flex-direction:row;align-items:center;gap:.4rem'>"
-    "<input id=aCap type=checkbox> beim Start automatisch messen</label>"
-    "<label style='flex-direction:row;align-items:center;gap:.4rem'>"
-    "<input id=aFine type=checkbox> Fein-Modus</label>"
-    "<label style='flex-direction:row;align-items:center;gap:.4rem'>"
-    "<input id=aUpd type=checkbox> Auto-Update (GitHub)</label>"
-    "</div>"
-    "<div class=row>"
-    "<label>Medium <select id=aMedia></select></label>"
-    "<label>Hotspot-SSID <input id=w2s maxlength=32></label>"
-    "<label>Hotspot-Passwort <input id=w2p type=password maxlength=64></label>"
-    "</div>"
-    "<div class=row><label style='flex:1'>Update-Manifest <input id=aUrl style='width:100%'></label></div>"
-    "<div class=row><button onclick=saveDrive()>Speichern</button></div>"
-    "<p class=muted>Gilt ab dem nächsten Start. Ablauf: WLAN (Heimnetz oder Hotspot, 15 s) → "
-    "gespeicherte Fahrten hochladen → Update prüfen. Ohne Heimnetz (Auto/Hotspot): Messung "
-    "scharf. Am Heimnetz mit erreichbarem Collector: Upload, dann Modus automatisch aus "
-    "(einmalig). BOOT beim Einstecken gedrückt halten = WLAN-Portal.</p>"
-    "<h2>Gespeicherte Fahrten (Flash)</h2>"
-    "<p class=muted id=tripsNow></p>"
-    "<p class=muted>Upload braucht stabiles WLAN; OTG am PC/HU währenddessen vermeiden "
-    "(USB wird für den Transfer soft-detached).</p>"
-    "<div class=row>"
-    "<button class=sec onclick=tripsUpload()>Ausstehende hochladen</button>"
-    "<button class=sec onclick=tripsErase(false)>Hochgeladene löschen</button>"
-    "<button class=sec onclick=tripsErase(true)>Alle löschen</button>"
-    "</div>"
-    "<pre id=tripList class=muted></pre>"
     "</div>"
 
     "<div class=card>"
@@ -212,7 +191,78 @@ static const char* PAGE =
     "</div>"
     "<p class=muted>Live-Marker brauchen WLAN. Während Offline-Capture nur BOOT.</p>"
     "</div>"
+    "</div>"
 
+    "<div class=pane id=paneConnected>"
+    "<div class=card>"
+    "<h2>USB Gadget Mode (P0-0)</h2>"
+    "<p class=muted id=caGadgetNow>…</p>"
+    "<div class=row>"
+    "<label>usb_gadget <select id=caGadget>"
+    "<option value=msc>msc (Golden Path)</option>"
+    "<option value=aoa_observe>aoa_observe (kein MSC)</option>"
+    "</select></label>"
+    "<button class=sec onclick=saveGadget()>NVS speichern</button>"
+    "<button onclick=rebootGadget()>Speichern + Reboot</button>"
+    "</div>"
+    "<p class=muted>Umschalten nur NVS + Reboot. Soft-Detach ist kein Moduswechsel. "
+    "aoa_observe bootet ohne MSC-Interface.</p>"
+    "</div>"
+    "<div class=card>"
+    "<h2>Connected App Probe</h2>"
+    "<p class=muted id=caNow>…</p>"
+    "<p class=muted id=caP0>P0: –</p>"
+    "<div class=warnbox id=caWarn style='display:none'>Link Observe braucht Boot "
+    "<code>usb_gadget=aoa_observe</code>. Aktuell MSC — Gadget setzen und rebooten.</div>"
+    "<div class=row>"
+    "<button class=sec id=caLab onclick=runCaLabBcl()>▶ ca_c1_lab_bcl</button>"
+    "<button class=sec id=caLinkStart onclick=runCaLinkStart()>▶ ca_c1_link (P0 observe)</button>"
+    "<button class=sec id=caLinkStop onclick=runCaLinkStop()>Stop link</button>"
+    "</div>"
+    "<div class=row>"
+    "<label>Inject hex (Lab/TEST) <input id=caHex "
+    "placeholder='00040000000000080000000000000000' style='min-width:16rem'></label>"
+    "<button class=sec onclick=runCaInject()>Inject → Lab Framer</button>"
+    "</div>"
+    "<p class=muted>C1b-P0: passive USB/AOA-Observability. Kein BCL-Handshake, kein SAS. "
+    "Bulk-RX → ca_usb P0-E raw (nicht BclFramer).</p>"
+    "</div>"
+    "</div>"
+
+    "<div class=pane id=paneSystem>"
+    "<div class=card>"
+    "<h2>Heimfahrt-Modus</h2>"
+    "<p class=muted id=driveNow>…</p>"
+    "<div class=row>"
+    "<label style='flex-direction:row;align-items:center;gap:.4rem'>"
+    "<input id=aCap type=checkbox> beim Start automatisch messen</label>"
+    "<label style='flex-direction:row;align-items:center;gap:.4rem'>"
+    "<input id=aFine type=checkbox> Fein-Modus</label>"
+    "<label style='flex-direction:row;align-items:center;gap:.4rem'>"
+    "<input id=aUpd type=checkbox> Auto-Update (GitHub)</label>"
+    "</div>"
+    "<div class=row>"
+    "<label>Medium <select id=aMedia></select></label>"
+    "<label>Hotspot-SSID <input id=w2s maxlength=32></label>"
+    "<label>Hotspot-Passwort <input id=w2p type=password maxlength=64></label>"
+    "</div>"
+    "<div class=row><label style='flex:1'>Update-Manifest <input id=aUrl style='width:100%'></label></div>"
+    "<div class=row><button onclick=saveDrive()>Speichern</button></div>"
+    "<p class=muted>Gilt ab dem nächsten Start. Ablauf: WLAN (Heimnetz oder Hotspot, 15 s) → "
+    "gespeicherte Fahrten hochladen → Update prüfen. Ohne Heimnetz (Auto/Hotspot): Messung "
+    "scharf. Am Heimnetz mit erreichbarem Collector: Upload, dann Modus automatisch aus "
+    "(einmalig). BOOT beim Einstecken gedrückt halten = WLAN-Portal.</p>"
+    "<h2>Gespeicherte Fahrten (Flash)</h2>"
+    "<p class=muted id=tripsNow></p>"
+    "<p class=muted>Upload braucht stabiles WLAN; OTG am PC/HU währenddessen vermeiden "
+    "(USB wird für den Transfer soft-detached).</p>"
+    "<div class=row>"
+    "<button class=sec onclick=tripsUpload()>Ausstehende hochladen</button>"
+    "<button class=sec onclick=tripsErase(false)>Hochgeladene löschen</button>"
+    "<button class=sec onclick=tripsErase(true)>Alle löschen</button>"
+    "</div>"
+    "<pre id=tripList class=muted></pre>"
+    "</div>"
     "<div class=card>"
     "<h2>Diagnose</h2>"
     "<p class=muted id=diagMeta>…</p>"
@@ -229,12 +279,21 @@ static const char* PAGE =
     "<pre id=diagNow class=muted style='max-height:18rem'>…</pre>"
     "<pre id=diagSaved class=muted style='max-height:18rem'></pre>"
     "</div>"
-
     "<pre id=st>loading…</pre>"
+    "</div>"
+
     "<script>"
     "const PROFILE={lab_debian:'lab_debian',bmw:'bmw_nbt_evo',mazda_cx30:'mazda_cx30'};"
     "let experiments=[];"
     "let localArm=null;"
+    "function showTab(name){"
+    "  ['messung','connected','system'].forEach(n=>{"
+    "    const p=document.getElementById('pane'+n.charAt(0).toUpperCase()+n.slice(1));"
+    "    const b=document.getElementById('tabBtn'+n.charAt(0).toUpperCase()+n.slice(1));"
+    "    if(p)p.className='pane'+(n===name?' on':'');"
+    "    if(b)b.className=n===name?'on':'';"
+    "  });"
+    "}"
     "async function loadExperiments(){"
     "  const r=await fetch('/api/experiments');experiments=await r.json();"
     "  const sel=exp;sel.innerHTML='';"
@@ -305,6 +364,25 @@ static const char* PAGE =
     "    const s=j.stall||{};stallNow.textContent=(s.enabled?(s.active?'AKTIV':'wartet auf Start'):'aus')+"
     "      ' · gehalten '+(s.held||0)+' · abgebrochen '+(s.abandoned||0)+' · max '+(s.max_wait_ms||0)+' ms'+"
     "      (s.last_off?(' · zuletzt aus: '+s.last_off):'');"
+    "    const ca=j.connected_app||{},tr=ca.transport||{},lf=ca.last_frame||{},p0=ca.p0||{};"
+    "    const gadget=ca.usb_gadget||(j.config&&j.config.usbGadget)||'msc';"
+    "    caGadgetNow.textContent='Boot usb_gadget='+gadget+"
+    "      ' · MSC if='+!!ca.msc_interface_present+' · Vendor if='+!!ca.vendor_interface_present+"
+    "      ' · stack_bound='+!!tr.usb_stack_bound;"
+    "    if(caGadget.value!==gadget)caGadget.value=gadget;"
+    "    caWarn.style.display=gadget==='aoa_observe'?'none':'block';"
+    "    caLinkStart.disabled=gadget!=='aoa_observe';"
+    "    caP0.textContent='P0-0='+!!p0.P0_0+' A='+!!p0.P0_A+' B='+!!p0.P0_B+"
+    "      ' C='+!!p0.P0_C+' D='+!!p0.P0_D+' E='+!!p0.P0_E+"
+    "      ' · ca_usb='+(ca.ca_usb_count||0)+' · aoa51='+(tr.aoa51||0)+"
+    "      ' 52='+(tr.aoa52||0)+' 53='+(tr.aoa53||0)+' · bulk_rx_ev='+(tr.bulk_rx_events||0);"
+    "    caNow.textContent='Gate '+(ca.gate||'?')+' · '+(ca.scenario||'')+' · State '+(ca.state||'idle')+"
+    "      ' · AOA '+(tr.impl||'?')+' armed='+!!tr.armed+' conn='+!!tr.connected+"
+    "      ' stack='+!!tr.usb_stack_bound+' rx='+(tr.rx_bytes||0)+' tx='+(tr.tx_bytes||0)+"
+    "      (tr.vid!=null?(' · VID 0x'+Number(tr.vid).toString(16)+':'+Number(tr.pid||0).toString(16)):'')+"
+    "      ' · Frames '+(ca.frames||0)+' mal '+(ca.malformed||0)+' unk '+(ca.unknown_cmd||0)+"
+    "      (lf.cmd!=null?(' · Last CMD '+lf.cmd+' DEST 0x'+Number(lf.dest||0).toString(16).toUpperCase()):'')+"
+    "      (ca.last_err?(' · err '+ca.last_err):'');"
     "    const d=j.drive||{},g=j.ota||{},dg=j.diag||{};"
     "    driveNow.textContent='Zustand '+(d.state||'off')+(d.wlan?(' · WLAN '+d.wlan):'')+"
     "      ' · ausstehend '+(d.trips_pending||0)+(d.error?(' · '+d.error):'')+"
@@ -340,6 +418,49 @@ static const char* PAGE =
     "    localArm={t0:Date.now(),ms:Math.round(+dur.value*1000),until:Date.now()+300000}}"
     "}"
     "async function stopOffline(){await fetch('/api/offline/stop',{method:'POST'});refresh()}"
+    "async function runCaLabBcl(){"
+    "  caLab.disabled=true;setPhase('CA LAB BCL…','warn');"
+    "  try{"
+    "    const r=await fetch('/api/connected/lab_bcl',{method:'POST'});"
+    "    const t=await r.text();st.textContent=t;"
+    "    let j={};try{j=JSON.parse(t)}catch(_){}"
+    "    setPhase(j.ok?'CA LAB PASS':'CA LAB FAIL',j.ok?'ok':'fail');"
+    "  }catch(e){setPhase('CA LAB ERROR','fail')}"
+    "  caLab.disabled=false;refresh()"
+    "}"
+    "async function runCaLinkStart(){"
+    "  setPhase('CA LINK ARM…','warn');"
+    "  try{"
+    "    const r=await fetch('/api/connected/link/start',{method:'POST'});"
+    "    const t=await r.text();st.textContent=t;"
+    "    let j={};try{j=JSON.parse(t)}catch(_){}"
+    "    setPhase(j.ok?'CA LINK OBSERVE':'CA LINK FAIL',j.ok?'ok':'fail');"
+    "  }catch(e){setPhase('CA LINK ERROR','fail')}"
+    "  refresh()"
+    "}"
+    "async function runCaLinkStop(){"
+    "  await fetch('/api/connected/link/stop',{method:'POST'});refresh()"
+    "}"
+    "async function runCaInject(){"
+    "  const hex=(caHex.value||'').trim();if(!hex){setPhase('CA INJECT empty','fail');return}"
+    "  const r=await fetch('/api/connected/link/inject',{method:'POST',"
+    "    headers:{'Content-Type':'application/json'},body:JSON.stringify({hex:hex})});"
+    "  const t=await r.text();st.textContent=t;"
+    "  let j={};try{j=JSON.parse(t)}catch(_){}"
+    "  setPhase(j.ok?'CA INJECT OK':'CA INJECT FAIL',j.ok?'ok':'fail');refresh()"
+    "}"
+    "async function saveGadget(){"
+    "  const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},"
+    "    body:JSON.stringify({usbGadget:caGadget.value})});"
+    "  st.textContent=await r.text();refresh()"
+    "}"
+    "async function rebootGadget(){"
+    "  if(!confirm('usb_gadget='+caGadget.value+' speichern und ESP neu starten?'))return;"
+    "  await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},"
+    "    body:JSON.stringify({usbGadget:caGadget.value})});"
+    "  const r=await fetch('/api/connected/gadget/reboot',{method:'POST'});"
+    "  st.textContent=await r.text();setPhase('REBOOTING…','warn')"
+    "}"
     "async function startLive(){await fetch('/api/session/start',{method:'POST',headers:{'Content-Type':'application/json'},"
     "body:JSON.stringify({vehicle:v.value,scenario:exp.value,profile_id:PROFILE[v.value]||v.value})});refresh()}"
     "async function stopLive(){await fetch('/api/session/stop',{method:'POST'});refresh()}"
@@ -477,6 +598,11 @@ void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
     server_.on("/api/session/stop", HTTP_POST, [this]() { handleSessionStop(); });
     server_.on("/api/marker", HTTP_POST, [this]() { handleMarker(); });
     server_.on("/api/debug/sim-read", HTTP_POST, [this]() { handleSimulateRead(); });
+    server_.on("/api/connected/lab_bcl", HTTP_POST, [this]() { handleConnectedLabBcl(); });
+    server_.on("/api/connected/link/start", HTTP_POST, [this]() { handleConnectedLinkStart(); });
+    server_.on("/api/connected/link/stop", HTTP_POST, [this]() { handleConnectedLinkStop(); });
+    server_.on("/api/connected/link/inject", HTTP_POST, [this]() { handleConnectedLinkInject(); });
+    server_.on("/api/connected/gadget/reboot", HTTP_POST, [this]() { handleConnectedGadgetReboot(); });
     server_.on("/api/usb/cycle", HTTP_POST, [this]() { handleUsbCycle(); });
     server_.on("/api/usb/remount", HTTP_POST, [this]() { handleUsbRemount(); });
     server_.on("/api/offline/start", HTTP_POST, [this]() { handleOfflineStart(); });
@@ -883,6 +1009,7 @@ void WebUi::handleStatus() {
         doc["vehicle"] = cfg_->vehicleId;
         doc["scenario"] = cfg_->scenarioId;
         doc["collector"] = cfg_->collectorHost + ":" + String(cfg_->collectorPort);
+        doc["usb_gadget"] = cfg_->usbGadget;
     }
     {
         JsonObject oc = doc["offline"].to<JsonObject>();
@@ -892,6 +1019,7 @@ void WebUi::handleStatus() {
     SequenceRunner::instance().toJson(doc["sequence"].to<JsonObject>());
     ReadStall::instance().toJson(doc["stall"].to<JsonObject>());
     DriveMode::instance().toJson(doc["drive"].to<JsonObject>());
+    ConnectedAppProbe::instance().toStatusJson(doc["connected_app"].to<JsonObject>());
     GithubOta::toJson(doc["ota"].to<JsonObject>());
     if (inst_) inst_->turStatsJson(doc["tur"].to<JsonObject>());
     String out;
@@ -1202,6 +1330,108 @@ void WebUi::handleSimulateRead() {
     server_.send(200, "application/json", "{\"ok\":true,\"schema\":2}");
 }
 
+void WebUi::handleConnectedLabBcl() {
+    JsonDocument out;
+    ConnectedAppProbe& ca = ConnectedAppProbe::instance();
+    const bool ok = ca.runCaC1LabBcl();
+    out["ok"] = ok;
+    out["action"] = "ca_c1_lab_bcl";
+    out["gate"] = "C1a.5";
+    out["source"] = "synthetic";
+    out["evidence_level"] = "TEST";
+    out["direct_observation"] = false;
+    const char* err = ca.lastErr();
+    if (err && err[0]) out["err"] = err;
+    ca.toStatusJson(out["connected_app"].to<JsonObject>());
+    int code = 200;
+    if (!ok) {
+        if (err && (!strcmp(err, "session_busy") || !strcmp(err, "busy") ||
+                    !strcmp(err, "no_session"))) {
+            code = 409;
+        } else {
+            code = 500;
+        }
+    }
+    sendJson(code, out);
+}
+
+void WebUi::handleConnectedLinkStart() {
+    JsonDocument out;
+    ConnectedAppProbe& ca = ConnectedAppProbe::instance();
+    const bool ok = ca.startCaC1Link();
+    out["ok"] = ok;
+    out["action"] = "ca_c1_link_start";
+    out["gate"] = ca.aoaObserveBoot() ? "C1b-P0" : "C1b-0";
+    out["note"] = ca.aoaObserveBoot() ? "aoa_observe_passive_no_bcl_tx"
+                                      : "wrong_usb_gadget_need_aoa_observe_reboot";
+    out["direct_observation"] = ca.aoaObserveBoot();
+    const char* err = ca.lastErr();
+    if (err && err[0]) out["err"] = err;
+    ca.toStatusJson(out["connected_app"].to<JsonObject>());
+    int code = 200;
+    if (!ok) {
+        if (err && (!strcmp(err, "session_busy") || !strcmp(err, "busy") ||
+                    !strcmp(err, "wrong_usb_gadget"))) {
+            code = 409;
+        } else {
+            code = 500;
+        }
+    }
+    sendJson(code, out);
+}
+
+void WebUi::handleConnectedGadgetReboot() {
+    JsonDocument out;
+    out["ok"] = true;
+    out["action"] = "gadget_reboot";
+    out["usbGadget"] = cfg_ ? cfg_->usbGadget : "";
+    out["note"] = "restart_after_nvs_save";
+    sendJson(200, out);
+    delay(200);
+    ESP.restart();
+}
+
+void WebUi::handleConnectedLinkStop() {
+    JsonDocument out;
+    ConnectedAppProbe& ca = ConnectedAppProbe::instance();
+    const bool ok = ca.stopCaC1Link();
+    out["ok"] = ok;
+    out["action"] = "ca_c1_link_stop";
+    if (ca.lastErr() && ca.lastErr()[0]) out["err"] = ca.lastErr();
+    ca.toStatusJson(out["connected_app"].to<JsonObject>());
+    sendJson(ok ? 200 : 409, out);
+}
+
+void WebUi::handleConnectedLinkInject() {
+    JsonDocument out;
+    if (!server_.hasArg("plain")) {
+        out["ok"] = false;
+        out["err"] = "body_required";
+        sendJson(400, out);
+        return;
+    }
+    JsonDocument in;
+    if (deserializeJson(in, server_.arg("plain"))) {
+        out["ok"] = false;
+        out["err"] = "json";
+        sendJson(400, out);
+        return;
+    }
+    const char* hex = in["hex"].is<const char*>() ? in["hex"].as<const char*>() : "";
+    ConnectedAppProbe& ca = ConnectedAppProbe::instance();
+    const bool ok = ca.injectRxHex(hex);
+    out["ok"] = ok;
+    out["action"] = "ca_c1_link_inject";
+    out["gate"] = "C1b-0";
+    out["source"] = "synthetic_inject";
+    out["evidence_level"] = "TEST";
+    out["direct_observation"] = false;
+    out["note"] = "not_nbt_wire";
+    if (ca.lastErr() && ca.lastErr()[0]) out["err"] = ca.lastErr();
+    ca.toStatusJson(out["connected_app"].to<JsonObject>());
+    sendJson(ok ? 200 : 409, out);
+}
+
 void WebUi::handleUsbCycle() {
     uint16_t holdMs = 600;
     if (server_.hasArg("plain")) {
@@ -1210,11 +1440,20 @@ void WebUi::handleUsbCycle() {
             if (!doc["holdMs"].isNull()) holdMs = doc["holdMs"].as<uint16_t>();
         }
     }
-    bool ok = msc_ && msc_->softCycle(holdMs);
+    bool ok = false;
+    const char* via = "none";
+    if (cfg_ && cfg_->isAoaObserve()) {
+        ok = huprobe::aoa::AoaObserveGadget::instance().softCycle(holdMs);
+        via = "aoa_observe";
+    } else if (msc_) {
+        ok = msc_->softCycle(holdMs);
+        via = "msc";
+    }
     JsonDocument out;
     out["ok"] = ok;
     out["action"] = "usb_cycle";
     out["holdMs"] = holdMs;
+    out["via"] = via;
     out["note"] = "soft_usb=D+_pullup_not_VBUS";
     String body;
     serializeJson(out, body);

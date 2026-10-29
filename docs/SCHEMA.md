@@ -307,6 +307,90 @@ Hinweis: Bis FW 0.2.3 konnte TCP bei Write-Fehler Events bereits aus dem Ring ne
 
 ---
 
+## Connected App / Control Plane (C1a Host)
+
+Host-Adapter (`tools/bcl_c1a`) und Device (`ConnectedAppProbe` / C1a.5). Getrennt von `bot_*` / `read`.
+
+### ev = ca_bcl
+
+```json
+{
+  "v": 2, "sid": "LAB-ca_c1_lab_bcl", "seq": 3, "t_us": 3000,
+  "ev": "ca_bcl",
+  "ca_ev": "frame",
+  "cmd": 2,
+  "cmd_desk_name": "DATA",
+  "src": 1,
+  "dest": 4004,
+  "dest_desk_label": "Etch",
+  "len": 7,
+  "payload_hex": "53594e54483031",
+  "source": "synthetic",
+  "evidence_level": "TEST",
+  "direct_observation": false
+}
+```
+
+`ca_ev`: `frame` | `error`.  
+`dest_desk_label` optional (Desk-R0, z. B. `"Etch"` für `0x0FA4`) — **kein** Live-Etch-Claim.  
+Synthetic Lab-Events: `source=synthetic` / `evidence_level=TEST` / `direct_observation=false`.  
+Transport-Skeleton-Inject: `source=transport_aoa_skeleton` — weiterhin **kein** NBT-Wire.
+
+### ev = ca_transport (C1b-0 / C1b-P0)
+
+```json
+{
+  "v": 2, "sid": "...", "seq": 2, "t_us": 2000,
+  "ev": "ca_transport",
+  "ca_ev": "DISCONNECTED",
+  "transport": "aoa",
+  "impl": "observe",
+  "usb_role_intent": "device_in_accessory_mode",
+  "usb_stack_bound": true,
+  "armed": true,
+  "connected": false,
+  "rx_bytes": 0,
+  "tx_bytes": 0,
+  "gate": "C1b-P0",
+  "direct_observation": true
+}
+```
+
+`impl`: `skeleton` (C1b-0 / MSC-Boot) | `observe` (C1b-P0 / `aoa_observe`).  
+`ca_ev`: `CONNECTED` | `DISCONNECTED` | `RX_BYTES` | `TX_BYTES` | `TRANSPORT_ERROR`.
+
+### ev = ca_usb (C1b-P0)
+
+```json
+{
+  "v": 2, "sid": "...", "seq": 3, "t_us": 3000,
+  "ev": "ca_usb",
+  "ca_ev": "aoa_control",
+  "p0_level": "P0-B",
+  "transport": "aoa",
+  "impl": "observe",
+  "usb_stack_bound": true,
+  "b_request": 51,
+  "aoa_desk_name": "GET_PROTOCOL",
+  "hypothesis": true,
+  "hypothesis_handled": true,
+  "direct_observation": true,
+  "evidence_level": "FIELD",
+  "gate": "C1b-P0",
+  "probe_plane": "control"
+}
+```
+
+`p0_level`: `P0-0` | `P0-A` | `P0-B` | `P0-C` | `P0-D` | `P0-E`.  
+`ca_ev`: `gadget_isolation` | `attach` | `aoa_control` | `vid_pid` | `ep` | `bulk_rx`.  
+P0-E `bulk_rx` carries `payload_hex` (truncated) and **must not** be treated as BCL until C1b-P1.
+
+Status `connected_app`: `usb_gadget`, `msc_interface_present`, `vendor_interface_present`, `p0{P0_0…P0_E}`.
+
+Siehe [CONNECTED-APP.md](CONNECTED-APP.md), [GATES-Connected.md](GATES-Connected.md).
+
+---
+
 ## Ableitbare Kennzahlen
 
 Aus `events.jsonl` (v2) müssen berechenbar sein: USB-Enum-Timeline, Gap-p50 (µs), Eager-EOF, Prefetch-Lead, Resume-Fenster, Busy-Dauer, TUR-Hz, Identity-Wechsel, Write-Count, Xfer-Histogramm, CBW/CSW-Vollständigkeit, Capture-Completeness.

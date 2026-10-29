@@ -53,8 +53,23 @@ public:
     bool autoUpdate = true;
     String otaManifestUrl = OTA_MANIFEST_URL_DEFAULT;
 
+    /**
+     * @brief USB gadget boot mode (C1b-P0 isolation).
+     *
+     * "msc" = Golden Path USBMSC only (default).
+     * "aoa_observe" = USBVendor AOA observe only — no MSC interface.
+     * Switch via NVS + reboot only; soft-detach is not a mode change.
+     */
+    String usbGadget = "msc";
+
     /** @brief Initialize the store by loading the configuration from NVS (calls load()). */
     void begin();
+
+    /** @brief True when usbGadget == "aoa_observe". */
+    bool isAoaObserve() const { return usbGadget == "aoa_observe"; }
+
+    /** @brief True when usbGadget == "msc" (Golden Path). */
+    bool isMscGadget() const { return usbGadget != "aoa_observe"; }
 
     /**
      * @brief Reset all fields to defaults, then overlay the values stored in NVS.

@@ -105,6 +105,38 @@ private:
     void handleSimulateRead();
 
     /**
+     * @brief POST /api/connected/lab_bcl: run C1a.5 synthetic BCL scenario on-device.
+     *
+     * Feeds fixed synthetic bytes through BclFramer → ca_bcl EventBus events.
+     * No AOA/SPP/SAS. HTTP 409 if a session is already active or the probe is busy.
+     */
+    void handleConnectedLabBcl();
+
+    /**
+     * @brief POST /api/connected/link/start: arm C1b-P0 AOA observe (ca_c1_link).
+     *
+     * Requires usb_gadget=aoa_observe boot. HTTP 409 if wrong gadget or session busy.
+     */
+    void handleConnectedLinkStart();
+
+    /** @brief POST /api/connected/link/stop: disarm AOA and stop session. */
+    void handleConnectedLinkStop();
+
+    /**
+     * @brief POST /api/connected/link/inject: lab hex bytes into AoaTransport RX.
+     *
+     * Body {hex:"..."}. Not NBT wire evidence. HTTP 409 if not observing.
+     */
+    void handleConnectedLinkInject();
+
+    /**
+     * @brief POST /api/connected/gadget/reboot: restart after NVS usbGadget save.
+     *
+     * Responds JSON then ESP.restart(). Soft-detach is not a mode switch.
+     */
+    void handleConnectedGadgetReboot();
+
+    /**
      * @brief POST /api/usb/cycle: soft USB re-enumeration via the D+ pull-up (not VBUS).
      *
      * Optional body {holdMs} (default 600 ms). Responds {ok, action, holdMs, note}; HTTP 500

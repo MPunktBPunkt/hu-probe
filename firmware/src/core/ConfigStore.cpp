@@ -33,6 +33,7 @@ void ConfigStore::applyDefaults() {
     wifi2Pass = "";
     autoUpdate = true;
     otaManifestUrl = OTA_MANIFEST_URL_DEFAULT;
+    usbGadget = "msc";
 }
 
 void ConfigStore::begin() {
@@ -72,6 +73,10 @@ void ConfigStore::load() {
         wifi2Pass = prefs.getString("wifi2_pass", wifi2Pass);
         autoUpdate = prefs.getBool("auto_upd", autoUpdate);
         otaManifestUrl = prefs.getString("ota_url", otaManifestUrl);
+        usbGadget = prefs.getString("usb_gadget", usbGadget);
+        if (usbGadget != "msc" && usbGadget != "aoa_observe") {
+            usbGadget = "msc";
+        }
         prefs.end();
     }
 }
@@ -107,6 +112,7 @@ void ConfigStore::save() {
         prefs.putString("wifi2_pass", wifi2Pass);
         prefs.putBool("auto_upd", autoUpdate);
         prefs.putString("ota_url", otaManifestUrl);
+        prefs.putString("usb_gadget", usbGadget);
         prefs.end();
     }
 }
@@ -148,6 +154,7 @@ void ConfigStore::toJson(JsonObject obj) const {
     obj["wifi2PassSet"] = wifi2Pass.length() > 0;
     obj["autoUpdate"] = autoUpdate;
     obj["otaManifestUrl"] = otaManifestUrl;
+    obj["usbGadget"] = usbGadget;
     obj["fwVersion"] = FW_VERSION;
     obj["fwType"] = FW_TYPE;
     obj["board"] = HUPROBE_BOARD_LABEL;
@@ -185,5 +192,9 @@ bool ConfigStore::fromJson(JsonVariantConst obj) {
         wifi2Pass = obj["wifi2Pass"].as<String>();
     if (!obj["autoUpdate"].isNull()) autoUpdate = obj["autoUpdate"].as<bool>();
     if (obj["otaManifestUrl"].is<const char*>()) otaManifestUrl = obj["otaManifestUrl"].as<String>();
+    if (obj["usbGadget"].is<const char*>()) {
+        String g = obj["usbGadget"].as<String>();
+        if (g == "msc" || g == "aoa_observe") usbGadget = g;
+    }
     return true;
 }

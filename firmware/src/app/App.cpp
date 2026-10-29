@@ -18,6 +18,8 @@
 #include "core/PanicTail.h"
 #include "core/PhaseGate.h"
 #include "msc/MscBotTap.h"
+#include "connected/ConnectedAppProbe.h"
+#include "connected/aoa/AoaObserveGadget.h"
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <ESPmDNS.h>
@@ -173,10 +175,28 @@ void App::begin() {
     instrument_.begin(&session_);
     AutoMarker::begin(&session_);
     TripStore::instance().begin();
-    const bool drive = config_.autoCapture;
-    // MSC first so the HU sees a stick even while WiFi portal runs. Drive mode keeps it
-    // detached until the capture is armed, so the HU's first enumeration is recorded.
-    msc_.begin(&session_, &instrument_, drive);
+    const bool aoaObserve = config_.isAoaObserve();
+    // P0-0: autoCapture requires MSC Golden Path — ignore drive arming in aoa_observe.
+    const bool drive = config_.autoCapture && !aoaObserve;
+    if (config_.autoCapture && aoaObserve) {
+        DiagLog::printf("[CA] autoCapture ignored: usb_gadget=aoa_observe (P0-0 isolation)\n");
+    }
+
+    ConnectedAppProbe::instance().begin(&session_, aoaObserve ? nullptr : &msc_, aoaObserve);
+
+    if (aoaObserve) {
+        // C1b-P0: USBVendor only — never enable USBMSC (fingerprint isolation).
+        using huprobe::aoa::AoaObserveGadget;
+        const bool labWifiFirst = isLabDebian();
+        AoaObserveGadget::instance().begin(&session_, labWifiFirst);
+        ConnectedAppProbe::instance().bindAoaObserveStack();
+        DiagLog::printf("[USB] gadget=aoa_observe msc_interface=0 vendor=1\n");
+    } else {
+        // MSC first so the HU sees a stick even while WiFi portal runs. Drive mode keeps it
+        // detached until the capture is armed, so the HU's first enumeration is recorded.
+        msc_.begin(&session_, &instrument_, drive);
+        DiagLog::printf("[USB] gadget=msc msc_interface=1 vendor=0\n");
+    }
 
     if (drive) {
         pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);
@@ -195,7 +215,7 @@ void App::begin() {
 
     // Lab: keep MSC soft-detached by default — Enum/Mount must not kill WiFi.
     // Reattach only via WebUI / Sequence "MSC arm" (explicit softAttach).
-    if (!drive && isLabDebian()) {
+    if (!aoaObserve && !drive && isLabDebian()) {
         msc_.softDetach(0);
         labMscDetachedDefault_ = true;
         DiagLog::printf("[MSC] lab_debian: soft-detached by default (WiFi first)");
@@ -210,19 +230,25 @@ void App::begin() {
     hub_.begin(&config_);
     hub_.setPayloadBuilder(buildHeartbeat);
     tcp_.begin(&config_);
-    web_.begin(&config_, &session_, &instrument_, &msc_, &hub_, &tcp_);
-    SequenceRunner::instance().begin(&session_, &msc_, &instrument_, &tcp_);
+    web_.begin(&config_, &session_, &instrument_, aoaObserve ? nullptr : &msc_, &hub_, &tcp_);
+    if (!aoaObserve) {
+        SequenceRunner::instance().begin(&session_, &msc_, &instrument_, &tcp_);
+    }
     if (WiFi.status() == WL_CONNECTED) hub_.sendNow();
 
     if (drive) {
         DriveMode::instance().bootPhase();
     } else {
         GithubOta::markHealthy();
-        // Auto-session for field use: plug → measure without opening the UI first.
-        session_.start(config_.vehicleId, config_.scenarioId, config_.profileId,
-                       msc_.identitySerial(), msc_.volumeLabel());
-        Serial.printf("[SESSION] auto-start %s fw=%s sha=%s\n", session_.id().c_str(),
-                      FW_VERSION, FW_GIT_SHA);
+        if (!aoaObserve) {
+            // Auto-session for field use: plug → measure without opening the UI first.
+            session_.start(config_.vehicleId, config_.scenarioId, config_.profileId,
+                           msc_.identitySerial(), msc_.volumeLabel());
+            Serial.printf("[SESSION] auto-start %s fw=%s sha=%s\n", session_.id().c_str(),
+                          FW_VERSION, FW_GIT_SHA);
+        } else {
+            Serial.printf("[SESSION] aoa_observe boot — no MSC auto-session fw=%s\n", FW_VERSION);
+        }
     }
 
     // Above TinyUSB usbd (prio 24): Arduino loop was starved under OTG, coex never ran.
@@ -352,7 +378,12 @@ void App::enterCoexHold(const char* reason) {
         else if (strcmp(reason, "zombie-assoc") == 0) code = PanicTail::CoexZombie;
     }
     PanicTail::breadcrumb(PanicTail::CoexHold, code);
-    if (msc_.usbSoftAttached()) {
+    if (config_.isAoaObserve()) {
+        using huprobe::aoa::AoaObserveGadget;
+        if (AoaObserveGadget::instance().softAttached()) {
+            AoaObserveGadget::instance().softDetach(0);
+        }
+    } else if (msc_.usbSoftAttached()) {
         msc_.softDetach(0);
     }
     coexDetachedForWifi_ = true;
@@ -474,7 +505,11 @@ void App::superviseWifi() {
                 DiagLog::printf("[WIFI] coex reattach pending=%u hold=%lums heap=%u\n",
                               (unsigned)bus.pending(), flushedFor, (unsigned)ESP.getFreeHeap());
                 PanicTail::breadcrumb(PanicTail::CoexReattach, (uint32_t)flushedFor);
-                msc_.softAttach();
+                if (config_.isAoaObserve()) {
+                    huprobe::aoa::AoaObserveGadget::instance().softAttach();
+                } else {
+                    msc_.softAttach();
+                }
                 coexDetachedForWifi_ = false;
                 coexRecoveredAtMs_ = 0;
                 coexZombieSinceMs_ = 0;
@@ -499,7 +534,10 @@ void App::superviseWifi() {
         DiagLog::printf("[WIFI] lost — supervising reconnect heap=%u\n",
                       (unsigned)ESP.getFreeHeap());
         PanicTail::breadcrumb(PanicTail::WifiLost, assoc ? 1u : 0u);
-        if (msc_.usbSoftAttached() || !coexDetachedForWifi_) {
+        const bool usbUp = config_.isAoaObserve()
+                               ? huprobe::aoa::AoaObserveGadget::instance().softAttached()
+                               : msc_.usbSoftAttached();
+        if (usbUp || !coexDetachedForWifi_) {
             enterCoexHold("assoc-lost");
         }
     }
@@ -537,19 +575,24 @@ void App::superviseWifi() {
 void App::loop() {
     // WiFi/coex soft-detach runs in wifiCoexTask (loop starves under USB Bulk).
     // Drain Capture-tUs BOT/read before loop-now status/health (keeps t_us non-decreasing).
-    msc_.loop();
+    if (!config_.isAoaObserve()) msc_.loop();
+    ConnectedAppProbe::instance().loop();
     // Serve HTTP before/after upload pumps so trip-replay cannot starve the Web UI.
     web_.loop();
-    OfflineCapture::instance().poll(&msc_);
-    DriveMode::instance().poll();
-    SequenceRunner::instance().poll();
-    instrument_.tick();
+    if (!config_.isAoaObserve()) {
+        OfflineCapture::instance().poll(&msc_);
+        DriveMode::instance().poll();
+        SequenceRunner::instance().poll();
+        instrument_.tick();
+    }
     // During OfflineCapture upload, OC owns TcpStreamer pumps — a second loop() here would
     // stack blocking connect/write on top of replay and freeze HTTP again.
     if (!OfflineCapture::instance().active()) tcp_.loop();
     web_.loop();
 
-    const bool usbHost = msc_.plugged();
+    const bool usbHost = config_.isAoaObserve()
+                             ? huprobe::aoa::AoaObserveGadget::instance().plugged()
+                             : msc_.plugged();
     // Hub HTTPClient can block up to 2s — under OTG that races WiFi to death.
     if (!usbHost) {
         hub_.loop();

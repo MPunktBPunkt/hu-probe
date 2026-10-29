@@ -9,12 +9,16 @@ BMW NBT Evo dient als **Golden Probe** (stark belegte Muster aus technology-audi
 ## Systembild
 
 ```
-Fahrzeug-HU ──USB MSC──► ESP32-S3 hu-probe
+Fahrzeug-HU ──USB MSC──► ESP32-S3 hu-probe          ← Storage Plane (Golden Path)
+            ──USB AOA / BT SPP ─► (optional)         ← Control Plane (Connected App)
                             │ HubClient ──► esp-hub :8093 (register/OTA)
                             │ WebUI :80
                             └ TCP JSONL ──► Collector :9100
                                               └ sessions/ + Fingerprint/Diff
 ```
+
+Zwei Instrumente, eine Sonde: **Storage Plane** = USB-MSC Host-Verhalten (dieser Kern).  
+**Control Plane** = Connected-App-Kanal (BCL → Etch → SAS → RHMI/CDS/AV) als optionaler Probe-Pfad — Desk R0 bis eigene Captures; siehe [CONNECTED-APP.md](CONNECTED-APP.md), Gates [GATES-Connected.md](GATES-Connected.md). Kein Claim-Merge mit MSC-FACTS.
 
 ## Rollen
 
@@ -25,6 +29,7 @@ Fahrzeug-HU ──USB MSC──► ESP32-S3 hu-probe
 | Actor | Szenarien: Stall/Busy, Soft-RST, Identity-Rotation, Marker |
 | Reference | Profil `bmw_nbt_evo` |
 | Discovery | Profil `mazda_cx30` (wachsend) |
+| Control (optional) | BCL/Etch-Beobachtung, SAS-Gate, RHMI/CDS/AV — parallel, nicht MSC-Ersatz |
 
 ## Hub-Vertrag
 
@@ -47,7 +52,7 @@ Fahrzeug-HU ──USB MSC──► ESP32-S3 hu-probe
 | Busy ~65 s vs Stall-off ~6 s | Szenario `busy_budget` + Marker |
 | Lifecycle Sleep/Ignition | Operator-Marker + VBUS/Phasen |
 
-Details: [SCHEMA.md](SCHEMA.md) (v2), [FIRMWARE-ABLAUF.md](FIRMWARE-ABLAUF.md), [SZENARIEN.md](SZENARIEN.md), [GATES.md](GATES.md), [MEDIA_VARIATION.md](MEDIA_VARIATION.md).
+Details: [SCHEMA.md](SCHEMA.md) (v2), [FIRMWARE-ABLAUF.md](FIRMWARE-ABLAUF.md), [SZENARIEN.md](SZENARIEN.md), [GATES.md](GATES.md), [GATES-Connected.md](GATES-Connected.md), [CONNECTED-APP.md](CONNECTED-APP.md), [MEDIA_VARIATION.md](MEDIA_VARIATION.md).
 
 ## Measurement Integrity
 
