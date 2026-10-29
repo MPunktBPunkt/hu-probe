@@ -1,7 +1,7 @@
 # C1b-P0.5-A — Control-Tap Instrumentation + Phone-like B1 Prep
 
 **Datum:** 2026-10-29  
-**FW:** **0.3.27** (P0.5-A 0.3.24 · phone-like 0.3.25 · softAttach-on-link 0.3.26 · **P0-0 MSC leak fix** 0.3.27)  
+**FW:** **0.3.28** (P0.5-A 0.3.24 · phone-like 0.3.25 · softAttach 0.3.26 · MSC-leak-fix 0.3.27 · **P0_B nur 51/52/53/58** 0.3.28)  
 **Audit:** technology-audit PR #28 / `C1b-PLAN.md`
 
 ## Was gebaut wurde

@@ -5,7 +5,7 @@
 | | |
 |--|--|
 | **Gerät** | Auto-ESP `192.168.178.89` (PiDrive-USB) |
-| **FW** | **0.3.23** (`aoa_observe` Boot) |
+| **FW** | **0.3.23** (`aoa_observe` Boot) — **Composite-caveated:** unbeabsichtigt MSC+Vendor (Leak bis 0.3.26; Fix **0.3.27** vendor-only). UI „Zubehör“ gilt für den damaligen Fingerprint, nicht als reiner Vendor-Beweis. |
 | **Lab** | `.88` ebenfalls 0.3.22/23 getestet |
 | **Gate** | HU-PROBE-GATE-C1b-P0 ([GATES-Connected.md](../GATES-Connected.md)) |
 | **Desk-Basis** | technology-audit `usb-aoa-bmw-connected-2026-desk` (EVID-AOA-2026-10-28-*) |

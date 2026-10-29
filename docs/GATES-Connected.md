@@ -113,7 +113,7 @@ Umschalten **nur** NVS + Reboot (`POST /api/config` + `/api/connected/gadget/reb
 |-------|--------|
 | **P0-0** | Gadget isolation: `msc_interface_present` / `vendor_interface_present` match boot mode |
 | **P0-A** | USB attach/enum observed (`ca_usb` attach) |
-| **P0-B** | Control SETUPs on callback path (`setup_count`/`vendor_setup_count`; 51/52/53 Desk-Hypothese). Direct-2D00-Boot: Absent ≠ AOA-FAIL |
+| **P0-B** | AOA-relevant control seen (`bRequest` ∈ {51,52,53,58}). Generic callback SETUPs count in `setup_count` only — do **not** set P0_B. Direct-2D00-Boot: Absent ≠ AOA-FAIL |
 | **P0-C** | VID/PID path documented (`aoa_observe` → `0x18D1:0x2D00`; `aoa_phone_like` → `0x04E8:0x6860`; post-53 re-enum **NOT IMPLEMENTED**) |
 | **P0-D** | Bulk endpoints identified (USBVendor duplex) |
 | **P0-E** | First bulk RX capturable as raw `ca_usb` / counters — **not** fed to `BclFramer` |

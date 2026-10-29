@@ -259,8 +259,10 @@ void ConnectedAppProbe::drainTransportRaw() {
 void ConnectedAppProbe::drainControlTap() {
     AoaControlSample s;
     while (AoaControlTap::instance().pop(s)) {
-        if (!p0_b_) p0_b_ = true;
+        // P0.5-A publishes every callback SETUP; P0_B stays AOA-specific (51/52/53/58).
         const bool aoa_req = (s.b_request == 51 || s.b_request == 52 || s.b_request == 53);
+        const bool aoa_or_audio = aoa_req || s.b_request == 58;
+        if (!p0_b_ && aoa_or_audio) p0_b_ = true;
         const uint8_t req_type = (s.bm_request_type >> 5) & 0x3;
         JsonDocument extra;
         extra["bm_request_type"] = s.bm_request_type;
@@ -284,7 +286,8 @@ void ConnectedAppProbe::drainControlTap() {
             extra["string_index"] = s.w_index;
             extra["string_utf8"] = s.str;  // audit B3: HU identity strings on req 52
         }
-        publishCaUsb("P0-B", "aoa_control", aoa_req || s.b_request == 58, true, extra);
+        // Event tag stays aoa_control for schema stability; hypothesis=true only for 51–53/58.
+        publishCaUsb("P0-B", "aoa_control", aoa_or_audio, true, extra);
     }
 }
 
