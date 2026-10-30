@@ -13,6 +13,7 @@
 **Research 1 (AOA 51/52/53/58, Direct-2D00):** [`2026-10-30-research-01-aoa-direct-accessory.md`](2026-10-30-research-01-aoa-direct-accessory.md)  
 **Research 2 (USB-Sniffing, Host- vs. Device-Trace):** [`2026-10-30-research-02-usb-sniffing-gadget-validation.md`](2026-10-30-research-02-usb-sniffing-gadget-validation.md)  
 **Research 3 (ESP32-S3 / TinyUSB / `USBVendor.onRequest`):** [`2026-10-30-research-03-esp32-tinyusb-ep0-callbacks.md`](2026-10-30-research-03-esp32-tinyusb-ep0-callbacks.md)  
+**Research 4 (Composite vs. vendor-only):** [`2026-10-30-research-04-composite-vs-vendor-only.md`](2026-10-30-research-04-composite-vs-vendor-only.md)  
 **Verwandt:** [`2026-10-29-c1b-p0-aoa-observe-feld.md`](2026-10-29-c1b-p0-aoa-observe-feld.md) · [`2026-10-29-c1b-p05a-instrumentation.md`](2026-10-29-c1b-p05a-instrumentation.md) · [`2026-10-29-c1b-massnahmen-nach-b1-b2b.md`](2026-10-29-c1b-massnahmen-nach-b1-b2b.md) · [`../GATES-Connected.md`](../GATES-Connected.md)
 
 **Quellenbasis für diesen Bericht:**
