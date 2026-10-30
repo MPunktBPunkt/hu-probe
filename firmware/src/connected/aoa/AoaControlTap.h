@@ -10,12 +10,17 @@
  * Stage values are TinyUSB `CONTROL_STAGE_*` (SETUP=1), not Arduino
  * `REQUEST_STAGE_*` (SETUP=0). USBVendor forwards the TinyUSB stage unchanged.
  *
+ * After a successful SETUP respond, DATA/ACK must return true — TinyUSB stalls
+ * EP0 if the complete callback returns false (seen as host Pipe error on 51).
+ *
  * Desk hypothesis responses are optional behind hypothesisRespond() and are
  * independent of observe counters / SETUP publish.
  */
 
 #include <cstddef>
 #include <cstdint>
+
+#include "USBVendor.h"
 
 namespace huprobe {
 namespace aoa {
@@ -57,11 +62,21 @@ public:
 
     /**
      * @brief USB-task callback: record SETUP and optionally answer AOA hypothesis.
+     * @param request  Original control request (needed by tud_control_xfer).
      * @return true if TinyUSB should consider the request handled.
      */
-    bool onControlRequest(uint8_t rhport, uint8_t stage, uint8_t bmRequestType,
-                          uint8_t bRequest, uint16_t wValue, uint16_t wIndex,
-                          uint16_t wLength, void* vendorSendResponseCtx);
+#if CONFIG_TINYUSB_VENDOR_ENABLED
+    bool onControlRequest(uint8_t rhport, uint8_t stage,
+                          arduino_usb_control_request_t const* request, USBVendor* vendor);
+#else
+    bool onControlRequest(uint8_t rhport, uint8_t stage, void const* request, void* vendor) {
+        (void)rhport;
+        (void)stage;
+        (void)request;
+        (void)vendor;
+        return false;
+    }
+#endif
 
     /** @brief Pop one sample for EventBus publish (Arduino loop). */
     bool pop(AoaControlSample& out);
@@ -80,6 +95,8 @@ public:
     uint32_t aoa53Count() const { return aoa53_; }
     uint32_t aoa58Count() const { return aoa58_; }
     uint32_t dropCount() const { return drops_; }
+    /** @brief Successful sendResponse() calls for GET_PROTOCOL (51). */
+    uint32_t aoa51RespondOk() const { return aoa51_respond_ok_; }
     /** @brief True when the control ring has not overflowed since reset. */
     bool captureValid() const { return drops_ == 0; }
     bool sawAoaControl() const { return aoa51_ || aoa52_ || aoa53_ || aoa58_; }
@@ -98,9 +115,15 @@ private:
     uint32_t aoa52_ = 0;
     uint32_t aoa53_ = 0;
     uint32_t aoa58_ = 0;
+    uint32_t aoa51_respond_ok_ = 0;
     uint32_t drops_ = 0;
     /** @brief Default passive; PhoneLike gadget enables responder at begin(). */
     bool hypothesis_respond_ = false;
+    /**
+     * @brief SETUP respond succeeded — DATA/ACK complete_cb must return true
+     * or TinyUSB stalls EP0 (host Pipe error).
+     */
+    bool respond_in_flight_ = false;
     uint16_t aoa_protocol_le_ = 1;  // AOA 1.0 LE
     uint8_t string_scratch_[256] = {0};
     uint16_t string_scratch_len_ = 0;

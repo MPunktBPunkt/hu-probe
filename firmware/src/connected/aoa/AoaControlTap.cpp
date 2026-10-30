@@ -4,12 +4,14 @@
  *
  * TinyUSB passes CONTROL_STAGE_* into USBVendor.onRequest. Arduino's REQUEST_STAGE_*
  * constants are offset by one (SETUP=0 vs SETUP=1) and must not be used here.
+ *
+ * After SETUP+sendResponse, DATA/ACK complete callbacks must return true — otherwise
+ * TinyUSB stalls EP0 (Lab: 51 Pipe error while 52 worked via DATA early-return).
  */
 
 #include "connected/aoa/AoaControlTap.h"
 #include "core/ProbeClock.h"
 
-#include "USBVendor.h"
 #include "tusb.h"
 
 #include <cstring>
@@ -30,9 +32,11 @@ void AoaControlTap::begin() {
 
 void AoaControlTap::reset() {
     head_ = tail_ = 0;
-    setup_count_ = vendor_setup_count_ = aoa51_ = aoa52_ = aoa53_ = aoa58_ = drops_ = 0;
+    setup_count_ = vendor_setup_count_ = aoa51_ = aoa52_ = aoa53_ = aoa58_ = 0;
+    aoa51_respond_ok_ = drops_ = 0;
     string_scratch_len_ = 0;
     pending_string_index_ = 0xff;
+    respond_in_flight_ = false;
     std::memset(string_scratch_, 0, sizeof(string_scratch_));
 }
 
@@ -54,9 +58,20 @@ bool AoaControlTap::pop(AoaControlSample& out) {
     return true;
 }
 
-bool AoaControlTap::onControlRequest(uint8_t rhport, uint8_t stage, uint8_t bmRequestType,
-                                     uint8_t bRequest, uint16_t wValue, uint16_t wIndex,
-                                     uint16_t wLength, void* vendorSendResponseCtx) {
+bool AoaControlTap::onControlRequest(uint8_t rhport, uint8_t stage,
+                                     arduino_usb_control_request_t const* request,
+                                     USBVendor* vendor) {
+    if (!request) return false;
+
+    const uint8_t bmRequestType = static_cast<uint8_t>(
+        (request->bmRequestDirection << 7) | (request->bmRequestType << 5) |
+        request->bmRequestRecipient);
+    const uint8_t bRequest = request->bRequest;
+    const uint16_t wValue = request->wValue;
+    const uint16_t wIndex = request->wIndex;
+    const uint16_t wLength = request->wLength;
+    const bool vendor_type = ((bmRequestType >> 5) & 0x3) == 2;
+
     AoaControlSample s;
     s.bm_request_type = bmRequestType;
     s.b_request = bRequest;
@@ -69,12 +84,28 @@ bool AoaControlTap::onControlRequest(uint8_t rhport, uint8_t stage, uint8_t bmRe
     s.str[0] = '\0';
     s.str_len = 0;
 
-    const bool vendor = ((bmRequestType >> 5) & 0x3) == 2;
+    // DATA/ACK after a successful SETUP respond: must not stall EP0.
+    if (stage != CONTROL_STAGE_SETUP && respond_in_flight_) {
+        if (vendor_type && bRequest == 52 && stage == CONTROL_STAGE_DATA &&
+            string_scratch_len_ > 0) {
+            const size_t n =
+                string_scratch_len_ < sizeof(s.str) - 1 ? string_scratch_len_ : sizeof(s.str) - 1;
+            std::memcpy(s.str, string_scratch_, n);
+            s.str[n] = '\0';
+            s.str_len = static_cast<uint8_t>(n);
+            s.w_index = pending_string_index_;
+            push(s);
+        }
+        if (stage == CONTROL_STAGE_ACK) {
+            respond_in_flight_ = false;
+        }
+        return true;
+    }
 
     // Observe always: count/publish every SETUP that reaches this callback (not full EP0).
     if (stage == CONTROL_STAGE_SETUP) {
         setup_count_++;
-        if (vendor) {
+        if (vendor_type) {
             vendor_setup_count_++;
             if (bRequest == 51) aoa51_++;
             else if (bRequest == 52) aoa52_++;
@@ -83,59 +114,37 @@ bool AoaControlTap::onControlRequest(uint8_t rhport, uint8_t stage, uint8_t bmRe
         }
     }
 
-    // After OUT data stage of SEND_STRING: publish captured identity (audit B3).
-    // Independent of whether a later SETUP would respond — buffer was filled if we accepted 52.
-    if (vendor && bRequest == 52 && stage == CONTROL_STAGE_DATA && string_scratch_len_ > 0) {
-        const size_t n =
-            string_scratch_len_ < sizeof(s.str) - 1 ? string_scratch_len_ : sizeof(s.str) - 1;
-        std::memcpy(s.str, string_scratch_, n);
-        s.str[n] = '\0';
-        s.str_len = static_cast<uint8_t>(n);
-        s.w_index = pending_string_index_;
-        push(s);
-        return true;
-    }
-
-    USBVendor* v = static_cast<USBVendor*>(vendorSendResponseCtx);
     bool handled = false;
 
     // Respond path is optional and separate from observe counters above.
-    if (hypothesis_respond_ && v && vendor && stage == CONTROL_STAGE_SETUP) {
+    // Pass the original request into sendResponse (TinyUSB copies it).
+    if (hypothesis_respond_ && vendor && vendor_type && stage == CONTROL_STAGE_SETUP) {
         // Desk hypothesis AOA device-side replies (AOSP). Not NBT FACT.
-        // EVID-AOA-2026-10-28-002..004
-        arduino_usb_control_request_t req;
-        req.bmRequestRecipient = bmRequestType & 0x1f;
-        req.bmRequestType = (bmRequestType >> 5) & 0x3;
-        req.bmRequestDirection = (bmRequestType >> 7) & 0x1;
-        req.bRequest = bRequest;
-        req.wValue = wValue;
-        req.wIndex = wIndex;
-        req.wLength = wLength;
-
         if (bRequest == 51 && (bmRequestType & 0x80)) {
-            handled = v->sendResponse(rhport, &req, &aoa_protocol_le_, 2);
+            handled = vendor->sendResponse(rhport, request, &aoa_protocol_le_, 2);
             s.hypothesis_handled = handled;
+            if (handled) aoa51_respond_ok_++;
         } else if (bRequest == 52 && !(bmRequestType & 0x80)) {
             pending_string_index_ = static_cast<uint8_t>(wIndex & 0xff);
             string_scratch_len_ = wLength > sizeof(string_scratch_) ? sizeof(string_scratch_)
                                                                    : wLength;
             std::memset(string_scratch_, 0, sizeof(string_scratch_));
             if (string_scratch_len_ == 0) {
-                handled = v->sendResponse(rhport, &req, nullptr, 0);
+                handled = vendor->sendResponse(rhport, request, nullptr, 0);
             } else {
                 handled =
-                    v->sendResponse(rhport, &req, string_scratch_, string_scratch_len_);
+                    vendor->sendResponse(rhport, request, string_scratch_, string_scratch_len_);
             }
             s.hypothesis_handled = handled;
         } else if (bRequest == 53 && !(bmRequestType & 0x80)) {
             // START accepted; post-53 VID re-enum NOT IMPLEMENTED (Arduino lock).
-            handled = v->sendResponse(rhport, &req, nullptr, 0);
+            handled = vendor->sendResponse(rhport, request, nullptr, 0);
             s.hypothesis_handled = handled;
         } else if (bRequest == 58 && !(bmRequestType & 0x80)) {
-            // AOAv2 SET_AUDIO_MODE — accept/ignore (audio deprecated); still log via push.
-            handled = v->sendResponse(rhport, &req, nullptr, 0);
+            handled = vendor->sendResponse(rhport, request, nullptr, 0);
             s.hypothesis_handled = handled;
         }
+        respond_in_flight_ = handled;
     }
 
     if (stage == CONTROL_STAGE_SETUP) {
@@ -158,10 +167,7 @@ AoaControlTap& AoaControlTap::instance() {
 }
 void AoaControlTap::begin() { reset(); }
 void AoaControlTap::reset() {}
-bool AoaControlTap::onControlRequest(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t, uint16_t,
-                                     uint16_t, void*) {
-    return false;
-}
+bool AoaControlTap::onControlRequest(uint8_t, uint8_t, void const*, void*) { return false; }
 bool AoaControlTap::pop(AoaControlSample&) { return false; }
 
 }  // namespace aoa

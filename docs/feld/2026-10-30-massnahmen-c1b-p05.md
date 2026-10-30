@@ -198,6 +198,6 @@ Danach erst: umfassende Statussemantik und ggf. EP0-Hook laut Verbesserungsplan 
 | MSC: `stage` in usb-control Events; `control_setup_count` / `capture_valid` in health | **Code** |
 | MSC: AOA `transport_epoch` / `aoa_capture_valid` in `capture_health` bei AOA-Boot | **Code** |
 | M0 Android-Consumer | offen |
-| M2/M3 Lab A/B | **PASS** — siehe [`2026-10-30-lab-c1b-p05-stage-fix.md`](2026-10-30-lab-c1b-p05-stage-fix.md); Restpunkt: 51-Response STALL |
+| M2/M3 Lab A/B | **PASS** — siehe [`2026-10-30-lab-c1b-p05-stage-fix.md`](2026-10-30-lab-c1b-p05-stage-fix.md); 51-Response in **0.3.34** behoben (`0100`) |
 | M4.6 Retro-Caveat Feldberichte | offen |
 | M5 EP0-Hook | zurückgestellt (Callback sieht SETUP — Hook nicht nötig für Zählen) |
