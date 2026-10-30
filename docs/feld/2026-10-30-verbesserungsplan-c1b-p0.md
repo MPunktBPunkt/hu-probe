@@ -5,6 +5,7 @@
 **Repo-Basis:** `main` @ `849f30e`  
 **Gegenstand:** Umsetzungsplan zur Messsemantik und Capture-Gültigkeit des AOA-Observe-Pfads. Nicht implementiert.  
 **Code-Analyse:** [`2026-10-30-codeanalyse-connected-aoa.md`](2026-10-30-codeanalyse-connected-aoa.md)  
+**MSC-Verbesserungspotential:** [`2026-10-30-msc-verbesserungspotential.md`](2026-10-30-msc-verbesserungspotential.md)  
 **Multi-Review:** [`2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md`](2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md)  
 **Problemfelder:** [`2026-10-30-aoa-problemfelder.md`](2026-10-30-aoa-problemfelder.md)  
 **Gesamtbewertung:** [`2026-10-30-gesamtbewertung-aoa-fuenf-reports.md`](2026-10-30-gesamtbewertung-aoa-fuenf-reports.md)  
