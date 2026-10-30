@@ -160,15 +160,13 @@ Das ist C1b-P1-Instrumentierung, nicht ein weiterer P0-Hack.
 
 ```text
 AOA Accessory-Identity     → PASS (HU + Lab UI)
-51/52/53 Transition        → zu validieren (Stage + Lab A/B)
-Android erkennt Headunit   → PASS
-UI „verbunden“             → PASS
-Accessory-Consumer / FD    → Schritt 0
-Bulk auf Device-RX         → nicht nachgewiesen
-BCL                        → UNKNOWN
+51/52/53 im Vendor-CB      → Feld ABSENT (Direct-2D00); Lab Tap PASS
+USB-Bus jenseits CB        → UNKNOWN (Messlücke)
+Bulk Device-RX             → ABSENT (Messschicht)
+Application peer / BCL     → UNKNOWN / false beobachtet
 ```
 
-AOA-Weg nicht verwerfen. Nicht als Connected-App-Transport behandeln. Nächster diskriminierender Block ist **C1b-P0.5** (dieses Dokument), nicht Phase 1–3 des Verbesserungsplans in Originalreihenfolge.
+P0.5 Stage/Passiv **done**. Nächster diskriminierender Block: **M5 EP0-Core-Hook** ([epistemik](2026-10-30-epistemik-messluecke-ep0-bulk.md)), parallel M0 Consumer.
 
 ---
 
@@ -197,7 +195,7 @@ Danach erst: umfassende Statussemantik und ggf. EP0-Hook laut Verbesserungsplan 
 | M4.3 `device_response_queued` + `capture_valid` | **Code** |
 | MSC: `stage` in usb-control Events; `control_setup_count` / `capture_valid` in health | **Code** |
 | MSC: AOA `transport_epoch` / `aoa_capture_valid` in `capture_health` bei AOA-Boot | **Code** |
-| M0 Android-Consumer | offen |
-| M2/M3 Lab A/B | **PASS** — siehe [`2026-10-30-lab-c1b-p05-stage-fix.md`](2026-10-30-lab-c1b-p05-stage-fix.md); 51-Response in **0.3.34** behoben (`0100`) |
-| M4.6 Retro-Caveat Feldberichte | offen |
-| M5 EP0-Hook | zurückgestellt (Callback sieht SETUP — Hook nicht nötig für Zählen) |
+| M0 Android-Consumer | offen (parallel) |
+| M2/M3 Lab A/B | **PASS** — [`lab-c1b-p05-stage-fix`](2026-10-30-lab-c1b-p05-stage-fix.md); 51→`0100` in 0.3.34 |
+| M4.6 Retro-Caveat Feldberichte | **teilweise** — siehe [`epistemik-messluecke-ep0-bulk`](2026-10-30-epistemik-messluecke-ep0-bulk.md) |
+| M5 EP0-Hook | **wieder priorisiert** — Feld 0-RX/0-Vendor schließt Bus-Verkehr nicht aus; nächster Gatekeeper |
