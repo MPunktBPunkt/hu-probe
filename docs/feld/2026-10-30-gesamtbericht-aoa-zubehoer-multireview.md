@@ -16,6 +16,7 @@
 **Research 4 (Composite vs. vendor-only):** [`2026-10-30-research-04-composite-vs-vendor-only.md`](2026-10-30-research-04-composite-vs-vendor-only.md)  
 **Research 5 (BCL / Etch / NBT, öffentlicher Stand):** [`2026-10-30-research-05-bcl-etch-nbt.md`](2026-10-30-research-05-bcl-etch-nbt.md)  
 **Gesamtbewertung der fünf Reports:** [`2026-10-30-gesamtbewertung-aoa-fuenf-reports.md`](2026-10-30-gesamtbewertung-aoa-fuenf-reports.md)  
+**Code-Analyse Connected:** [`2026-10-30-codeanalyse-connected-aoa.md`](2026-10-30-codeanalyse-connected-aoa.md)  
 **Verwandt:** [`2026-10-29-c1b-p0-aoa-observe-feld.md`](2026-10-29-c1b-p0-aoa-observe-feld.md) · [`2026-10-29-c1b-p05a-instrumentation.md`](2026-10-29-c1b-p05a-instrumentation.md) · [`2026-10-29-c1b-massnahmen-nach-b1-b2b.md`](2026-10-29-c1b-massnahmen-nach-b1-b2b.md) · [`../GATES-Connected.md`](../GATES-Connected.md)
 
 **Quellenbasis für diesen Bericht:**
