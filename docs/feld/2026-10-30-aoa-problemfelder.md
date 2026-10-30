@@ -7,6 +7,7 @@
 **Quelle:** [`2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md`](2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md)  
 **Lab-Bericht:** [`2026-10-30-lab-aoa-aaidrive-phone-host.md`](2026-10-30-lab-aoa-aaidrive-phone-host.md)  
 **Instrumentierung:** [`2026-10-29-c1b-p05a-instrumentation.md`](2026-10-29-c1b-p05a-instrumentation.md)  
+**Gesamtbewertung der fünf Reports:** [`2026-10-30-gesamtbewertung-aoa-fuenf-reports.md`](2026-10-30-gesamtbewertung-aoa-fuenf-reports.md)  
 **Research-Reports:** [1](2026-10-30-research-01-aoa-direct-accessory.md), [2](2026-10-30-research-02-usb-sniffing-gadget-validation.md), [3](2026-10-30-research-03-esp32-tinyusb-ep0-callbacks.md), [4](2026-10-30-research-04-composite-vs-vendor-only.md) und [5](2026-10-30-research-05-bcl-etch-nbt.md) abgelegt. Die fünf Blöcke stehen unten.
 
 > **Ablagehinweis zum Stand `849f30e`:** Der Text ab Abschnitt 1 ist die gelieferte Filterung. Drei Formulierungen beschreiben diesen Commit nicht mehr als offenen Codefehler.
