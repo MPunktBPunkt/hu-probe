@@ -1,0 +1,26 @@
+=== Kurztest C1b-P0 observe — steck jetzt in die HU (~90s) ===
+Baseline: setup=0 51/52/53=0 P0_A/B/E=false hyp=off
+[16:10:26] A=True B=False C=True D=True E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=True attach=3 hyp=False
+[16:10:35] A=True B=False C=True D=True E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=True attach=3 hyp=False
+[16:10:42] A=True B=False C=True D=True E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=False attach=3 hyp=False
+[16:10:44] A=True B=False C=True D=True E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=True attach=4 hyp=False
+[16:10:46] A=True B=False C=True D=True E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=True attach=4 hyp=False
+[16:10:55] HTTP_000000
+[16:10:59] A=False B=False C=False D=False E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=True attach=1 hyp=False
+[16:11:06] A=False B=False C=False D=False E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=False attach=1 hyp=False
+[16:11:08] A=False B=False C=False D=False E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=True attach=2 hyp=False
+[16:11:10] A=False B=False C=False D=False E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=True attach=2 hyp=False
+[16:11:21] A=False B=False C=False D=False E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=True attach=2 hyp=False
+[16:11:33] A=False B=False C=False D=False E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=True attach=2 hyp=False
+[16:11:44] A=False B=False C=False D=False E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=True attach=2 hyp=False
+[16:11:55] A=False B=False C=False D=False E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=False attach=2 hyp=False
+[16:11:57] A=False B=False C=False D=False E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=True attach=3 hyp=False
+[16:12:06] A=False B=False C=False D=False E=False setup=0/0 51=0 52=0 53=0 drops=0 rx=0 bulk=0 mount=True attach=3 hyp=False
+=== Ende Snapshot ===
+fw 0.3.34 gadget aoa_observe mode observe
+P0 {'P0_0': True, 'P0_A': False, 'P0_B': False, 'P0_B_aoa_entry_callback_seen': False, 'P0_B_scope': 'vendor_callback_51_52_53_58', 'P0_C': False, 'P0_D': False, 'P0_E': False}
+control setup=0 vendor=0 51=0 52=0 53=0 58=0 drops=0 capt=True respond_ok51=0
+bulk rx=0 ev=0 peer=False mounted=False
+sid None ca_usb 0
+
+---
