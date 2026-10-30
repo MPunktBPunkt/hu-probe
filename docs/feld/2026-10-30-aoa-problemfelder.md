@@ -7,7 +7,7 @@
 **Quelle:** [`2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md`](2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md)  
 **Lab-Bericht:** [`2026-10-30-lab-aoa-aaidrive-phone-host.md`](2026-10-30-lab-aoa-aaidrive-phone-host.md)  
 **Instrumentierung:** [`2026-10-29-c1b-p05a-instrumentation.md`](2026-10-29-c1b-p05a-instrumentation.md)  
-**Fünf Research-Reports:** angekündigt, in diesem Ordner noch nicht abgelegt. Die fünf Blöcke stehen unten als geplante Schnitte.
+**Research-Reports:** [1 abgelegt](2026-10-30-research-01-aoa-direct-accessory.md), 2–5 ausstehend. Die fünf Blöcke stehen unten.
 
 > **Ablagehinweis zum Stand `849f30e`:** Der Text ab Abschnitt 1 ist die gelieferte Filterung. Drei Formulierungen beschreiben diesen Commit nicht mehr als offenen Codefehler.
 >
@@ -216,7 +216,7 @@ Die Spalte „Status im gelieferten Filter“ ist der Originaltext. Die letzte S
 
 Die Internet-Recherche wäre in diese 5 Blöcke geschnitten:
 
-1. **AOA / Direct-Accessory / Request 51/52/53/58**
+1. **AOA / Direct-Accessory / Request 51/52/53/58** — [`2026-10-30-research-01-aoa-direct-accessory.md`](2026-10-30-research-01-aoa-direct-accessory.md)
 2. **ESP32-S3 / TinyUSB / Arduino USBVendor / EP0-Control-Callbacks**
 3. **USB-Sniffing / Host-vs-Device Control Trace / Gadget Validation**
 4. **BMW Connected / BCL / Etch / NBT Evo Reverse Engineering**

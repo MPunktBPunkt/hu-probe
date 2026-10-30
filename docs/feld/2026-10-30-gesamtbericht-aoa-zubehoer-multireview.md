@@ -10,6 +10,7 @@
 **Lab-Bericht (Phone als Accessory):** [`2026-10-30-lab-aoa-aaidrive-phone-host.md`](2026-10-30-lab-aoa-aaidrive-phone-host.md)  
 **Artefakte:** [`artifacts/20261030-lab-aoa-aaidrive/`](artifacts/20261030-lab-aoa-aaidrive/)  
 **Problemfelder (gefiltert, ohne externe Recherche):** [`2026-10-30-aoa-problemfelder.md`](2026-10-30-aoa-problemfelder.md)  
+**Research 1 (AOA 51/52/53/58, Direct-2D00):** [`2026-10-30-research-01-aoa-direct-accessory.md`](2026-10-30-research-01-aoa-direct-accessory.md)  
 **Verwandt:** [`2026-10-29-c1b-p0-aoa-observe-feld.md`](2026-10-29-c1b-p0-aoa-observe-feld.md) · [`2026-10-29-c1b-p05a-instrumentation.md`](2026-10-29-c1b-p05a-instrumentation.md) · [`2026-10-29-c1b-massnahmen-nach-b1-b2b.md`](2026-10-29-c1b-massnahmen-nach-b1-b2b.md) · [`../GATES-Connected.md`](../GATES-Connected.md)
 
 **Quellenbasis für diesen Bericht:**
