@@ -21,13 +21,7 @@ static AoaObserveGadget* g_self = nullptr;
 
 static bool onVendorControl(uint8_t rhport, uint8_t stage,
                             arduino_usb_control_request_t const* request) {
-    if (!request) return false;
-    const uint8_t bm = static_cast<uint8_t>(
-        (request->bmRequestDirection << 7) | (request->bmRequestType << 5) |
-        request->bmRequestRecipient);
-    return AoaControlTap::instance().onControlRequest(
-        rhport, stage, bm, request->bRequest, request->wValue, request->wIndex,
-        request->wLength, &g_vendor);
+    return AoaControlTap::instance().onControlRequest(rhport, stage, request, &g_vendor);
 }
 
 static void onUsbEvent(void* /*arg*/, esp_event_base_t /*base*/, int32_t id, void* /*data*/) {

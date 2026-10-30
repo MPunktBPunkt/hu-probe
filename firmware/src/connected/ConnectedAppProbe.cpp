@@ -755,6 +755,7 @@ void ConnectedAppProbe::toStatusJson(JsonObject obj) const {
         tr["aoa52"] = tap.aoa52Count();
         tr["aoa53"] = tap.aoa53Count();
         tr["aoa58"] = tap.aoa58Count();
+        tr["aoa51_respond_ok"] = tap.aoa51RespondOk();
         tr["hypothesis_respond"] = tap.hypothesisRespond();
         tr["aoa_mode"] = tap.hypothesisRespond() ? "phone_like_responder" : "observe";
     }

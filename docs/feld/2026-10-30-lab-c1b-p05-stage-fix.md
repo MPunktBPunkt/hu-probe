@@ -31,8 +31,15 @@ hypothesis_respond=false · alle Host-Transfers Pipe/STALL
 
 Observe und Respond sind getrennt: Zählen ohne Antworten.
 
+## Follow-up FW 0.3.34 — 51-Response
+
+**Ursache:** Nach erfolgreichem SETUP+`tud_control_xfer` ruft TinyUSB den Complete-Callback mit `CONTROL_STAGE_DATA` auf. Rückgabe `false` → EP0-STALL (Host Pipe). Req 52 war zufällig ok, weil der DATA-Pfad schon `true` zurückgab.
+
+**Fix:** `respond_in_flight_` — DATA/ACK nach erfolgreichem Respond liefern `true`. Original-Request an `sendResponse`.
+
+**Lab Retest:** `51 GET_PROTOCOL → 0100` PASS · `aoa51_respond_ok=1` · 52×6 + 53 ok.
+
 ## Offen
 
-- 51-Response-Pfad debuggen (`sendResponse` / bmRequest-Rekonstruktion)
 - LXC usbfs-Passthrough (`pct` Node nach Re-Enum)
 - M0 Android-Consumer; Retro-Caveat Feldberichte

@@ -103,7 +103,7 @@ Blind-Knock beendet → FOLLOW-ON #9 Referenz-Capture ([Maßnahmen](feld/2026-10
 Note: `51/52/53=0` bei Already-Accessory `18D1:2D00` ≠ AOA-FAIL (AOSP: Transition-Requests).  
 **Lab 2026-10-30 (Debian=AOA-Host ↔ OnePlus/AAIdrive):** Handshake+Re-Enum `2D00` PASS; AAIdrive UI „verbunden“ mit BMW-Strings; **USB-Bulk ABSENT** (OUT Timeout). Bericht: [feld/2026-10-30-lab-aoa-aaidrive-phone-host.md](feld/2026-10-30-lab-aoa-aaidrive-phone-host.md). Konsolidierter Multi-Review (Mistral, Grok, GPT, Claude): [feld/2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md](feld/2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md).
 
-**FW 0.3.33 (C1b-P0.5 Instrument):** Stage-Gate TinyUSB `CONTROL_STAGE_*`. Lab A/B **PASS** ([feld/2026-10-30-lab-c1b-p05-stage-fix.md](feld/2026-10-30-lab-c1b-p05-stage-fix.md)): Zähler sehen 51/52/53; Responder 52/53 ok; 51 Host-STALL Restpunkt; Lab B passiv zählt ohne Antworten.
+**FW 0.3.34 (C1b-P0.5 Instrument):** Stage-Gate TinyUSB `CONTROL_STAGE_*`; DATA/ACK nach Respond → `true` (51-STALL behoben). Lab: 51→`0100`, 52/53 ok; Lab B passiv ([feld/2026-10-30-lab-c1b-p05-stage-fix.md](feld/2026-10-30-lab-c1b-p05-stage-fix.md)).
 
 **Boot-Mode Isolation (P0-0) — Voraussetzung:**
 
