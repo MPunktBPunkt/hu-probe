@@ -59,12 +59,16 @@ volatile size_t MscBotTap::pendingHead_ = 0;
 volatile size_t MscBotTap::pendingTail_ = 0;
 volatile size_t MscBotTap::pendingCount_ = 0;
 uint32_t MscBotTap::pendingOverflow_ = 0;
+uint32_t MscBotTap::controlSetupCount_ = 0;
+uint32_t MscBotTap::controlOtherStageCount_ = 0;
 
 void MscBotTap::begin(ReadInstrument* instrument) {
     instrument_ = instrument;
     clearBotEpoch();
     pendingHead_ = pendingTail_ = pendingCount_ = 0;
     pendingOverflow_ = 0;
+    controlSetupCount_ = 0;
+    controlOtherStageCount_ = 0;
 }
 
 ReadInstrument* MscBotTap::instrument() { return instrument_; }
@@ -112,7 +116,13 @@ void MscBotTap::queue(const Pending& p) {
 }
 
 void MscBotTap::queueControl(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue,
-                             uint16_t wIndex, uint16_t wLength) {
+                             uint16_t wIndex, uint16_t wLength, uint8_t stage) {
+    // TinyUSB CONTROL_STAGE_SETUP=1 (not Arduino REQUEST_STAGE_SETUP=0).
+    if (stage != CONTROL_STAGE_SETUP) {
+        controlOtherStageCount_++;
+        return;
+    }
+    controlSetupCount_++;
     Pending p;
     p.kind = Kind::Control;
     p.tUs = ProbeClock::nowUs();
@@ -121,6 +131,7 @@ void MscBotTap::queueControl(uint8_t bmRequestType, uint8_t bRequest, uint16_t w
     p.wValue = wValue;
     p.wIndex = wIndex;
     p.wLength = wLength;
+    p.stage = stage;
     // Standard CLEAR_FEATURE(HALT) while NEED_RESET: log, do not heal.
     if ((bmRequestType & 0x60) == 0 && bRequest == 0x01 && needResetArmed_) {
         p.flag = 1;
@@ -297,7 +308,7 @@ void MscBotTap::drain(int maxEvents) {
                 break;
             case Kind::Control:
                 instrument_->emitUsbControlTinyusb(p.bmRequestType, p.bRequest, p.wValue, p.wIndex,
-                                                   p.wLength, p.tUs, p.flag != 0);
+                                                   p.wLength, p.tUs, p.flag != 0, p.stage);
                 break;
             case Kind::SetAddress:
                 instrument_->emitUsbEpochTinyusb(p.tUs, "set_address", 0, p.wValue, nullptr);
@@ -468,19 +479,19 @@ bool __wrap_tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool sta
  * @brief Linker wrap of mscd_control_xfer_cb: queue the SETUP and detect MSC BOT_RESET.
  *
  * A class request 0xFF (Bulk-Only Mass Storage Reset) at SETUP stage starts a new BOT epoch
- * after the real handler ran.
+ * after the real handler ran. Stage is TinyUSB CONTROL_STAGE_* (SETUP=1).
  *
  * @param rhport   Root hub port.
- * @param stage    Control stage (only CONTROL_STAGE_SETUP is tapped).
+ * @param stage    Control stage (only CONTROL_STAGE_SETUP is published; others counted).
  * @param request  Control request; may be nullptr.
  * @return Result of the real mscd_control_xfer_cb.
  * @note USB task context.
  */
 bool __wrap_mscd_control_xfer_cb(uint8_t rhport, uint8_t stage,
                                  tusb_control_request_t const* request) {
-    if (request && stage == CONTROL_STAGE_SETUP) {
+    if (request) {
         MscBotTap::queueControl(request->bmRequestType, request->bRequest, request->wValue,
-                                request->wIndex, request->wLength);
+                                request->wIndex, request->wLength, stage);
     }
     bool ok = __real_mscd_control_xfer_cb(rhport, stage, request);
     if (request && stage == CONTROL_STAGE_SETUP && (request->bmRequestType & 0x60) == 0x20 &&
@@ -660,7 +671,7 @@ void MscBotTap::afterMscdXfer() {}
 void MscBotTap::poll() {}
 void MscBotTap::drain(int) {}
 void MscBotTap::queue(const Pending&) {}
-void MscBotTap::queueControl(uint8_t, uint8_t, uint16_t, uint16_t, uint16_t) {}
+void MscBotTap::queueControl(uint8_t, uint8_t, uint16_t, uint16_t, uint16_t, uint8_t) {}
 void MscBotTap::queueSetAddress(uint8_t) {}
 void MscBotTap::queueMount() {}
 void MscBotTap::queueUmount() {}
@@ -683,6 +694,8 @@ volatile size_t MscBotTap::pendingHead_ = 0;
 volatile size_t MscBotTap::pendingTail_ = 0;
 volatile size_t MscBotTap::pendingCount_ = 0;
 uint32_t MscBotTap::pendingOverflow_ = 0;
+uint32_t MscBotTap::controlSetupCount_ = 0;
+uint32_t MscBotTap::controlOtherStageCount_ = 0;
 
 #endif
 

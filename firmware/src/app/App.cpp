@@ -19,6 +19,7 @@
 #include "core/PhaseGate.h"
 #include "msc/MscBotTap.h"
 #include "connected/ConnectedAppProbe.h"
+#include "connected/aoa/AoaControlTap.h"
 #include "connected/aoa/AoaObserveGadget.h"
 #include <WiFi.h>
 #include <WiFiManager.h>
@@ -339,9 +340,22 @@ void App::emitCaptureHealth() {
                           tcp_.connected());
     doc["msc_sample_overflow"] = msc_.sampleOverflow();
     doc["bot_pending_overflow"] = MscBotTap::pendingOverflow();
+    doc["msc_control_setup_count"] = MscBotTap::controlSetupCount();
+    doc["msc_control_other_stage_count"] = MscBotTap::controlOtherStageCount();
+    doc["msc_capture_valid"] = MscBotTap::captureValid();
     doc["msc_reads"] = msc_.readCount();
     doc["transport"] = session_.transport();
-    doc["transport_epoch"] = msc_.transportEpoch();
+    // AOA boots: transport_epoch from AoaObserveGadget; MSC boots: MscGadget.
+    if (config_.isAoaObserve()) {
+        doc["transport_epoch"] = huprobe::aoa::AoaObserveGadget::instance().transportEpoch();
+        const auto& tap = huprobe::aoa::AoaControlTap::instance();
+        doc["aoa_control_drops"] = tap.dropCount();
+        doc["aoa_capture_valid"] = tap.captureValid();
+        doc["aoa_setup_count"] = tap.setupCount();
+        doc["hypothesis_respond"] = tap.hypothesisRespond();
+    } else {
+        doc["transport_epoch"] = msc_.transportEpoch();
+    }
     doc["end_reason"] = session_.active() ? "active" : "session_stop";
     doc["upload_status"] = tcp_.connected() ? "streaming" : "pending";
     instrument_.turStatsJson(doc.as<JsonObject>());

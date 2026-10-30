@@ -384,11 +384,14 @@ static const char* PAGE =
     "      ' C='+!!p0.P0_C+' D='+!!p0.P0_D+' E='+!!p0.P0_E+"
     "      ' · ca_usb='+(ca.ca_usb_count||0)+"
     "      ' · setup='+(tr.setup_count||0)+'/'+(tr.vendor_setup_count||0)+"
-    "      ' drops='+(tr.drops||0)+"
+    "      ' drops='+(tr.drops||0)+' capt='+!!tr.capture_valid+"
     "      ' · aoa51='+(tr.aoa51||0)+"
-    "      ' 52='+(tr.aoa52||0)+' 53='+(tr.aoa53||0)+' · bulk_rx_ev='+(tr.bulk_rx_events||0);"
+    "      ' 52='+(tr.aoa52||0)+' 53='+(tr.aoa53||0)+' · bulk_rx_ev='+(tr.bulk_rx_events||0)+"
+    "      ' · mode='+(tr.aoa_mode||'?')+' hyp_resp='+!!tr.hypothesis_respond;"
     "    caNow.textContent='Gate '+(ca.gate||'?')+' · '+(ca.scenario||'')+' · State '+(ca.state||'idle')+"
-    "      ' · AOA '+(tr.impl||'?')+' armed='+!!tr.armed+' conn='+!!tr.connected+"
+    "      ' · AOA '+(tr.impl||'?')+' armed='+!!tr.armed+"
+    "      ' mounted='+!!(tr.usb_function_mounted!=null?tr.usb_function_mounted:tr.connected)+"
+    "      ' peer='+!!tr.application_peer_proven+"
     "      ' stack='+!!tr.usb_stack_bound+' rx='+(tr.rx_bytes||0)+' tx='+(tr.tx_bytes||0)+"
     "      (tr.vid!=null?(' · VID 0x'+Number(tr.vid).toString(16)+':'+Number(tr.pid||0).toString(16)):'')+"
     "      ' · Frames '+(ca.frames||0)+' mal '+(ca.malformed||0)+' unk '+(ca.unknown_cmd||0)+"
@@ -626,6 +629,8 @@ void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
     server_.on("/api/connected/link/stop", HTTP_POST, [this]() { handleConnectedLinkStop(); });
     server_.on("/api/connected/link/inject", HTTP_POST, [this]() { handleConnectedLinkInject(); });
     server_.on("/api/connected/link/knock", HTTP_POST, [this]() { handleConnectedLinkKnock(); });
+    server_.on("/api/connected/link/hypothesis_respond", HTTP_POST,
+               [this]() { handleConnectedHypothesisRespond(); });
     server_.on("/api/connected/gadget/reboot", HTTP_POST, [this]() { handleConnectedGadgetReboot(); });
     server_.on("/api/usb/cycle", HTTP_POST, [this]() { handleUsbCycle(); });
     server_.on("/api/usb/remount", HTTP_POST, [this]() { handleUsbRemount(); });
@@ -1482,6 +1487,39 @@ void WebUi::handleConnectedLinkKnock() {
     out["pattern"] = pattern;
     out["evidence_level"] = "HYP";
     out["note"] = "gated_bulk_out_not_nbt_fact";
+    if (ca.lastErr() && ca.lastErr()[0]) out["err"] = ca.lastErr();
+    ca.toStatusJson(out["connected_app"].to<JsonObject>());
+    sendJson(ok ? 200 : 409, out);
+}
+
+void WebUi::handleConnectedHypothesisRespond() {
+    JsonDocument out;
+    bool want = false;
+    bool have = false;
+    if (server_.hasArg("plain") && server_.arg("plain").length() > 0) {
+        JsonDocument in;
+        if (!deserializeJson(in, server_.arg("plain"))) {
+            if (!in["hypothesis_respond"].isNull()) {
+                want = in["hypothesis_respond"].as<bool>();
+                have = true;
+            } else if (!in["on"].isNull()) {
+                want = in["on"].as<bool>();
+                have = true;
+            }
+        }
+    }
+    if (!have) {
+        out["ok"] = false;
+        out["err"] = "need_body_hypothesis_respond_bool";
+        sendJson(400, out);
+        return;
+    }
+    ConnectedAppProbe& ca = ConnectedAppProbe::instance();
+    const bool ok = ca.setHypothesisRespond(want);
+    out["ok"] = ok;
+    out["action"] = "hypothesis_respond";
+    out["hypothesis_respond"] = want;
+    out["note"] = "lab_a_responder_vs_lab_b_observe_not_host_ack";
     if (ca.lastErr() && ca.lastErr()[0]) out["err"] = ca.lastErr();
     ca.toStatusJson(out["connected_app"].to<JsonObject>());
     sendJson(ok ? 200 : 409, out);

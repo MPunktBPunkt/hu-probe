@@ -11,6 +11,8 @@
 #include "core/ProbeClock.h"
 #include "net/EventBus.h"
 
+#include "tusb.h"
+
 #include <cstdio>
 #include <cstring>
 #include <vector>
@@ -271,11 +273,18 @@ void ConnectedAppProbe::drainControlTap() {
         extra["w_index"] = s.w_index;
         extra["w_length"] = s.w_length;
         extra["stage"] = s.stage;
+        extra["stage_name"] = s.stage == CONTROL_STAGE_SETUP   ? "setup"
+                              : s.stage == CONTROL_STAGE_DATA  ? "data"
+                              : s.stage == CONTROL_STAGE_ACK   ? "ack"
+                              : s.stage == CONTROL_STAGE_IDLE  ? "idle"
+                                                               : "other";
         extra["request_type"] = req_type == 0   ? "standard"
                                 : req_type == 1 ? "class"
                                 : req_type == 2 ? "vendor"
                                                 : "reserved";
-        extra["hypothesis_handled"] = s.hypothesis_handled;
+        // device_response_queued: sendResponse() called — not host ACK.
+        extra["device_response_queued"] = s.hypothesis_handled;
+        extra["hypothesis_handled"] = s.hypothesis_handled;  // legacy alias
         if (aoa_req) {
             extra["aoa_desk_name"] =
                 s.b_request == 51 ? "GET_PROTOCOL" : (s.b_request == 52 ? "SEND_STRING" : "START");
@@ -652,6 +661,17 @@ bool ConnectedAppProbe::labSetConnected(bool up) {
     return true;
 }
 
+bool ConnectedAppProbe::setHypothesisRespond(bool on) {
+    if (!aoa_observe_boot_) {
+        lastErr_ = "need_aoa_observe_boot";
+        return false;
+    }
+    AoaControlTap::instance().setHypothesisRespond(on);
+    DiagLog::printf("[CA] hypothesis_respond=%d\n", on ? 1 : 0);
+    lastErr_ = "";
+    return true;
+}
+
 void ConnectedAppProbe::toStatusJson(JsonObject obj) const {
     obj["plane"] = "CONTROL";
     obj["scenario"] = scenario_;
@@ -690,6 +710,8 @@ void ConnectedAppProbe::toStatusJson(JsonObject obj) const {
     p0["P0_0"] = aoa_observe_boot_;
     p0["P0_A"] = p0_a_;
     p0["P0_B"] = p0_b_;
+    p0["P0_B_aoa_entry_callback_seen"] = p0_b_;
+    p0["P0_B_scope"] = "vendor_callback_51_52_53_58";
     p0["P0_C"] = p0_c_;
     p0["P0_D"] = p0_d_;
     p0["P0_E"] = p0_e_;
@@ -700,7 +722,10 @@ void ConnectedAppProbe::toStatusJson(JsonObject obj) const {
     tr["usb_role_intent"] = aoa_.usbRoleIntent();
     tr["usb_stack_bound"] = aoa_.usbStackBound();
     tr["armed"] = aoa_.armed();
+    // connected == usb_function_mounted; not application peer.
     tr["connected"] = aoa_.connected();
+    tr["usb_function_mounted"] = aoa_.usbFunctionMounted();
+    tr["application_peer_proven"] = aoa_.applicationPeerProven();
     tr["rx_bytes"] = aoa_.rxBytes();
     tr["tx_bytes"] = aoa_.txBytes();
     tr["inject_count"] = aoa_.injectCount();
@@ -721,12 +746,17 @@ void ConnectedAppProbe::toStatusJson(JsonObject obj) const {
         tr["setup_count"] = tap.setupCount();
         tr["vendor_setup_count"] = tap.vendorSetupCount();
         tr["drops"] = tap.dropCount();
+        tr["capture_valid"] = tap.captureValid();
+        tr["visibility_scope"] = "usbvendor_onrequest_only";
+        tr["is_full_ep0_trace"] = false;
         // Legacy: historically Vendor-SETUPs only (= vendor_setup_count).
         tr["aoa_control_count"] = tap.vendorSetupCount();
         tr["aoa51"] = tap.aoa51Count();
         tr["aoa52"] = tap.aoa52Count();
         tr["aoa53"] = tap.aoa53Count();
+        tr["aoa58"] = tap.aoa58Count();
         tr["hypothesis_respond"] = tap.hypothesisRespond();
+        tr["aoa_mode"] = tap.hypothesisRespond() ? "phone_like_responder" : "observe";
     }
 
     if (has_last_) {

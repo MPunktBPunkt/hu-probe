@@ -5,8 +5,8 @@
  * @brief C1b-P0/P0.5 USBVendor-only gadget for AOA observe boots (no MSC interface).
  *
  * Profiles (NVS usb_gadget + reboot):
- * - Accessory: VID/PID 0x18D1:0x2D00 (Already-Accessory desk hypothesis)
- * - PhoneLike: non-accessory VID/PID for B1 switch/51–53 measurement
+ * - Accessory (`aoa_observe`): VID/PID 0x18D1:0x2D00 — observe-only (hypothesis_respond=false)
+ * - PhoneLike (`aoa_phone_like`): non-accessory IDs + desk 51/52/53 responder (Lab A / B1)
  *
  * Soft-detach is D+ only — not a gadget-mode or identity switch.
  */
