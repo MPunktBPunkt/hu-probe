@@ -1,0 +1,32 @@
+{"ts": "2026-10-30T07:03:13.446266+00:00", "event": "run_start"}
+{"ts": "2026-10-30T07:03:13.469835+00:00", "event": "poll", "phone": true, "phone_addr": 49, "acc": false, "acc_pid": null, "acc_addr": null}
+{"ts": "2026-10-30T07:03:13.471155+00:00", "event": "inventory", "phone": true, "phone_addr": 49, "acc": false, "acc_pid": null, "acc_addr": null}
+{"ts": "2026-10-30T07:03:13.471457+00:00", "event": "path", "path": "handshake"}
+{"ts": "2026-10-30T07:03:13.553720+00:00", "event": "set_configuration"}
+{"ts": "2026-10-30T07:03:13.553974+00:00", "event": "claim_interface", "iface": 0}
+{"ts": "2026-10-30T07:03:13.554726+00:00", "event": "aoa51", "hex": "0200", "ver": 2}
+{"ts": "2026-10-30T07:03:13.555938+00:00", "event": "aoa52", "idx": 0, "name": "manufacturer", "value": "BMW"}
+{"ts": "2026-10-30T07:03:13.556826+00:00", "event": "aoa52", "idx": 1, "name": "model", "value": "NBT Evo"}
+{"ts": "2026-10-30T07:03:13.557839+00:00", "event": "aoa52", "idx": 2, "name": "description", "value": "Headunit"}
+{"ts": "2026-10-30T07:03:13.558657+00:00", "event": "aoa52", "idx": 3, "name": "version", "value": "1.0"}
+{"ts": "2026-10-30T07:03:13.559511+00:00", "event": "aoa52", "idx": 4, "name": "uri", "value": "http://www.bmw.com"}
+{"ts": "2026-10-30T07:03:13.560179+00:00", "event": "aoa52", "idx": 5, "name": "serial", "value": "HU-PROBE-LAB"}
+{"ts": "2026-10-30T07:03:13.560696+00:00", "event": "aoa53_start"}
+{"ts": "2026-10-30T07:03:14.167633+00:00", "event": "accessory", "pid": "2d00", "bus": 2, "addr": 50, "t": 0.607}
+{"ts": "2026-10-30T07:03:14.170784+00:00", "event": "set_configuration"}
+{"ts": "2026-10-30T07:03:14.171024+00:00", "event": "claim_interface", "iface": 0}
+{"ts": "2026-10-30T07:03:14.171320+00:00", "event": "eps", "out": "0x1", "inn": "0x81", "wMaxIn": 512, "wMaxOut": 512}
+{"ts": "2026-10-30T07:03:14.171384+00:00", "event": "listen_start", "label": "pre_tx", "seconds": 5.0}
+{"ts": "2026-10-30T07:03:19.377415+00:00", "event": "listen_end", "label": "pre_tx", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:03:21.378274+00:00", "event": "bulk_out_err", "label": "hex4", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:03:21.378512+00:00", "event": "listen_start", "label": "after_hex4", "seconds": 4.0}
+{"ts": "2026-10-30T07:03:25.382189+00:00", "event": "listen_end", "label": "after_hex4", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:03:27.382694+00:00", "event": "bulk_out_err", "label": "zeros8", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:03:27.382847+00:00", "event": "listen_start", "label": "after_zeros8", "seconds": 4.0}
+{"ts": "2026-10-30T07:03:31.387145+00:00", "event": "listen_end", "label": "after_zeros8", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:03:33.387627+00:00", "event": "bulk_out_err", "label": "bcl_len0_hdr_guess", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:03:33.387778+00:00", "event": "listen_start", "label": "after_bcl_len0_hdr_guess", "seconds": 4.0}
+{"ts": "2026-10-30T07:03:37.391778+00:00", "event": "listen_end", "label": "after_bcl_len0_hdr_guess", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:03:37.391982+00:00", "event": "listen_start", "label": "final_idle", "seconds": 25.0}
+{"ts": "2026-10-30T07:04:02.614325+00:00", "event": "listen_end", "label": "final_idle", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:04:02.614556+00:00", "event": "run_done", "mode": "handshake"}

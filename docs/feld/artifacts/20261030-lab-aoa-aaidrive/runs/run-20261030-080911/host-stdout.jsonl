@@ -1,0 +1,31 @@
+{"ts": "2026-10-30T07:09:11.999336+00:00", "event": "run_start", "note": "retry_no_uri_full_log"}
+{"ts": "2026-10-30T07:09:11.999453+00:00", "event": "wait_phone", "timeout": 90}
+{"ts": "2026-10-30T07:09:12.017595+00:00", "event": "usb_state", "phone": true, "phone_addr": 54, "acc": false, "acc_addr": null, "acc_pid": null}
+{"ts": "2026-10-30T07:09:12.017691+00:00", "event": "path", "path": "handshake_from_mtp"}
+{"ts": "2026-10-30T07:09:12.018548+00:00", "event": "aoa51", "hex": "0200", "ver": 2}
+{"ts": "2026-10-30T07:09:12.019418+00:00", "event": "aoa52", "idx": 0, "name": "manufacturer", "value": "BMW"}
+{"ts": "2026-10-30T07:09:12.020068+00:00", "event": "aoa52", "idx": 1, "name": "model", "value": "NBT Evo"}
+{"ts": "2026-10-30T07:09:12.021071+00:00", "event": "aoa52", "idx": 2, "name": "description", "value": "Headunit"}
+{"ts": "2026-10-30T07:09:12.022367+00:00", "event": "aoa52", "idx": 3, "name": "version", "value": "1.0"}
+{"ts": "2026-10-30T07:09:12.023207+00:00", "event": "aoa52", "idx": 4, "name": "uri", "value": ""}
+{"ts": "2026-10-30T07:09:12.024671+00:00", "event": "aoa52", "idx": 5, "name": "serial", "value": "HU-PROBE-LAB"}
+{"ts": "2026-10-30T07:09:12.024987+00:00", "event": "aoa53_start"}
+{"ts": "2026-10-30T07:09:12.631046+00:00", "event": "accessory", "pid": "2d00", "addr": 55, "t": 0.606}
+{"ts": "2026-10-30T07:09:12.634854+00:00", "event": "set_configuration"}
+{"ts": "2026-10-30T07:09:12.635092+00:00", "event": "claim", "iface": 0}
+{"ts": "2026-10-30T07:09:12.635389+00:00", "event": "eps", "out": "0x1", "inn": "0x81"}
+{"ts": "2026-10-30T07:09:12.635471+00:00", "event": "operator", "msg": "start_AAIdrive_now"}
+{"ts": "2026-10-30T07:09:12.635511+00:00", "event": "listen_start", "label": "aaidrive_window_1", "seconds": 25.0}
+{"ts": "2026-10-30T07:09:37.859480+00:00", "event": "listen_end", "label": "aaidrive_window_1", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:09:39.360330+00:00", "event": "bulk_out_err", "label": "hex4", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:09:39.360601+00:00", "event": "listen_start", "label": "after_hex4", "seconds": 5.0}
+{"ts": "2026-10-30T07:09:42.226693+00:00", "event": "bulk_in_err", "label": "after_hex4", "err": "[Errno 5] Input/Output Error"}
+{"ts": "2026-10-30T07:09:42.226921+00:00", "event": "listen_end", "label": "after_hex4", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:09:42.227612+00:00", "event": "bulk_out_err", "label": "zeros8", "err": "[Errno 5] Input/Output Error", "type": "USBError"}
+{"ts": "2026-10-30T07:09:42.227689+00:00", "event": "listen_start", "label": "after_zeros8", "seconds": 5.0}
+{"ts": "2026-10-30T07:09:42.227918+00:00", "event": "bulk_in_err", "label": "after_zeros8", "err": "[Errno 5] Input/Output Error"}
+{"ts": "2026-10-30T07:09:42.227972+00:00", "event": "listen_end", "label": "after_zeros8", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:09:42.228010+00:00", "event": "listen_start", "label": "aaidrive_window_2", "seconds": 40.0}
+{"ts": "2026-10-30T07:09:42.228231+00:00", "event": "bulk_in_err", "label": "aaidrive_window_2", "err": "[Errno 5] Input/Output Error"}
+{"ts": "2026-10-30T07:09:42.228302+00:00", "event": "listen_end", "label": "aaidrive_window_2", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:09:42.228337+00:00", "event": "run_done"}

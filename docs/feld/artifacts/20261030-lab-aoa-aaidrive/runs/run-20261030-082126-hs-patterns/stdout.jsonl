@@ -1,0 +1,49 @@
+{"ts": "2026-10-30T07:21:26.709212+00:00", "event": "start"}
+{"ts": "2026-10-30T07:21:26.709331+00:00", "event": "wait_mtp"}
+{"ts": "2026-10-30T07:21:26.731183+00:00", "event": "phone", "addr": 62}
+{"ts": "2026-10-30T07:21:26.734731+00:00", "event": "aoa51", "hex": "0200"}
+{"ts": "2026-10-30T07:21:26.739542+00:00", "event": "aoa53"}
+{"ts": "2026-10-30T07:21:27.347832+00:00", "event": "accessory", "pid": "2d00", "addr": 63, "t": 0.608}
+{"ts": "2026-10-30T07:21:27.351041+00:00", "event": "claim"}
+{"ts": "2026-10-30T07:21:27.351601+00:00", "event": "eps", "inn": "0x81", "out": "0x1"}
+======== HANDSHAKE OK — AAIdrive should show connected; patterns starting ========
+{"ts": "2026-10-30T07:21:28.351832+00:00", "event": "pattern", "name": "pre_listen", "tx_len": 0}
+{"ts": "2026-10-30T07:21:31.356755+00:00", "event": "listen_end", "label": "pre_listen", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:21:31.356923+00:00", "event": "pattern", "name": "hu_handshake_v4", "tx_len": 16}
+{"ts": "2026-10-30T07:21:32.357403+00:00", "event": "bulk_out_err", "label": "hu_handshake_v4", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:21:37.415381+00:00", "event": "listen_end", "label": "hu_handshake_v4", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:21:37.415559+00:00", "event": "pattern", "name": "hu_handshake_v3", "tx_len": 16}
+{"ts": "2026-10-30T07:21:38.415882+00:00", "event": "bulk_out_err", "label": "hu_handshake_v3", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:21:42.471523+00:00", "event": "listen_end", "label": "hu_handshake_v3", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:21:42.471766+00:00", "event": "pattern", "name": "hex4", "tx_len": 4}
+{"ts": "2026-10-30T07:21:43.472117+00:00", "event": "bulk_out_err", "label": "hex4", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:21:47.527710+00:00", "event": "listen_end", "label": "hex4", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:21:47.527963+00:00", "event": "pattern", "name": "hex4_repeat_1s_x5"}
+{"ts": "2026-10-30T07:21:48.528370+00:00", "event": "bulk_out_err", "label": "hex4_0", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:21:49.530128+00:00", "event": "listen_end", "label": "hex4_0", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:21:50.530761+00:00", "event": "bulk_out_err", "label": "hex4_1", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:21:51.532455+00:00", "event": "listen_end", "label": "hex4_1", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:21:52.533234+00:00", "event": "bulk_out_err", "label": "hex4_2", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:21:53.534849+00:00", "event": "listen_end", "label": "hex4_2", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:21:54.535284+00:00", "event": "bulk_out_err", "label": "hex4_3", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:21:55.536819+00:00", "event": "listen_end", "label": "hex4_3", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:21:56.537240+00:00", "event": "bulk_out_err", "label": "hex4_4", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:21:57.538591+00:00", "event": "listen_end", "label": "hex4_4", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:21:57.538848+00:00", "event": "pattern", "name": "selectproto3", "tx_len": 10}
+{"ts": "2026-10-30T07:21:58.539245+00:00", "event": "bulk_out_err", "label": "selectproto3", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:22:01.593953+00:00", "event": "listen_end", "label": "selectproto3", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:22:01.594219+00:00", "event": "pattern", "name": "knock20", "tx_len": 20}
+{"ts": "2026-10-30T07:22:02.594634+00:00", "event": "bulk_out_err", "label": "knock20", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:22:06.650894+00:00", "event": "listen_end", "label": "knock20", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:22:06.651175+00:00", "event": "pattern", "name": "open_etch", "tx_len": 8}
+{"ts": "2026-10-30T07:22:07.651544+00:00", "event": "bulk_out_err", "label": "open_etch", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:22:10.705597+00:00", "event": "listen_end", "label": "open_etch", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:22:10.705853+00:00", "event": "pattern", "name": "deadbeef", "tx_len": 4}
+{"ts": "2026-10-30T07:22:11.706266+00:00", "event": "bulk_out_err", "label": "deadbeef", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:22:13.758697+00:00", "event": "listen_end", "label": "deadbeef", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:22:13.758951+00:00", "event": "pattern", "name": "zeros8", "tx_len": 8}
+{"ts": "2026-10-30T07:22:14.759304+00:00", "event": "bulk_out_err", "label": "zeros8", "err": "[Errno 110] Operation timed out", "type": "USBTimeoutError"}
+{"ts": "2026-10-30T07:22:16.811824+00:00", "event": "listen_end", "label": "zeros8", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:22:24.823275+00:00", "event": "listen_end", "label": "final", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:22:24.823533+00:00", "event": "done", "any_rx": false, "any_tx": false}
+RESULT any_tx=False any_rx=False

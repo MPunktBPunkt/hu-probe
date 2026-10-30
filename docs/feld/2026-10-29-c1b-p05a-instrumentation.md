@@ -32,14 +32,17 @@ Soft-Cycle unter OTG am Lab kann WiFi/Reboot auslösen — lieber `link/start` s
 ```bash
 # Probe .88, OTG Host↔Probe, pyusb (venv)
 python3 -m venv .venv-lab && .venv-lab/bin/pip install pyusb
-.venv-lab/bin/python tools/lab_aoa_control_tap_check.py --ip 192.168.178.88
+.venv-lab/bin/python tools/lab_aoa_iface.py doctor
+.venv-lab/bin/python tools/lab_aoa_iface.py arm
+.venv-lab/bin/python tools/lab_aoa_iface.py host-handshake --arm --profile lab
+# compat: tools/lab_aoa_control_tap_check.py
 ```
 
 Erwartet: `aoa51` steigt nach Host-`GET_PROTOCOL`; zeigt, dass der Tap Vendor-SETUPs sieht.
 
-**Lab-Host-Hinweis (DebianCursor LXC):** sysfs zeigt `18d1:2d00`, aber `/dev/bus/usb/00x/0yy`
-fehlt → pyusb `ctrl_transfer` = ENODEV. Descriptor-Check (Interface-Anzahl) geht; Control-Tap-Check
-braucht USB-Device-Node-Passthrough.
+**Lab-Host-Hinweis (DebianCursor LXC):** nach `arm`/`soft-attach` erscheint die Probe in sysfs
+(`04e8:6860` bzw. `18d1:2d00`), aber `/dev/bus/usb` ist leer → pyusb `ctrl_transfer` = ENODEV.
+Descriptor-Sicht ja; Host-Control/Bulk braucht usbfs-Nodes im LXC (`c 189:*` + `/dev/bus/usb`).
 
 ## Feld (Auto) — wenn .89 online
 

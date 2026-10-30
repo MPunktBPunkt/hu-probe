@@ -1,0 +1,6 @@
+{"ts": "2026-10-30T07:02:25.693270+00:00", "event": "run_start"}
+{"ts": "2026-10-30T07:02:25.711105+00:00", "event": "inventory", "phone": false, "phone_addr": null, "acc": true, "acc_pid": "2d00", "acc_addr": 48}
+{"ts": "2026-10-30T07:02:25.711225+00:00", "event": "path", "path": "already_accessory"}
+{"ts": "2026-10-30T07:02:25.711530+00:00", "event": "eps", "out": "0x1", "inn": "0x81"}
+{"ts": "2026-10-30T07:02:25.711583+00:00", "event": "listen_start", "label": "pre_tx", "seconds": 5.0}
+{"ts": "2026-10-30T07:02:30.715269+00:00", "event": "listen_end", "label": "pre_tx", "total": 0, "chunks": 0}

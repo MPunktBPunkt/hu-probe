@@ -1,0 +1,18 @@
+2026-10-30T08:14:27+01:00
+=== lsusb ===
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 002 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 002 Device 002: ID 05e3:0610 Genesys Logic, Inc. Hub
+Bus 002 Device 006: ID 0bda:2838 Realtek Semiconductor Corp. RTL2838 DVB-T
+Bus 002 Device 042: ID 1a86:55d3 QinHeng Electronics USB Single Serial
+Bus 002 Device 044: ID 8087:0025 Intel Corp. Wireless-AC 9260 Bluetooth Adapter
+Bus 002 Device 058: ID 22d9:2764 OPPO Electronics Corp. OnePlus 12
+Bus 003 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 004 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 005 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+=== oneplus/google ===
+Bus 002 Device 058: ID 22d9:2764 OPPO Electronics Corp. OnePlus 12
+phone True 58
+acc False None
+phone_ifaces 1
+  0 0x6

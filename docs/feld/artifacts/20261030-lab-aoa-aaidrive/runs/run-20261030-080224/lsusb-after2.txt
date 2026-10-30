@@ -1,0 +1,1 @@
+Bus 002 Device 050: ID 18d1:2d00 Google Inc. Android Open Accessory device (accessory)

@@ -1,0 +1,31 @@
+{"ts": "2026-10-30T07:11:40.696271+00:00", "event": "run_start", "note": "timed_aaidrive_after_marker"}
+{"ts": "2026-10-30T07:11:40.696363+00:00", "event": "wait_phone", "timeout": 120, "hint": "unplug_replug_then_wait"}
+{"ts": "2026-10-30T07:11:40.713053+00:00", "event": "usb_state", "phone": true, "phone_addr": 56, "acc": false, "acc_addr": null}
+{"ts": "2026-10-30T07:11:48.770033+00:00", "event": "path", "path": "handshake_from_mtp"}
+{"ts": "2026-10-30T07:11:48.772603+00:00", "event": "aoa51", "hex": "0200", "ver": 2}
+{"ts": "2026-10-30T07:11:48.779179+00:00", "event": "aoa52", "idx": 0, "name": "manufacturer", "value": "BMW"}
+{"ts": "2026-10-30T07:11:48.780160+00:00", "event": "aoa52", "idx": 1, "name": "model", "value": "NBT Evo"}
+{"ts": "2026-10-30T07:11:48.780939+00:00", "event": "aoa52", "idx": 2, "name": "description", "value": "Headunit"}
+{"ts": "2026-10-30T07:11:48.783040+00:00", "event": "aoa52", "idx": 3, "name": "version", "value": "1.0"}
+{"ts": "2026-10-30T07:11:48.784188+00:00", "event": "aoa52", "idx": 4, "name": "uri", "value": ""}
+{"ts": "2026-10-30T07:11:48.784751+00:00", "event": "aoa52", "idx": 5, "name": "serial", "value": "HU-PROBE-LAB"}
+{"ts": "2026-10-30T07:11:48.785011+00:00", "event": "aoa53_start"}
+{"ts": "2026-10-30T07:11:49.391576+00:00", "event": "accessory", "pid": "2d00", "addr": 57, "t": 0.606}
+{"ts": "2026-10-30T07:11:49.394588+00:00", "event": "claim", "iface": 0}
+{"ts": "2026-10-30T07:11:49.394917+00:00", "event": "eps", "out": "0x1", "inn": "0x81"}
+{"ts": "2026-10-30T07:11:49.395035+00:00", "event": "operator", "msg": "START_AAIDRIVE_NOW"}
+{"ts": "2026-10-30T07:11:49.395082+00:00", "event": "listen_start", "label": "after_start_signal", "seconds": 45.0}
+{"ts": "2026-10-30T07:12:06.861039+00:00", "event": "bulk_in_err", "label": "after_start_signal", "err": "[Errno 5] Input/Output Error"}
+{"ts": "2026-10-30T07:12:06.861269+00:00", "event": "listen_end", "label": "after_start_signal", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:12:06.862335+00:00", "event": "bulk_out_err", "label": "hex4", "err": "[Errno 5] Input/Output Error", "type": "USBError"}
+{"ts": "2026-10-30T07:12:06.862524+00:00", "event": "listen_start", "label": "after_hex4", "seconds": 8.0}
+{"ts": "2026-10-30T07:12:06.862886+00:00", "event": "bulk_in_err", "label": "after_hex4", "err": "[Errno 5] Input/Output Error"}
+{"ts": "2026-10-30T07:12:06.862971+00:00", "event": "listen_end", "label": "after_hex4", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:12:06.863219+00:00", "event": "bulk_out_err", "label": "zeros8", "err": "[Errno 5] Input/Output Error", "type": "USBError"}
+{"ts": "2026-10-30T07:12:06.863282+00:00", "event": "listen_start", "label": "after_zeros8", "seconds": 8.0}
+{"ts": "2026-10-30T07:12:06.863545+00:00", "event": "bulk_in_err", "label": "after_zeros8", "err": "[Errno 5] Input/Output Error"}
+{"ts": "2026-10-30T07:12:06.863620+00:00", "event": "listen_end", "label": "after_zeros8", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:12:06.863666+00:00", "event": "listen_start", "label": "final", "seconds": 30.0}
+{"ts": "2026-10-30T07:12:06.863922+00:00", "event": "bulk_in_err", "label": "final", "err": "[Errno 5] Input/Output Error"}
+{"ts": "2026-10-30T07:12:06.863999+00:00", "event": "listen_end", "label": "final", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:12:06.864039+00:00", "event": "run_done"}

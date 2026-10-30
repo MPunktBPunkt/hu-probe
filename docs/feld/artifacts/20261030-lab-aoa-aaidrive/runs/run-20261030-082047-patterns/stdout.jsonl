@@ -1,0 +1,83 @@
+{"ts": "2026-10-30T07:20:47.665275+00:00", "event": "suite_start", "role": "HU_against_AAIdrive_accessory"}
+{"ts": "2026-10-30T07:20:47.687076+00:00", "event": "accessory", "pid": "2d00", "addr": 61}
+{"ts": "2026-10-30T07:20:47.689974+00:00", "event": "set_configuration"}
+{"ts": "2026-10-30T07:20:47.690172+00:00", "event": "claim"}
+{"ts": "2026-10-30T07:20:47.690449+00:00", "event": "eps", "inn": "0x81", "out": "0x1", "wMaxIn": 512, "wMaxOut": 512}
+{"ts": "2026-10-30T07:20:47.690516+00:00", "event": "pattern", "name": "listen_only_pre", "tx_len": 0}
+{"ts": "2026-10-30T07:20:47.700714+00:00", "event": "bulk_in_err", "label": "listen_only_pre", "err": "[Errno 5] Input/Output Error", "type": "USBError"}
+{"ts": "2026-10-30T07:20:47.700870+00:00", "event": "listen_end", "label": "listen_only_pre", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:47.700921+00:00", "event": "pattern", "name": "hu_handshake_v4_test", "tx_len": 16}
+{"ts": "2026-10-30T07:20:47.701705+00:00", "event": "bulk_out_err", "label": "hu_handshake_v4_test", "err": "[Errno 5] Input/Output Error", "type": "USBError", "len": 16}
+{"ts": "2026-10-30T07:20:47.752018+00:00", "event": "bulk_in_err", "label": "hu_handshake_v4_test", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:47.752153+00:00", "event": "listen_end", "label": "hu_handshake_v4_test", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:47.752200+00:00", "event": "pattern", "name": "hu_handshake_v3", "tx_len": 16}
+{"ts": "2026-10-30T07:20:47.752293+00:00", "event": "bulk_out_err", "label": "hu_handshake_v3", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 16}
+{"ts": "2026-10-30T07:20:47.802538+00:00", "event": "bulk_in_err", "label": "hu_handshake_v3", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:47.802683+00:00", "event": "listen_end", "label": "hu_handshake_v3", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:47.802729+00:00", "event": "pattern", "name": "hu_handshake_v1", "tx_len": 16}
+{"ts": "2026-10-30T07:20:47.802816+00:00", "event": "bulk_out_err", "label": "hu_handshake_v1", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 16}
+{"ts": "2026-10-30T07:20:47.853066+00:00", "event": "bulk_in_err", "label": "hu_handshake_v1", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:47.853241+00:00", "event": "listen_end", "label": "hu_handshake_v1", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:47.853286+00:00", "event": "pattern", "name": "hex4_session_init_phone_role", "tx_len": 4}
+{"ts": "2026-10-30T07:20:47.853361+00:00", "event": "bulk_out_err", "label": "hex4_session_init_phone_role", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 4}
+{"ts": "2026-10-30T07:20:47.903638+00:00", "event": "bulk_in_err", "label": "hex4_session_init_phone_role", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:47.903818+00:00", "event": "listen_end", "label": "hex4_session_init_phone_role", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:47.903882+00:00", "event": "pattern", "name": "hex4_x3_burst", "tx_len": 12}
+{"ts": "2026-10-30T07:20:47.903964+00:00", "event": "bulk_out_err", "label": "hex4_x3_burst", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 12}
+{"ts": "2026-10-30T07:20:47.954198+00:00", "event": "bulk_in_err", "label": "hex4_x3_burst", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:47.954348+00:00", "event": "listen_end", "label": "hex4_x3_burst", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:47.954394+00:00", "event": "pattern", "name": "selectproto3_phone_role", "tx_len": 10}
+{"ts": "2026-10-30T07:20:47.954493+00:00", "event": "bulk_out_err", "label": "selectproto3_phone_role", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 10}
+{"ts": "2026-10-30T07:20:48.004733+00:00", "event": "bulk_in_err", "label": "selectproto3_phone_role", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.004868+00:00", "event": "listen_end", "label": "selectproto3_phone_role", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.004915+00:00", "event": "pattern", "name": "knock_default_20b", "tx_len": 20}
+{"ts": "2026-10-30T07:20:48.004999+00:00", "event": "bulk_out_err", "label": "knock_default_20b", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 20}
+{"ts": "2026-10-30T07:20:48.055233+00:00", "event": "bulk_in_err", "label": "knock_default_20b", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.055398+00:00", "event": "listen_end", "label": "knock_default_20b", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.055464+00:00", "event": "pattern", "name": "open_etch_src1", "tx_len": 8}
+{"ts": "2026-10-30T07:20:48.055556+00:00", "event": "bulk_out_err", "label": "open_etch_src1", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 8}
+{"ts": "2026-10-30T07:20:48.105795+00:00", "event": "bulk_in_err", "label": "open_etch_src1", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.105946+00:00", "event": "listen_end", "label": "open_etch_src1", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.105993+00:00", "event": "pattern", "name": "watchdog_ping", "tx_len": 12}
+{"ts": "2026-10-30T07:20:48.106077+00:00", "event": "bulk_out_err", "label": "watchdog_ping", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 12}
+{"ts": "2026-10-30T07:20:48.156316+00:00", "event": "bulk_in_err", "label": "watchdog_ping", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.156458+00:00", "event": "listen_end", "label": "watchdog_ping", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.156510+00:00", "event": "pattern", "name": "zeros4", "tx_len": 4}
+{"ts": "2026-10-30T07:20:48.156598+00:00", "event": "bulk_out_err", "label": "zeros4", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 4}
+{"ts": "2026-10-30T07:20:48.206831+00:00", "event": "bulk_in_err", "label": "zeros4", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.206982+00:00", "event": "listen_end", "label": "zeros4", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.207029+00:00", "event": "pattern", "name": "zeros8", "tx_len": 8}
+{"ts": "2026-10-30T07:20:48.207113+00:00", "event": "bulk_out_err", "label": "zeros8", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 8}
+{"ts": "2026-10-30T07:20:48.257341+00:00", "event": "bulk_in_err", "label": "zeros8", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.257477+00:00", "event": "listen_end", "label": "zeros8", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.257525+00:00", "event": "pattern", "name": "zeros16", "tx_len": 16}
+{"ts": "2026-10-30T07:20:48.257605+00:00", "event": "bulk_out_err", "label": "zeros16", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 16}
+{"ts": "2026-10-30T07:20:48.307849+00:00", "event": "bulk_in_err", "label": "zeros16", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.307973+00:00", "event": "listen_end", "label": "zeros16", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.308016+00:00", "event": "pattern", "name": "deadbeef_etch_magic", "tx_len": 4}
+{"ts": "2026-10-30T07:20:48.308091+00:00", "event": "bulk_out_err", "label": "deadbeef_etch_magic", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 4}
+{"ts": "2026-10-30T07:20:48.358341+00:00", "event": "bulk_in_err", "label": "deadbeef_etch_magic", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.358496+00:00", "event": "listen_end", "label": "deadbeef_etch_magic", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.358545+00:00", "event": "pattern", "name": "ascii_OKOKOKOK", "tx_len": 8}
+{"ts": "2026-10-30T07:20:48.358635+00:00", "event": "bulk_out_err", "label": "ascii_OKOKOKOK", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 8}
+{"ts": "2026-10-30T07:20:48.408871+00:00", "event": "bulk_in_err", "label": "ascii_OKOKOKOK", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.409018+00:00", "event": "listen_end", "label": "ascii_OKOKOKOK", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.409069+00:00", "event": "pattern", "name": "bcl_hdr_cmd4_len0", "tx_len": 8}
+{"ts": "2026-10-30T07:20:48.409157+00:00", "event": "bulk_out_err", "label": "bcl_hdr_cmd4_len0", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 8}
+{"ts": "2026-10-30T07:20:48.459392+00:00", "event": "bulk_in_err", "label": "bcl_hdr_cmd4_len0", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.459535+00:00", "event": "listen_end", "label": "bcl_hdr_cmd4_len0", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.459588+00:00", "event": "pattern", "name": "bcl_hdr_cmd1_open_etch", "tx_len": 8}
+{"ts": "2026-10-30T07:20:48.459682+00:00", "event": "bulk_out_err", "label": "bcl_hdr_cmd1_open_etch", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 8}
+{"ts": "2026-10-30T07:20:48.509916+00:00", "event": "bulk_in_err", "label": "bcl_hdr_cmd1_open_etch", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.510068+00:00", "event": "listen_end", "label": "bcl_hdr_cmd1_open_etch", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.510120+00:00", "event": "pattern", "name": "hu_handshake_buf1M", "tx_len": 16}
+{"ts": "2026-10-30T07:20:48.510203+00:00", "event": "bulk_out_err", "label": "hu_handshake_buf1M", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 16}
+{"ts": "2026-10-30T07:20:48.560461+00:00", "event": "bulk_in_err", "label": "hu_handshake_buf1M", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.560620+00:00", "event": "listen_end", "label": "hu_handshake_buf1M", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.560669+00:00", "event": "pattern", "name": "hu_handshake_repeat", "tx_len": 32}
+{"ts": "2026-10-30T07:20:48.560753+00:00", "event": "bulk_out_err", "label": "hu_handshake_repeat", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError", "len": 32}
+{"ts": "2026-10-30T07:20:48.610996+00:00", "event": "bulk_in_err", "label": "hu_handshake_repeat", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.611150+00:00", "event": "listen_end", "label": "hu_handshake_repeat", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.611241+00:00", "event": "bulk_in_err", "label": "final_idle", "err": "[Errno 19] No such device (it may have been disconnected)", "type": "USBError"}
+{"ts": "2026-10-30T07:20:48.611301+00:00", "event": "listen_end", "label": "final_idle", "total": 0, "chunks": 0}
+{"ts": "2026-10-30T07:20:48.611350+00:00", "event": "suite_done", "any_rx": false, "any_tx_ok": false}
