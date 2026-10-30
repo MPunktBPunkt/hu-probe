@@ -9,6 +9,7 @@
 **Reports:** [1](2026-10-30-research-01-aoa-direct-accessory.md) · [2](2026-10-30-research-02-usb-sniffing-gadget-validation.md) · [3](2026-10-30-research-03-esp32-tinyusb-ep0-callbacks.md) · [4](2026-10-30-research-04-composite-vs-vendor-only.md) · [5](2026-10-30-research-05-bcl-etch-nbt.md)  
 **Code-Analyse Connected:** [`2026-10-30-codeanalyse-connected-aoa.md`](2026-10-30-codeanalyse-connected-aoa.md)  
 **Verbesserungsplan C1b-P0:** [`2026-10-30-verbesserungsplan-c1b-p0.md`](2026-10-30-verbesserungsplan-c1b-p0.md)  
+**MSC-Verbesserungspotential:** [`2026-10-30-msc-verbesserungspotential.md`](2026-10-30-msc-verbesserungspotential.md)  
 **Epistemik:** [`../CONNECTED-APP.md`](../CONNECTED-APP.md)
 
 Die Ziffer `[1]` im Text unten meint den Repo-Codekontext (`ConnectedAppProbe`, `AoaControlTap`, `AoaObserveGadget`, `AoaTransport`, `BclFramer`), nicht eine externe Fußnote.

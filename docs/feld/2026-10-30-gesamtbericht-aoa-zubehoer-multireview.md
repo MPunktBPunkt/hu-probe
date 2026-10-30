@@ -18,6 +18,7 @@
 **Gesamtbewertung der fünf Reports:** [`2026-10-30-gesamtbewertung-aoa-fuenf-reports.md`](2026-10-30-gesamtbewertung-aoa-fuenf-reports.md)  
 **Code-Analyse Connected:** [`2026-10-30-codeanalyse-connected-aoa.md`](2026-10-30-codeanalyse-connected-aoa.md)  
 **Verbesserungsplan C1b-P0:** [`2026-10-30-verbesserungsplan-c1b-p0.md`](2026-10-30-verbesserungsplan-c1b-p0.md)  
+**MSC-Verbesserungspotential:** [`2026-10-30-msc-verbesserungspotential.md`](2026-10-30-msc-verbesserungspotential.md)  
 **Verwandt:** [`2026-10-29-c1b-p0-aoa-observe-feld.md`](2026-10-29-c1b-p0-aoa-observe-feld.md) · [`2026-10-29-c1b-p05a-instrumentation.md`](2026-10-29-c1b-p05a-instrumentation.md) · [`2026-10-29-c1b-massnahmen-nach-b1-b2b.md`](2026-10-29-c1b-massnahmen-nach-b1-b2b.md) · [`../GATES-Connected.md`](../GATES-Connected.md)
 
 **Quellenbasis für diesen Bericht:**
