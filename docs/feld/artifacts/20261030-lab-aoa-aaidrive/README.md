@@ -1,6 +1,7 @@
 # Lab artifacts — AOA Host ↔ OnePlus/AAIdrive — 2026-10-30
 
-**Bericht:** [`../../2026-10-30-lab-aoa-aaidrive-phone-host.md`](../../2026-10-30-lab-aoa-aaidrive-phone-host.md)
+**Bericht:** [`../../2026-10-30-lab-aoa-aaidrive-phone-host.md`](../../2026-10-30-lab-aoa-aaidrive-phone-host.md)  
+**Multi-Review:** [`../../2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md`](../../2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md)
 
 | Pfad | Inhalt |
 |------|--------|
