@@ -1,0 +1,24 @@
+=== monitor start 18:07:42 ===
+[18:07:42] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=False attach=2
+[18:07:51] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=3
+[18:08:02] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=False attach=3
+[18:08:04] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=4
+[18:08:25] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=4
+[18:08:33] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=False attach=4
+[18:08:38] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=5
+[18:08:47] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=False attach=5
+[18:08:49] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=6
+[18:09:09] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=6
+[18:09:31] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=6
+[18:09:54] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=6
+[18:10:16] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=6
+[18:10:29] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=False attach=6
+[18:10:34] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=7
+[18:10:38] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=7
+[18:10:43] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=False attach=7
+[18:10:45] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=8
+[18:11:00] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=8
+[18:11:23] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=8
+[18:11:45] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=8
+[18:12:07] A=True B=False E=False setup=0 51=0 52=0 53=0 rx=0 bulk=0 mount=True attach=8
+=== monitor end 18:12:10 ===

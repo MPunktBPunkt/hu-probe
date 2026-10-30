@@ -99,8 +99,8 @@ C1b wird **gestuft** gewertet — ein erfolgreicher USB-AOA-Link ist *nicht* „
 
 **Status:** PARTIAL — P0-0/A/C/D **PASS** am NBT; P0-E **ABSENT**.  
 B1 phone_like **NEGATIVE**. B2b hex4 **TX ok / keine HU-Antwort**. Blind-Knock beendet.  
-**Feld 2026-10-30 FW 0.3.34** (`aoa_observe`, passiv): erster Lauf mit belastbarem Control-Tap — Attach/P0-A/C/D PASS, **51/52/53=0** (Direct-2D00), **Bulk=0**. Bericht: [feld/2026-10-30-feld-c1b-p0-fw034-erster-lauf.md](feld/2026-10-30-feld-c1b-p0-fw034-erster-lauf.md).  
-**Lab 2026-10-30:** AAIdrive UI verbunden / Bulk absent ([lab-aoa-aaidrive](feld/2026-10-30-lab-aoa-aaidrive-phone-host.md)); Stage+51-Fix ([lab-c1b-p05-stage-fix](feld/2026-10-30-lab-c1b-p05-stage-fix.md)).
+**Feld 2026-10-30 FW 0.3.34** (`aoa_observe`, passiv): Attach/P0-A/C/D PASS, **51/52/53=0**, **Bulk=0**; HU „USB-Modus → reconnect“-Loop reproduziert (Nachmittag + Abend). `aoa_phone_like` → HU Fingerprint reject. Berichte: [erster Lauf](feld/2026-10-30-feld-c1b-p0-fw034-erster-lauf.md) · [Abend](feld/2026-10-30-feld-c1b-p0-fw034-abend.md).  
+**Lab 2026-10-30:** AAIdrive UI / Bulk absent; Stage+51-Fix ([lab-c1b-p05-stage-fix](feld/2026-10-30-lab-c1b-p05-stage-fix.md)).
 
 **FW 0.3.34 (C1b-P0.5 Instrument):** Stage-Gate TinyUSB `CONTROL_STAGE_*`; DATA/ACK nach Respond → `true`. Lab: 51→`0100`; Feld: Observe an HU ohne Control/Bulk.
 
