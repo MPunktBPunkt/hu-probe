@@ -49,9 +49,10 @@ Nicht zulässig: *„Die HU hat kein 51 gesendet“* — bei Already-Accessory o
 
 ## Deutung
 
-1. **Instrument:** Erster Feldlauf, in dem „51/52/53=0“ **nicht** mehr Stage-Blindheit sein kann (Lab A: 51→`0100` auf gleichem FW-Zweig).  
-2. **HU:** Zubehör wird erkannt und wählbar; Direct-Accessory ohne sichtbaren AOA-Handshake; **kein Bulk** trotz UI-Wahl → Consumer/FD weiter offen (wie Lab AAIdrive).  
-3. **Kein BCL** auf USB in diesem Lauf.
+1. **Instrument:** Erster Feldlauf, in dem „51/52/53=0“ im **Vendor-Callback** nicht mehr Stage-Blindheit sein kann (Lab A: 51→`0100`).  
+2. **HU:** Zubehör erkannt/wählbar; Direct-Accessory ohne Callback-51/52/53; Device-RX Bulk **absent** trotz UI-Wahl.  
+3. **Caveat:** Callback/RX-Absent ≠ Bus-Negativbeweis — [epistemik-messluecke-ep0-bulk](2026-10-30-epistemik-messluecke-ep0-bulk.md).  
+4. **Kein BCL** auf der beobachteten Schicht.
 
 ---
 

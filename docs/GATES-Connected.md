@@ -99,10 +99,10 @@ C1b wird **gestuft** gewertet — ein erfolgreicher USB-AOA-Link ist *nicht* „
 
 **Status:** PARTIAL — P0-0/A/C/D **PASS** am NBT; P0-E **ABSENT**.  
 B1 phone_like **NEGATIVE**. B2b hex4 **TX ok / keine HU-Antwort**. Blind-Knock beendet.  
-**Feld 2026-10-30 FW 0.3.34** (`aoa_observe`, passiv): Attach/P0-A/C/D PASS, **51/52/53=0**, **Bulk=0**; HU „USB-Modus → reconnect“-Loop reproduziert (Nachmittag + Abend). `aoa_phone_like` → HU Fingerprint reject. Berichte: [erster Lauf](feld/2026-10-30-feld-c1b-p0-fw034-erster-lauf.md) · [Abend](feld/2026-10-30-feld-c1b-p0-fw034-abend.md).  
-**Lab 2026-10-30:** AAIdrive UI / Bulk absent; Stage+51-Fix ([lab-c1b-p05-stage-fix](feld/2026-10-30-lab-c1b-p05-stage-fix.md)).
+**Feld 2026-10-30 FW 0.3.34** (`aoa_observe`, passiv): Attach/P0-A/C/D PASS; Vendor-Callback **51/52/53 absent**; Device-RX Bulk **absent**; HU reconnect-Loop. Bus-Negativ **UNKNOWN** — [epistemik](feld/2026-10-30-epistemik-messluecke-ep0-bulk.md). `phone_like` Fingerprint reject. [erster Lauf](feld/2026-10-30-feld-c1b-p0-fw034-erster-lauf.md) · [Abend](feld/2026-10-30-feld-c1b-p0-fw034-abend.md).  
+**Lab 2026-10-30:** Stage+51-Fix; AAIdrive UI / Bulk absent auf App-Ebene.
 
-**FW 0.3.34 (C1b-P0.5 Instrument):** Stage-Gate TinyUSB `CONTROL_STAGE_*`; DATA/ACK nach Respond → `true`. Lab: 51→`0100`; Feld: Observe an HU ohne Control/Bulk.
+**FW 0.3.34:** Control-Tap belastbar für Vendor-CB. **Nächster Gatekeeper:** read-only EP0-Core-Hook (Messlücke Bus↔Callback).
 
 **Boot-Mode Isolation (P0-0) — Voraussetzung:**
 
