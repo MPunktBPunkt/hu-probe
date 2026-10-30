@@ -101,7 +101,7 @@ C1b wird **gestuft** gewertet — ein erfolgreicher USB-AOA-Link ist *nicht* „
 B1 phone_like **NEGATIVE** (Fingerprint rejected). B2b hex4 **TX ok / keine HU-Antwort**.  
 Blind-Knock beendet → FOLLOW-ON #9 Referenz-Capture ([Maßnahmen](feld/2026-10-29-c1b-massnahmen-nach-b1-b2b.md)).  
 Note: `51/52/53=0` bei Already-Accessory `18D1:2D00` ≠ AOA-FAIL (AOSP: Transition-Requests).  
-**Lab 2026-10-30 (Debian=AOA-Host ↔ OnePlus/AAIdrive):** Handshake+Re-Enum `2D00` PASS; AAIdrive UI „verbunden“ mit BMW-Strings; **USB-Bulk ABSENT** (OUT Timeout). Bericht: [feld/2026-10-30-lab-aoa-aaidrive-phone-host.md](feld/2026-10-30-lab-aoa-aaidrive-phone-host.md). Probe-Tap 51 STALL = Stage-Enum-Instrument-Bug (noch offen).
+**Lab 2026-10-30 (Debian=AOA-Host ↔ OnePlus/AAIdrive):** Handshake+Re-Enum `2D00` PASS; AAIdrive UI „verbunden“ mit BMW-Strings; **USB-Bulk ABSENT** (OUT Timeout). Bericht: [feld/2026-10-30-lab-aoa-aaidrive-phone-host.md](feld/2026-10-30-lab-aoa-aaidrive-phone-host.md). Konsolidierter Multi-Review (Mistral, Grok, GPT, Claude): [feld/2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md](feld/2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md). Probe-Tap 51 STALL = Stage-Enum-Instrument-Bug (noch offen).
 
 **Boot-Mode Isolation (P0-0) — Voraussetzung:**
 
