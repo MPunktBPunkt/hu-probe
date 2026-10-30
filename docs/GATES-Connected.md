@@ -97,13 +97,12 @@ C1b wird **gestuft** gewertet — ein erfolgreicher USB-AOA-Link ist *nicht* „
 
 ### HU-PROBE-GATE-C1b-P0 — USB/AOA Observability (passive)
 
-**Status:** PARTIAL — P0-0/A/C/D **PASS** am NBT (Feld 2026-10-29); P0-E **FAIL/absent**.  
-B1 phone_like **NEGATIVE** (Fingerprint rejected). B2b hex4 **TX ok / keine HU-Antwort**.  
-Blind-Knock beendet → FOLLOW-ON #9 Referenz-Capture ([Maßnahmen](feld/2026-10-29-c1b-massnahmen-nach-b1-b2b.md)).  
-Note: `51/52/53=0` bei Already-Accessory `18D1:2D00` ≠ AOA-FAIL (AOSP: Transition-Requests).  
-**Lab 2026-10-30 (Debian=AOA-Host ↔ OnePlus/AAIdrive):** Handshake+Re-Enum `2D00` PASS; AAIdrive UI „verbunden“ mit BMW-Strings; **USB-Bulk ABSENT** (OUT Timeout). Bericht: [feld/2026-10-30-lab-aoa-aaidrive-phone-host.md](feld/2026-10-30-lab-aoa-aaidrive-phone-host.md). Konsolidierter Multi-Review (Mistral, Grok, GPT, Claude): [feld/2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md](feld/2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md).
+**Status:** PARTIAL — P0-0/A/C/D **PASS** am NBT; P0-E **ABSENT**.  
+B1 phone_like **NEGATIVE**. B2b hex4 **TX ok / keine HU-Antwort**. Blind-Knock beendet.  
+**Feld 2026-10-30 FW 0.3.34** (`aoa_observe`, passiv): erster Lauf mit belastbarem Control-Tap — Attach/P0-A/C/D PASS, **51/52/53=0** (Direct-2D00), **Bulk=0**. Bericht: [feld/2026-10-30-feld-c1b-p0-fw034-erster-lauf.md](feld/2026-10-30-feld-c1b-p0-fw034-erster-lauf.md).  
+**Lab 2026-10-30:** AAIdrive UI verbunden / Bulk absent ([lab-aoa-aaidrive](feld/2026-10-30-lab-aoa-aaidrive-phone-host.md)); Stage+51-Fix ([lab-c1b-p05-stage-fix](feld/2026-10-30-lab-c1b-p05-stage-fix.md)).
 
-**FW 0.3.34 (C1b-P0.5 Instrument):** Stage-Gate TinyUSB `CONTROL_STAGE_*`; DATA/ACK nach Respond → `true` (51-STALL behoben). Lab: 51→`0100`, 52/53 ok; Lab B passiv ([feld/2026-10-30-lab-c1b-p05-stage-fix.md](feld/2026-10-30-lab-c1b-p05-stage-fix.md)).
+**FW 0.3.34 (C1b-P0.5 Instrument):** Stage-Gate TinyUSB `CONTROL_STAGE_*`; DATA/ACK nach Respond → `true`. Lab: 51→`0100`; Feld: Observe an HU ohne Control/Bulk.
 
 **Boot-Mode Isolation (P0-0) — Voraussetzung:**
 

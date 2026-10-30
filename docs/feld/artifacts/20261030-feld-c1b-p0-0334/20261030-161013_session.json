@@ -1,0 +1,109 @@
+{
+  "schema": 2,
+  "session_id": "20261030-161013_lab_ca_c1_link",
+  "started_at": "2026-10-30T16:10:13.074809+01:00",
+  "ended_at": null,
+  "vehicle": "lab",
+  "profile_id": "bmw_nbt_evo",
+  "scenario": "ca_c1_link",
+  "fw_version": "0.3.34",
+  "transport": "aoa_observe",
+  "fw_type": "hu-probe",
+  "fw_sha": "90452d572c71",
+  "mac": "68:b6:b3:2b:c5:68",
+  "clock": {
+    "domain": "probe_monotonic_us",
+    "source": "esp_timer"
+  },
+  "capture": {
+    "dropped": 0,
+    "queue_highwater": 8,
+    "tcp_disconnects": 0,
+    "published": 24,
+    "stream_lost": 0,
+    "tcp_tx_fail": 0,
+    "msc_sample_overflow": 0,
+    "recv_seq_gaps": [],
+    "recv_events": 25,
+    "parse_errors": 0,
+    "complete": true,
+    "bot_pending_overflow": 0,
+    "reset_reason": "software",
+    "restart_cause": "webui",
+    "boot_generation": 2,
+    "uptime_ms": 125862,
+    "diag_tail": "844 [PHASE] begin reset=power_on rtc_ok=0 nvs_ok=0 crash=none\n948 [TRIP] partition 1536 KiB, 0 trips (0 pending), free 1532 KiB\n949 [CA] ConnectedAppProbe begin (C1b-P0 observe gadget=aoa_observe)\n966 [AOA] USB STOPPED\n960 [AOA] observe ready profile=accessory vid=0x18D1 pid=0x2D00 (hypothesis_google_accessory_0x18D1_0x2D00) soft=1\n970 [CA] AoaTransport bound to observe stack usb_stack_bound=1\n980 [USB] gadget=aoa_observe msc_interface=0 vendor=1\n1257 [AOA] USB STARTED (P0-A attach hypothesis path)\n2460 [WIFI] 192.168.178.89 ps=none tx=19.5 autoReconnect=0\n2512 [WIFI] coex task prio=25 core=0\n20769 [DIAG] persist restart slot=3 seq=676 bytes=714 ok=1\n",
+    "transport": "aoa_observe",
+    "transport_epoch": 5,
+    "end_reason": "active",
+    "upload_status": "streaming",
+    "hw_module": "N8R2",
+    "tur_count": 0,
+    "tur_burst_n": 0,
+    "tur_idle_n": 0,
+    "fw_dirty": true,
+    "collector_parse_errors_total": 56,
+    "integrity_pass": true,
+    "panic_tail": {
+      "session_id": "",
+      "generation": 1,
+      "breadcrumbs": [
+        {
+          "code": 8,
+          "name": "usb_umount",
+          "t_ms": 966,
+          "arg": 0
+        },
+        {
+          "code": 7,
+          "name": "usb_mount",
+          "t_ms": 1257,
+          "arg": 0
+        },
+        {
+          "code": 19,
+          "name": "restart",
+          "t_ms": 20721,
+          "arg": 4
+        }
+      ]
+    }
+  },
+  "gates": [
+    "HU-PROBE-GATE-01"
+  ],
+  "notes": "",
+  "fw_build_id": "90452d572c71-dirty-20261030T135150Z",
+  "fw_dirty": true,
+  "usb_host_kind": "unknown",
+  "usb_host_role": "unknown",
+  "probe_identity": {
+    "mac": "68:b6:b3:2b:c5:68",
+    "usb_serial": "",
+    "volume_label": "",
+    "board": "ESP32-S3",
+    "hw_type": "esp32s3"
+  },
+  "media": {
+    "variant": "demo_v1",
+    "label": "",
+    "synthetic": false,
+    "hash": "0x00000000",
+    "fs": "FAT16",
+    "sector_count": 0,
+    "spc": 1,
+    "reserved": 1,
+    "fat_sectors": 0,
+    "root_lba": 0,
+    "data_lba": 0,
+    "cluster_count": 0,
+    "volume_id": "0x00000000",
+    "fs_label": "HUPROBE",
+    "usb_serial_override": "",
+    "nodes": 0,
+    "truncated": false,
+    "mutation_gen": 0,
+    "ua_pending": false,
+    "ua_sent": 0
+  }
+}
