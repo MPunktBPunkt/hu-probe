@@ -6,7 +6,12 @@
  *
  * Publishes every SETUP that arrives on this callback (not a full EP0 sniffer).
  * AOA GET_PROTOCOL=51 / SEND_STRING=52 / START=53 are counted when vendor.
- * Desk hypothesis responses remain optional behind hypothesisRespond().
+ *
+ * Stage values are TinyUSB `CONTROL_STAGE_*` (SETUP=1), not Arduino
+ * `REQUEST_STAGE_*` (SETUP=0). USBVendor forwards the TinyUSB stage unchanged.
+ *
+ * Desk hypothesis responses are optional behind hypothesisRespond() and are
+ * independent of observe counters / SETUP publish.
  */
 
 #include <cstddef>
@@ -23,6 +28,10 @@ struct AoaControlSample {
     uint16_t w_index = 0;
     uint16_t w_length = 0;
     uint8_t stage = 0;
+    /**
+     * @brief True if sendResponse() was called (device queued a reply).
+     * Not proof the host accepted it — prefer JSON key device_response_queued.
+     */
     bool hypothesis_handled = false;
     int64_t t_us = 0;
     /** @brief For req 52: captured UTF-8 identity string (desk B3), truncated. */
@@ -42,7 +51,7 @@ public:
     void begin();
     void reset();
 
-    /** @brief When true, answer desk-hypothesis AOA 51/52/53 on SETUP. */
+    /** @brief When true, answer desk-hypothesis AOA 51/52/53/58 on SETUP. */
     void setHypothesisRespond(bool on) { hypothesis_respond_ = on; }
     bool hypothesisRespond() const { return hypothesis_respond_; }
 
@@ -57,7 +66,7 @@ public:
     /** @brief Pop one sample for EventBus publish (Arduino loop). */
     bool pop(AoaControlSample& out);
 
-    /** @brief All REQUEST_STAGE_SETUP samples that reached this callback. */
+    /** @brief All CONTROL_STAGE_SETUP samples that reached this callback. */
     uint32_t setupCount() const { return setup_count_; }
     /** @brief Vendor-type SETUPs only (type bits == 2). */
     uint32_t vendorSetupCount() const { return vendor_setup_count_; }
@@ -69,8 +78,11 @@ public:
     uint32_t aoa51Count() const { return aoa51_; }
     uint32_t aoa52Count() const { return aoa52_; }
     uint32_t aoa53Count() const { return aoa53_; }
+    uint32_t aoa58Count() const { return aoa58_; }
     uint32_t dropCount() const { return drops_; }
-    bool sawAoaControl() const { return aoa51_ || aoa52_ || aoa53_; }
+    /** @brief True when the control ring has not overflowed since reset. */
+    bool captureValid() const { return drops_ == 0; }
+    bool sawAoaControl() const { return aoa51_ || aoa52_ || aoa53_ || aoa58_; }
 
 private:
     AoaControlTap() = default;
@@ -85,8 +97,10 @@ private:
     uint32_t aoa51_ = 0;
     uint32_t aoa52_ = 0;
     uint32_t aoa53_ = 0;
+    uint32_t aoa58_ = 0;
     uint32_t drops_ = 0;
-    bool hypothesis_respond_ = true;
+    /** @brief Default passive; PhoneLike gadget enables responder at begin(). */
+    bool hypothesis_respond_ = false;
     uint16_t aoa_protocol_le_ = 1;  // AOA 1.0 LE
     uint8_t string_scratch_[256] = {0};
     uint16_t string_scratch_len_ = 0;

@@ -33,7 +33,7 @@ Debian-PC als **AOA-Host (HU-Rolle)** gegen echtes Phone: **51→52→53 mit `ma
 | LXC `/dev/bus/usb` leer | sysfs sichtbar, `ctrl_transfer` → ENODEV — behoben via `pct set` usbfs-Node + Tests **auf PVE** mit `python3-usb` |
 | PVE DNS | `resolv.conf` zeigte tot auf `192.168.4.1` — gefixt auf `192.168.178.1` / `8.8.8.8`; danach `python3-usb` installierbar |
 | usbmon | `modprobe usbmon`, `/dev/usbmon2` in CT100; tshark Capture PASS |
-| Probe-Tap 51 | Gegen `aoa_phone_like`: Standard-GET_DESCRIPTOR ok, Vendor **51 → Pipe/STALL**, `setup_count=0` — Instrument-Bug (**Stage-Enum**: TinyUSB `CONTROL_STAGE_SETUP=1` vs Arduino `REQUEST_STAGE_SETUP=0`) — **nicht** in diesem Lab gefixt |
+| Probe-Tap 51 | Gegen `aoa_phone_like` (FW **0.3.32**): Standard-GET_DESCRIPTOR ok, Vendor **51 → Pipe/STALL**, `setup_count=0` — Instrument-Bug (**Stage-Enum**: TinyUSB `CONTROL_STAGE_SETUP=1` vs Arduino `REQUEST_STAGE_SETUP=0`). **FW 0.3.33** korrigiert den Stage-Vergleich; Lab-A-Retest ausstehend |
 | TinyUSB SDK | Header **0.15.0**; Upstream `usbd.c` routet Vendor **vor** Recipient-Switch |
 
 ---

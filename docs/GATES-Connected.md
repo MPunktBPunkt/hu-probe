@@ -101,15 +101,17 @@ C1b wird **gestuft** gewertet — ein erfolgreicher USB-AOA-Link ist *nicht* „
 B1 phone_like **NEGATIVE** (Fingerprint rejected). B2b hex4 **TX ok / keine HU-Antwort**.  
 Blind-Knock beendet → FOLLOW-ON #9 Referenz-Capture ([Maßnahmen](feld/2026-10-29-c1b-massnahmen-nach-b1-b2b.md)).  
 Note: `51/52/53=0` bei Already-Accessory `18D1:2D00` ≠ AOA-FAIL (AOSP: Transition-Requests).  
-**Lab 2026-10-30 (Debian=AOA-Host ↔ OnePlus/AAIdrive):** Handshake+Re-Enum `2D00` PASS; AAIdrive UI „verbunden“ mit BMW-Strings; **USB-Bulk ABSENT** (OUT Timeout). Bericht: [feld/2026-10-30-lab-aoa-aaidrive-phone-host.md](feld/2026-10-30-lab-aoa-aaidrive-phone-host.md). Konsolidierter Multi-Review (Mistral, Grok, GPT, Claude): [feld/2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md](feld/2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md). Probe-Tap 51 STALL = Stage-Enum-Instrument-Bug (noch offen).
+**Lab 2026-10-30 (Debian=AOA-Host ↔ OnePlus/AAIdrive):** Handshake+Re-Enum `2D00` PASS; AAIdrive UI „verbunden“ mit BMW-Strings; **USB-Bulk ABSENT** (OUT Timeout). Bericht: [feld/2026-10-30-lab-aoa-aaidrive-phone-host.md](feld/2026-10-30-lab-aoa-aaidrive-phone-host.md). Konsolidierter Multi-Review (Mistral, Grok, GPT, Claude): [feld/2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md](feld/2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md).
+
+**FW 0.3.33 (C1b-P0.5 Instrument):** Stage-Gate TinyUSB `CONTROL_STAGE_*`. Lab A/B **PASS** ([feld/2026-10-30-lab-c1b-p05-stage-fix.md](feld/2026-10-30-lab-c1b-p05-stage-fix.md)): Zähler sehen 51/52/53; Responder 52/53 ok; 51 Host-STALL Restpunkt; Lab B passiv zählt ohne Antworten.
 
 **Boot-Mode Isolation (P0-0) — Voraussetzung:**
 
 | `usb_gadget` (NVS) | USB-Fingerprint |
 |--------------------|-----------------|
 | `msc` (default) | Golden Path USBMSC only — **kein** Vendor/AOA |
-| `aoa_observe` | USBVendor only Already-Accessory `0x18D1:0x2D00` — **kein** MSC |
-| `aoa_phone_like` | USBVendor only B1 phone-like `0x04E8:0x6860` — **kein** MSC |
+| `aoa_observe` | USBVendor only Already-Accessory `0x18D1:0x2D00` — **kein** MSC; observe-only |
+| `aoa_phone_like` | USBVendor only B1 phone-like `0x04E8:0x6860` — **kein** MSC; 51/52/53 Responder |
 
 Umschalten **nur** NVS + Reboot (`POST /api/config` + `/api/connected/gadget/reboot`). Soft-Detach ≠ Moduswechsel.
 

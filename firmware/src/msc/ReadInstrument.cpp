@@ -513,7 +513,7 @@ void ReadInstrument::emitBotCswTinyusb(const uint8_t cswRaw[13], int64_t tUs) {
 
 void ReadInstrument::emitUsbControlTinyusb(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue,
                                            uint16_t wIndex, uint16_t wLength, int64_t tUs,
-                                           bool needResetActive) {
+                                           bool needResetActive, uint8_t stage) {
     if (!session_ || !session_->active()) return;
 
     JsonDocument doc;
@@ -529,6 +529,15 @@ void ReadInstrument::emitUsbControlTinyusb(uint8_t bmRequestType, uint8_t bReque
     doc["wValue"] = wValue;
     doc["wIndex"] = wIndex;
     doc["wLength"] = wLength;
+    doc["stage"] = stage;
+    // TinyUSB: IDLE=0 SETUP=1 DATA=2 ACK=3 — not Arduino REQUEST_STAGE_*.
+    doc["stage_name"] = stage == 1   ? "setup"
+                        : stage == 2 ? "data"
+                        : stage == 3 ? "ack"
+                        : stage == 0 ? "idle"
+                                     : "other";
+    doc["visibility_scope"] = "mscd_control_xfer_cb";
+    doc["is_full_ep0_trace"] = false;
     doc["dur_us"] = 0;
 
     if ((bmRequestType & 0x60) == 0x20) {

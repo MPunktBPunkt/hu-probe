@@ -73,6 +73,12 @@ public:
     /** @brief Lab-only: mark AOA skeleton connected/disconnected without USB. */
     bool labSetConnected(bool up);
 
+    /**
+     * @brief Runtime toggle for desk AOA 51/52/53/58 replies (Lab A→B).
+     * @return false if not on an AOA observe boot.
+     */
+    bool setHypothesisRespond(bool on);
+
     void toStatusJson(JsonObject obj) const;
 
     const char* lastErr() const { return lastErr_; }

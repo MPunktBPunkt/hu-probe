@@ -45,7 +45,15 @@ public:
     bool arm() override;
     void disarm() override;
     bool armed() const override { return armed_; }
+    /**
+     * @brief True when USBVendor is mounted (or lab link injected).
+     * Not an application-peer / Connected-App proof — see usbFunctionMounted().
+     */
     bool connected() const override { return connected_; }
+    /** @brief Same as connected(); explicit name for status JSON. */
+    bool usbFunctionMounted() const { return connected_; }
+    /** @brief Always false until a real accessory consumer/FD path is proven. */
+    bool applicationPeerProven() const { return false; }
 
     void poll() override;
     size_t read(uint8_t* dst, size_t maxLen) override;

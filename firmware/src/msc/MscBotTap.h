@@ -133,16 +133,25 @@ public:
      * @brief Queue an MSC/standard control SETUP (from wrap — no JSON in USB path).
      *
      * A standard CLEAR_FEATURE while NEED_RESET is latched is flagged (logged, not healed).
+     * Stage must be TinyUSB CONTROL_STAGE_* (SETUP=1); only SETUP samples are queued as events.
      *
      * @param bmRequestType  SETUP bmRequestType.
      * @param bRequest       SETUP bRequest.
      * @param wValue         SETUP wValue.
      * @param wIndex         SETUP wIndex.
      * @param wLength        SETUP wLength.
+     * @param stage          TinyUSB control stage (CONTROL_STAGE_SETUP expected for publish).
      * @note USB task context.
      */
     static void queueControl(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue,
-                             uint16_t wIndex, uint16_t wLength);
+                             uint16_t wIndex, uint16_t wLength, uint8_t stage = 1);
+
+    /** @brief CONTROL_STAGE_SETUP samples queued since begin(). */
+    static uint32_t controlSetupCount() { return controlSetupCount_; }
+    /** @brief Control-callback invocations with stage != SETUP (instrument sanity). */
+    static uint32_t controlOtherStageCount() { return controlOtherStageCount_; }
+    /** @brief True when the pending ring has not overflowed since begin(). */
+    static bool captureValid() { return pendingOverflow_ == 0; }
 
     /**
      * @brief Queue a SET_ADDRESS epoch event.
@@ -288,6 +297,7 @@ private:
         uint16_t wLength = 0;
         uint8_t bmRequestType = 0;
         uint8_t bRequest = 0;
+        uint8_t stage = 0;  // TinyUSB CONTROL_STAGE_* for Kind::Control
         uint8_t epAddr = 0;
         uint8_t flag = 0;  // e.g. clear_halt while need_reset
         char tag[8] = {0};
@@ -321,6 +331,8 @@ private:
     static volatile size_t pendingTail_;
     static volatile size_t pendingCount_;
     static uint32_t pendingOverflow_;
+    static uint32_t controlSetupCount_;
+    static uint32_t controlOtherStageCount_;
 
     static volatile bool uaPending_;
     static volatile uint32_t uaSent_;

@@ -137,6 +137,13 @@ private:
     void handleConnectedLinkKnock();
 
     /**
+     * @brief POST /api/connected/link/hypothesis_respond: Lab A/B toggle for AOA 51/52/53 replies.
+     *
+     * Body {hypothesis_respond:bool}. Requires aoa_observe / aoa_phone_like boot. HTTP 409 else.
+     */
+    void handleConnectedHypothesisRespond();
+
+    /**
      * @brief POST /api/connected/gadget/reboot: restart after NVS usbGadget save.
      *
      * Responds JSON then ESP.restart(). Soft-detach is not a mode switch.

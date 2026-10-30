@@ -1,12 +1,16 @@
 /**
  * @file AoaControlTap.cpp
  * @brief C1b-P0 / P0.5-A control tap: publish callback SETUPs; optional AOA hypothesis replies.
+ *
+ * TinyUSB passes CONTROL_STAGE_* into USBVendor.onRequest. Arduino's REQUEST_STAGE_*
+ * constants are offset by one (SETUP=0 vs SETUP=1) and must not be used here.
  */
 
 #include "connected/aoa/AoaControlTap.h"
 #include "core/ProbeClock.h"
 
 #include "USBVendor.h"
+#include "tusb.h"
 
 #include <cstring>
 
@@ -26,7 +30,7 @@ void AoaControlTap::begin() {
 
 void AoaControlTap::reset() {
     head_ = tail_ = 0;
-    setup_count_ = vendor_setup_count_ = aoa51_ = aoa52_ = aoa53_ = drops_ = 0;
+    setup_count_ = vendor_setup_count_ = aoa51_ = aoa52_ = aoa53_ = aoa58_ = drops_ = 0;
     string_scratch_len_ = 0;
     pending_string_index_ = 0xff;
     std::memset(string_scratch_, 0, sizeof(string_scratch_));
@@ -67,19 +71,21 @@ bool AoaControlTap::onControlRequest(uint8_t rhport, uint8_t stage, uint8_t bmRe
 
     const bool vendor = ((bmRequestType >> 5) & 0x3) == 2;
 
-    // P0.5-A: count/publish every SETUP that reaches this callback (still not full EP0).
-    if (stage == REQUEST_STAGE_SETUP) {
+    // Observe always: count/publish every SETUP that reaches this callback (not full EP0).
+    if (stage == CONTROL_STAGE_SETUP) {
         setup_count_++;
         if (vendor) {
             vendor_setup_count_++;
             if (bRequest == 51) aoa51_++;
             else if (bRequest == 52) aoa52_++;
             else if (bRequest == 53) aoa53_++;
+            else if (bRequest == 58) aoa58_++;
         }
     }
 
     // After OUT data stage of SEND_STRING: publish captured identity (audit B3).
-    if (vendor && bRequest == 52 && stage == REQUEST_STAGE_DATA && string_scratch_len_ > 0) {
+    // Independent of whether a later SETUP would respond — buffer was filled if we accepted 52.
+    if (vendor && bRequest == 52 && stage == CONTROL_STAGE_DATA && string_scratch_len_ > 0) {
         const size_t n =
             string_scratch_len_ < sizeof(s.str) - 1 ? string_scratch_len_ : sizeof(s.str) - 1;
         std::memcpy(s.str, string_scratch_, n);
@@ -93,7 +99,8 @@ bool AoaControlTap::onControlRequest(uint8_t rhport, uint8_t stage, uint8_t bmRe
     USBVendor* v = static_cast<USBVendor*>(vendorSendResponseCtx);
     bool handled = false;
 
-    if (hypothesis_respond_ && v && vendor && stage == REQUEST_STAGE_SETUP) {
+    // Respond path is optional and separate from observe counters above.
+    if (hypothesis_respond_ && v && vendor && stage == CONTROL_STAGE_SETUP) {
         // Desk hypothesis AOA device-side replies (AOSP). Not NBT FACT.
         // EVID-AOA-2026-10-28-002..004
         arduino_usb_control_request_t req;
@@ -131,7 +138,7 @@ bool AoaControlTap::onControlRequest(uint8_t rhport, uint8_t stage, uint8_t bmRe
         }
     }
 
-    if (stage == REQUEST_STAGE_SETUP) {
+    if (stage == CONTROL_STAGE_SETUP) {
         push(s);
     }
     return handled;

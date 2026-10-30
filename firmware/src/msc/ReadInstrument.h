@@ -192,7 +192,7 @@ public:
      */
     void emitUsbControlTinyusb(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue,
                                uint16_t wIndex, uint16_t wLength, int64_t tUs,
-                               bool needResetActive = false);
+                               bool needResetActive = false, uint8_t stage = 1);
 
     /**
      * @brief Emit usb bot_need_reset.

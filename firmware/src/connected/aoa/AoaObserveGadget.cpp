@@ -61,7 +61,8 @@ void AoaObserveGadget::begin(Session* session, bool startDetached, AoaIdentityPr
     profile_ = profile;
     g_self = this;
     AoaControlTap::instance().begin();
-    AoaControlTap::instance().setHypothesisRespond(true);
+    // Accessory observe = passive. PhoneLike enables desk AOA 51/52/53 responder (Lab A / B1).
+    AoaControlTap::instance().setHypothesisRespond(profile_ == AoaIdentityProfile::PhoneLike);
 
     if (profile_ == AoaIdentityProfile::PhoneLike) {
         // B1 desk hypothesis: non-accessory IDs so HU may run classic 51→52→53.
@@ -100,9 +101,11 @@ void AoaObserveGadget::begin(Session* session, bool startDetached, AoaIdentityPr
     ready_ = true;
     soft_attached_ = true;
     if (startDetached && tud_disconnect()) soft_attached_ = false;
-    DiagLog::printf("[AOA] observe ready profile=%s vid=0x%04X pid=0x%04X (%s) soft=%d\n",
-                    profile_ == AoaIdentityProfile::PhoneLike ? "phone_like" : "accessory",
-                    (unsigned)vid_, (unsigned)pid_, identityNote(), soft_attached_ ? 1 : 0);
+    DiagLog::printf(
+        "[AOA] observe ready profile=%s vid=0x%04X pid=0x%04X (%s) soft=%d hypothesis_respond=%d\n",
+        profile_ == AoaIdentityProfile::PhoneLike ? "phone_like" : "accessory", (unsigned)vid_,
+        (unsigned)pid_, identityNote(), soft_attached_ ? 1 : 0,
+        AoaControlTap::instance().hypothesisRespond() ? 1 : 0);
 }
 
 void AoaObserveGadget::loop() {
