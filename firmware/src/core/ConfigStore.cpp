@@ -1,11 +1,66 @@
 /**
  * @file ConfigStore.cpp
  * @brief NVS load/save/reset and JSON mapping for ConfigStore.
+ *
+ * usb_gadget lives in a dedicated tiny namespace ("hpgad") so a full
+ * "huprobe" blob (wifi2_pass / ota_url) cannot silently drop the mode key.
  */
 #include "ConfigStore.h"
 #include <Preferences.h>
 
 static Preferences prefs;
+
+static constexpr const char *kNsEspHub = "esphub";
+static constexpr const char *kNsHuProbe = "huprobe";
+/** Dedicated namespace — only usb_gadget. Must stay small and first-class. */
+static constexpr const char *kNsGadget = "hpgad";
+static constexpr const char *kKeyGadget = "mode";
+
+static bool gadgetModeValid(const String &g) {
+    return g == "msc" || g == "aoa_observe" || g == "aoa_phone_like";
+}
+
+bool ConfigStore::saveUsbGadgetNvs() {
+    if (!gadgetModeValid(usbGadget)) {
+        usbGadget = "msc";
+    }
+    Preferences p;
+    if (!p.begin(kNsGadget, false)) {
+        Serial.println("[CFG] hpgad begin FAIL");
+        return false;
+    }
+    const size_t n = p.putString(kKeyGadget, usbGadget);
+    p.end();
+    if (n == 0) {
+        Serial.printf("[CFG] hpgad put '%s' FAIL\n", usbGadget.c_str());
+        return false;
+    }
+    // Verify round-trip before claiming sticky.
+    if (!p.begin(kNsGadget, true)) {
+        Serial.println("[CFG] hpgad verify begin FAIL");
+        return false;
+    }
+    const String got = p.getString(kKeyGadget, "");
+    p.end();
+    const bool ok = (got == usbGadget);
+    Serial.printf("[CFG] hpgad save '%s' verify=%s\n", usbGadget.c_str(),
+                  ok ? "ok" : "MISMATCH");
+    return ok;
+}
+
+bool ConfigStore::loadUsbGadgetNvs(String &out) {
+    Preferences p;
+    if (!p.begin(kNsGadget, true)) {
+        return false;
+    }
+    const String got = p.getString(kKeyGadget, "");
+    p.end();
+    if (!gadgetModeValid(got)) {
+        return false;
+    }
+    out = got;
+    return true;
+}
 
 void ConfigStore::applyDefaults() {
     deviceName = DEVICE_NAME_DEFAULT;
@@ -42,7 +97,7 @@ void ConfigStore::begin() {
 
 void ConfigStore::load() {
     applyDefaults();
-    if (prefs.begin("esphub", true)) {
+    if (prefs.begin(kNsEspHub, true)) {
         deviceName = prefs.getString("name", deviceName);
         hubHost = prefs.getString("hub_host", hubHost);
         hubPort = prefs.getInt("hub_port", hubPort);
@@ -51,7 +106,7 @@ void ConfigStore::load() {
         enableMdns = prefs.getBool("mdns", enableMdns);
         prefs.end();
     }
-    if (prefs.begin("huprobe", true)) {
+    if (prefs.begin(kNsHuProbe, true)) {
         collectorHost = prefs.getString("col_host", collectorHost);
         collectorPort = prefs.getInt("col_port", collectorPort);
         enableCollector = prefs.getBool("col_en", enableCollector);
@@ -73,17 +128,32 @@ void ConfigStore::load() {
         wifi2Pass = prefs.getString("wifi2_pass", wifi2Pass);
         autoUpdate = prefs.getBool("auto_upd", autoUpdate);
         otaManifestUrl = prefs.getString("ota_url", otaManifestUrl);
-        usbGadget = prefs.getString("usb_gadget", usbGadget);
-        if (usbGadget != "msc" && usbGadget != "aoa_observe" &&
-            usbGadget != "aoa_phone_like") {
-            usbGadget = "msc";
+        // Legacy key — only used if dedicated hpgad namespace is empty.
+        const String legacy = prefs.getString("usb_gadget", "");
+        if (gadgetModeValid(legacy)) {
+            usbGadget = legacy;
         }
         prefs.end();
     }
+    // Dedicated namespace wins (sticky fix 0.3.35).
+    String sticky;
+    if (loadUsbGadgetNvs(sticky)) {
+        usbGadget = sticky;
+    }
+    if (!gadgetModeValid(usbGadget)) {
+        usbGadget = "msc";
+    }
+    Serial.printf("[CFG] load usbGadget=%s enableHub=%d\n", usbGadget.c_str(),
+                  (int)enableHub);
 }
 
-void ConfigStore::save() {
-    if (prefs.begin("esphub", false)) {
+bool ConfigStore::save() {
+    bool ok = true;
+    // Gadget first — never depend on a crowded huprobe namespace.
+    if (!saveUsbGadgetNvs()) {
+        ok = false;
+    }
+    if (prefs.begin(kNsEspHub, false)) {
         prefs.putUChar("ver", kConfigVersion);
         prefs.putString("name", deviceName);
         prefs.putString("hub_host", hubHost);
@@ -92,8 +162,12 @@ void ConfigStore::save() {
         prefs.putUShort("hb_s", heartbeatIntervalS);
         prefs.putBool("mdns", enableMdns);
         prefs.end();
+    } else {
+        ok = false;
     }
-    if (prefs.begin("huprobe", false)) {
+    if (prefs.begin(kNsHuProbe, false)) {
+        // Write usb_gadget early inside this namespace too (legacy readers).
+        prefs.putString("usb_gadget", usbGadget);
         prefs.putUChar("ver", kConfigVersion);
         prefs.putString("col_host", collectorHost);
         prefs.putInt("col_port", collectorPort);
@@ -113,21 +187,28 @@ void ConfigStore::save() {
         prefs.putString("wifi2_pass", wifi2Pass);
         prefs.putBool("auto_upd", autoUpdate);
         prefs.putString("ota_url", otaManifestUrl);
-        prefs.putString("usb_gadget", usbGadget);
         prefs.end();
+    } else {
+        ok = false;
     }
+    return ok;
 }
 
 void ConfigStore::factoryReset() {
-    if (prefs.begin("esphub", false)) {
+    if (prefs.begin(kNsEspHub, false)) {
         prefs.clear();
         prefs.end();
     }
-    if (prefs.begin("huprobe", false)) {
+    if (prefs.begin(kNsHuProbe, false)) {
+        prefs.clear();
+        prefs.end();
+    }
+    if (prefs.begin(kNsGadget, false)) {
         prefs.clear();
         prefs.end();
     }
     applyDefaults();
+    Serial.println("[CFG] factoryReset cleared esphub+huprobe+hpgad");
 }
 
 void ConfigStore::toJson(JsonObject obj) const {
@@ -195,7 +276,7 @@ bool ConfigStore::fromJson(JsonVariantConst obj) {
     if (obj["otaManifestUrl"].is<const char*>()) otaManifestUrl = obj["otaManifestUrl"].as<String>();
     if (obj["usbGadget"].is<const char*>()) {
         String g = obj["usbGadget"].as<String>();
-        if (g == "msc" || g == "aoa_observe" || g == "aoa_phone_like") usbGadget = g;
+        if (gadgetModeValid(g)) usbGadget = g;
     }
     return true;
 }

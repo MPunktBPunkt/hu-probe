@@ -620,6 +620,7 @@ void WebUi::begin(ConfigStore* cfg, Session* session, ReadInstrument* inst,
     server_.on("/api/status", HTTP_GET, [this]() { handleStatus(); });
     server_.on("/api/config", HTTP_GET, [this]() { handleConfigGet(); });
     server_.on("/api/config", HTTP_POST, [this]() { handleConfigPost(); });
+    server_.on("/api/factory-reset", HTTP_POST, [this]() { handleFactoryReset(); });
     server_.on("/api/session/start", HTTP_POST, [this]() { handleSessionStart(); });
     server_.on("/api/session/stop", HTTP_POST, [this]() { handleSessionStop(); });
     server_.on("/api/marker", HTTP_POST, [this]() { handleMarker(); });
@@ -1278,8 +1279,29 @@ void WebUi::handleConfigPost() {
         return;
     }
     cfg_->fromJson(doc.as<JsonVariantConst>());
-    cfg_->save();
-    server_.send(200, "application/json", "{\"ok\":true}");
+    const bool saved = cfg_->save();
+    JsonDocument out;
+    out["ok"] = saved;
+    out["usbGadget"] = cfg_->usbGadget;
+    out["gadgetNvsOk"] = cfg_->saveUsbGadgetNvs();  // re-verify / reinforce sticky
+    out["enableHub"] = cfg_->enableHub;
+    String body;
+    serializeJson(out, body);
+    server_.send(saved ? 200 : 500, "application/json", body);
+}
+
+void WebUi::handleFactoryReset() {
+    JsonDocument out;
+    out["ok"] = true;
+    out["action"] = "factory_reset";
+    out["note"] = "cleared_esphub_huprobe_hpgad_then_restart";
+    if (cfg_) {
+        cfg_->factoryReset();
+        out["usbGadget"] = cfg_->usbGadget;
+    }
+    sendJson(200, out);
+    delay(250);
+    ESP.restart();
 }
 
 /**
@@ -1422,8 +1444,13 @@ void WebUi::handleConnectedGadgetReboot() {
     out["ok"] = true;
     out["action"] = "gadget_reboot";
     out["usbGadget"] = cfg_ ? cfg_->usbGadget : "";
-    out["note"] = "restart_after_nvs_save";
-    sendJson(200, out);
+    bool nvsOk = true;
+    if (cfg_) {
+        nvsOk = cfg_->saveUsbGadgetNvs();
+    }
+    out["gadgetNvsOk"] = nvsOk;
+    out["note"] = nvsOk ? "restart_after_nvs_save" : "nvs_verify_failed_restart_anyway";
+    sendJson(nvsOk ? 200 : 500, out);
     delay(200);
     ESP.restart();
 }

@@ -13,7 +13,8 @@
  * @brief Device configuration with NVS persistence and JSON (de)serialization.
  *
  * NVS namespace "esphub" holds the device-family fields (name, hub, heartbeat, mDNS),
- * namespace "huprobe" holds the measurement configuration (collector, IDs, NTP, drive mode, OTA).
+ * namespace "huprobe" holds the measurement configuration (collector, IDs, NTP, drive mode, OTA),
+ * namespace "hpgad" holds usb_gadget alone (sticky across full huprobe blobs).
  */
 class ConfigStore {
 public:
@@ -86,14 +87,27 @@ public:
     void load();
 
     /**
-     * @brief Write all fields to NVS namespaces "esphub" and "huprobe".
+     * @brief Write all fields to NVS ("hpgad" + "esphub" + "huprobe").
      *
-     * Each namespace also gets the config version key "ver" (kConfigVersion).
-     * @warning Writes flash; a namespace that cannot be opened is silently skipped.
+     * usb_gadget is persisted first in dedicated namespace "hpgad" with verify.
+     * @return false if gadget verify or a namespace open fails.
      */
-    void save();
+    bool save();
 
-    /** @brief Clear both NVS namespaces ("esphub", "huprobe") and restore the in-memory defaults. */
+    /**
+     * @brief Persist usbGadget alone to "hpgad" and verify round-trip.
+     * @return true when NVS readback matches usbGadget.
+     */
+    bool saveUsbGadgetNvs();
+
+    /**
+     * @brief Load usbGadget from "hpgad" if present and valid.
+     * @param out  Receives sticky mode on success.
+     * @return true when a valid sticky mode was loaded.
+     */
+    bool loadUsbGadgetNvs(String &out);
+
+    /** @brief Clear esphub+huprobe+hpgad and restore in-memory defaults. */
     void factoryReset();
 
     /** @brief Reset all in-memory fields to their compile-time/lab defaults (does not touch NVS). */

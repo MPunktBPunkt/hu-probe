@@ -69,10 +69,17 @@ private:
     /**
      * @brief POST /api/config: merge the JSON body into ConfigStore and save it.
      *
-     * Responds {"ok":true}; HTTP 400 text/plain "bad request" without config or body,
-     * "json" on a parse error.
+     * Responds {"ok":true,"usbGadget":...,"gadgetNvsOk":bool}; HTTP 400 without body,
+     * "json" on a parse error. gadgetNvsOk false means sticky save verify failed.
      */
     void handleConfigPost();
+
+    /**
+     * @brief POST /api/factory-reset: clear esphub+huprobe+hpgad NVS then reboot.
+     *
+     * Responds JSON then ESP.restart() after a short delay.
+     */
+    void handleFactoryReset();
 
     /**
      * @brief POST /api/session/start: start a live session.
