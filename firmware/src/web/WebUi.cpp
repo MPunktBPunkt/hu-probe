@@ -5,6 +5,7 @@
 
 #include "WebUi.h"
 #include "BuildFlags.h"
+#include "BuildId.h"
 #include "app/DriveMode.h"
 #include "capture/OfflineCapture.h"
 #include "capture/ExperimentProfiles.h"
@@ -994,6 +995,8 @@ void WebUi::handleStatus() {
     JsonDocument doc;
     doc["fw"] = FW_VERSION;
     doc["fwType"] = FW_TYPE;
+    doc["fw_build_id"] = FW_BUILD_ID;
+    doc["fw_dirty"] = FW_GIT_DIRTY != 0;
     doc["board"] = HUPROBE_BOARD_LABEL;
     {
         JsonObject hw = doc["hw"].to<JsonObject>();
