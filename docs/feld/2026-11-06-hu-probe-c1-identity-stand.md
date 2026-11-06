@@ -80,6 +80,7 @@ Auf MSC-Plane: Plug/Unplug, SCSI-Opcode-Histogramm (`tur`, `inquiry`, `mode_sens
 - „DEADBEEF/Etch/BCL bereits am BMW-HU-USB gemessen“.
 - „AOA-Zubehör / Bulk ⇒ Connected-App (SAS) offen“ — G4 braucht Cert+Challenge; außerhalb hu-probe-Scope.
 - „MyBMW exportiert SECURITY_SERVICE / liefert signChallenge“ als aktueller Default — nur Classic Connected ≤5.1 **[D]**; ≥5.1/MyBMW Export **weg**.
+- „Jede Connected-App ist direkter Etch-Client“ — CarAPI: Connected führt `sas_*` stellvertretend (Audit PR #34).
 - Soft-Detach als Mode-Switch; accidental MSC+Vendor Composite.
 
 **Scope-FACT (Desk):** G1 (+teilweise G2 AOA) = hu-probe; BCL/Etch/SAS/RHMI = Phone/Connected-Teilprojekt. Referenz: [GATES-Connected](../GATES-Connected.md#referenzmodell--vier-gates-usb--connected) · PiDrive [HU-Technical-Facts §10](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-Technical-Facts.md).

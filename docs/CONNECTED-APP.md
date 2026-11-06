@@ -17,7 +17,9 @@ G5 AM / RHMI / AV / CDS            ← Authorization/Use
 ```
 
 Quellen: PiDrive [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK-2026-11-06.md) · [Authentication](https://bimmergestalt.github.io/BMWConnectedAnalysis/authentication/) · [app-behavior](https://bimmergestalt.github.io/BMWConnectedAnalysis/app-behavior/).  
-**REJECTED:** „AOA-Zubehör / Bulk ⇒ Connected-App offen.“ · „MyBMW exportiert SECURITY_SERVICE / liefert signChallenge“ (nur Classic ≤5.1 **[D]**).
+**REJECTED:** „AOA-Zubehör / Bulk ⇒ Connected-App offen.“ · „MyBMW exportiert SECURITY_SERVICE / liefert signChallenge“ (nur Classic ≤5.1 **[D]**). · „Jede Connected-App ist direkter Etch-Client“ (CarAPI: Connected führt `sas_*` stellvertretend).
+
+Desk-Nachzug technology-audit [PR #34](https://github.com/MPunktBPunkt/technology-audit/pull/34) / [bmw-connected-sas-auth-2026-11-06](https://github.com/MPunktBPunkt/technology-audit/tree/main/audits/bmw-connected-sas-auth-2026-11-06): Cleartext-Claim („Nothing is encrypted“) → FX-G3-01 wertvoll sobald BCL/Etch sichtbar; AIDL-Namen (`createSecurityContext`/`loadAppCert`) vor Mermaid; AAIdrive `MainService` wartet auf Security connected.
 
 ---
 
@@ -227,6 +229,8 @@ Desk-Reihenfolge (R0, [Authentication](https://bimmergestalt.github.io/BMWConnec
 2. Android/`SAS.CertificateType`: `response = RSA-MD5( challenge XOR MD5(LE uint32(2)) )` → `sas_login(byte[512])`
 3. iOS-Alt-Certs ohne `CertificateType`: Challenge direkt signieren (kein XOR)
 4. P7B: `APP_AUTH` (Pubkey) + `APP` (Permissions / `SAS.Digests.*`); HU `CRHMIAuthPermHandler::verifyResource`
+5. **Zwei Phone-Pfade:** AAIdrive/Kit spricht Etch/`sas_*` selbst; CarAPI-Apps (Spotify…) → Connected lädt Cert (ContentProvider) und führt `sas_*` **stellvertretend** (App kein direkter Etch-Proxy-Client)
+6. Binder-Wahrheit = AIDL (`createSecurityContext` / `loadAppCert`), nicht Analysis-Mermaid-Aliase
 
 Weiter als Challenge beobachten nur mit:
 

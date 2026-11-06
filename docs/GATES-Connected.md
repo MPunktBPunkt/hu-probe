@@ -29,8 +29,9 @@ PiDrive-Abgleich: [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pid
 - AOA erkannt (G1) ≠ Connected-Transport/BCL (G2) ≠ Etch-Tunnel (G3) ≠ SAS (G4) ≠ RHMI/AV (G5).
 - Direct-ESP `18D1:2D00` = USB-Accessory-Identity, **nicht** Connected-Peer-Rolle.
 - BclCarLink kann BCL-Link ersetzen helfen; **nicht** SAS. Classic Connected ≤5.1 exportierte `.SECURITY_SERVICE`; **MyBMW / Connected ≥5.1 nicht** — moderne Signierung **UNKNOWN** (Altstand „MyBMW liefert signChallenge“ **REJECTED** als Default).
+- CarAPI ≠ AAIdrive-Call-Graph: Connected kann `sas_*` **stellvertretend** ausführen; Wire trotzdem BCL/Etch-Tunnel (Cleartext laut Analysis — FX-G3-01).
 - „BCL/Etch/SAS auf echtem HU-USB = 0“ ist **Scope**, kein Firmware-Qualitätsdefizit.
-- Nächster Feldschritt bleibt **I-303A** (nur G1) — siehe [Kampagne](feld/2026-11-06-c1-identity-gate-kampagne.md).
+- Nächster Feldschritt bleibt **I-303A** (nur G1) — siehe [Kampagne](feld/2026-11-06-c1-identity-gate-kampagne.md). SAS-Feld später: audit **FX-G3-01**.
 
 C1a–C5 unten ordnen Lab-/Wire-Stufen **innerhalb** dieses Modells ein; sie ersetzen es nicht.
 
