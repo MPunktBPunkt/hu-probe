@@ -9,6 +9,28 @@ Reihenfolge ist strikt: C(n+1) erst nach messbarem C(n) oder dokumentiertem Hard
 
 ---
 
+## Referenzmodell — vier Gates (USB → Connected)
+
+Desk/Primärquellen (BimmerGestalt Authentication, PiDrive Connected/AAIdrive-Stack 2026-11-06): Connected-App ist **nicht** ein USB-Flag, sondern eine Kette.
+
+| Gate | Inhalt | hu-probe Messfläche (0.3.36) |
+|------|--------|------------------------------|
+| **G1** | USB Identity/Class (VID/PID, Descriptors, MSC vs Vendor-only) | **ja** — I-303A, sticky Modes |
+| **G2** | AOA-Start / Vendor-Control / Bulk (51/52/53, RX/TX) | **ja** — Callback-Schicht; Bus außerhalb Callback = UNKNOWN |
+| **G3** | BCL Multiplex + Etch (Application Peer) | **nein** — Lab-Parser existiert; Wire am HU-USB nicht beobachtet |
+| **G4** | SAS Auth (P7B-Cert → Challenge/Nonce → Signatur → `sas_login`) | **nein** — braucht App-Keys / MyBMW SecurityService |
+
+**Invarianten**
+
+- AOA erkannt (G1/G2) ≠ BCL läuft (G3) ≠ Connected-App autorisiert (G4).
+- BclCarLink / BCL-Transport kann G3 ersetzen helfen; **nicht** G4 (Security bleibt bei Connected/MyBMW).
+- „BCL/Etch/SAS auf echtem HU-USB = 0“ ist **Scope**, kein Firmware-Qualitätsdefizit.
+- Nächster Feldschritt bleibt **I-303A** (nur G1, eine Variable) — siehe [Kampagne](feld/2026-11-06-c1-identity-gate-kampagne.md).
+
+C1a–C5 unten ordnen Lab-/Wire-Stufen **innerhalb** dieses Modells ein; sie ersetzen es nicht.
+
+---
+
 ## HU-PROBE-GATE-C1a — Host BCL Parser (Lab)
 
 **Status:** PASS (2026-10-28) — host-only, synthetic TEST evidence

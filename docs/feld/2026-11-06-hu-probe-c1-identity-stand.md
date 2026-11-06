@@ -58,6 +58,7 @@ Auf MSC-Plane: Plug/Unplug, SCSI-Opcode-Histogramm (`tur`, `inquiry`, `mode_sens
 
 - Analyzer-MSC-Negativ (`303a:1001` → kein AOA) und hu-probe Accessory-Positiv-UI (`18D1:2D00`) zusammen legen nahe, dass **Identity + Class/Configuration** den HU-Pfad steuern — nicht „MSC-Endpoint antwortet“.
 - `aoa_id_303a` ist der nächste empirische Schritt, um VID/PID vs. MSC-Class zu trennen.
+- **H-Reconnect:** Reconnect-Loop bei `18D1:2D00` *kann* fehlenden BCL/Etch/SAS-Peer (G3/G4) bedeuten statt reinem USB-Transportfehler — nicht messbar auf aktueller Schicht ([Kampagne](2026-11-06-c1-identity-gate-kampagne.md)).
 
 ---
 
@@ -65,7 +66,7 @@ Auf MSC-Plane: Plug/Unplug, SCSI-Opcode-Histogramm (`tur`, `inquiry`, `mode_sens
 
 - Ob die HU auf dem Bus 51/52/53 sendet, wenn der Vendor-Callback 0 zählt (EP0 außerhalb `USBVendor.onRequest`).
 - Welche Identity/Config den AOA-/Connected-App-Pfad am NBT auslöst.
-- BCL/Etch/RHMI am HU-USB-Bus.
+- BCL/Etch/RHMI/**SAS** am HU-USB-Bus (G3/G4).
 - `enumeration_count` / `configuration_count` / `control_in/out` / READ-size-/LBA-Histogramme auf hu-probe (explizit null).
 - BMW-Reaktion auf `aoa_id_303a` (noch nicht im Feld).
 
@@ -77,7 +78,10 @@ Auf MSC-Plane: Plug/Unplug, SCSI-Opcode-Histogramm (`tur`, `inquiry`, `mode_sens
 - „BMW sendet keinen USB-Verkehr“ — aus `setup_count=0` / `rx=0`.
 - „phone-like Identity reicht für AOA“ — Feld REJECTED bei `04E8:6860`.
 - „DEADBEEF/Etch/BCL bereits am BMW-HU-USB gemessen“.
+- „AOA-Zubehör / Bulk ⇒ Connected-App (SAS) offen“ — G4 braucht Cert+Challenge; außerhalb hu-probe-Scope.
 - Soft-Detach als Mode-Switch; accidental MSC+Vendor Composite.
+
+**Scope-FACT (Desk):** G1/G2 = hu-probe; G3/G4 = separates Teilprojekt (AAIdrive/MyBMW Keys). Referenz: [GATES-Connected Vier Gates](../GATES-Connected.md#referenzmodell--vier-gates-usb--connected).
 
 ---
 

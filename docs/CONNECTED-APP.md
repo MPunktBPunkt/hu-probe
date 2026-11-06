@@ -6,6 +6,18 @@
 
 Gates: [GATES-Connected.md](GATES-Connected.md). MSC-Integrität bleibt [GATES.md](GATES.md) / HU-PROBE-GATE-01.
 
+### Vier Gates (Kurz)
+
+```
+G1 USB Identity/Class     ← hu-probe (I-303A, Modes)
+G2 AOA / Vendor / Bulk    ← hu-probe (Callback-Schicht)
+G3 BCL + Etch             ← außerhalb aktueller Wire-Messung
+G4 SAS Auth (Cert+Nonce)  ← außerhalb Scope (App-Keys / MyBMW)
+```
+
+Quellen-Abgleich Stack/SAS: PiDrive [CONNECTED-AAIDRIVE-STACK-2026-11-06](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK-2026-11-06.md) · [BMWConnectedAnalysis Authentication](https://bimmergestalt.github.io/BMWConnectedAnalysis/authentication/).  
+**REJECTED als Claim:** „AOA-Zubehör-UI / Bulk ⇒ Connected-App offen.“
+
 ---
 
 ## Architektur: Storage vs Control
@@ -206,15 +218,19 @@ Post-53 Re-Enum mit VID-Wechsel: **NOT IMPLEMENTED** (Arduino TinyUSB lockt Desc
 
 ### C1c — BT-SPP — stub only (`SppTransport.h`)
 
-### SAS-Hard-Stop (dokumentiert)
+### SAS-Hard-Stop (dokumentiert) — Gate G4
+
+Desk-Reihenfolge (R0, Analysis/Authentication): `sas_certificate()` → 16-Byte-Nonce → Signatur (privater Schlüssel aus APP_AUTH) → `sas_login()`; Permissions als X509-Extensions (`SAS.CertificateType`, `Make`, `SAS.Digests.*` / RHMI-Whitelist).
 
 Weiter als Challenge beobachten nur mit:
 
 - gültigem App-Zertifikat (P7B / APP_AUTH+APP laut Analysis — **Existenz** FACT, Details Security-sensitiv),
-- Signing-Backend (Classic Connected Security-Service / äquivalent),
+- Signing-Backend (Classic Connected / MyBMW SecurityService; AAIdrive nutzt das per localhost-TCP),
 - bewusster Lab-Freigabe.
 
 **Probe-Verhalten ohne Cert:** `ca_sas.phase=blocked`, Gate C1 = „Auth-Challenge sichtbar oder klar blockiert“ — **PASS möglich ohne Login**. C2–C5 bleiben geschlossen.
+
+**Scope:** G4 ist ein **eigenes Teilprojekt** (AAIdrive/BclCarLink + Cert-Material, anderes Legality-Profil) — nicht Ziel von I-303A und nicht durch EP0-/MSC-Arbeit ersetzbar.
 
 ---
 
@@ -226,6 +242,7 @@ Weiter als Challenge beobachten nur mit:
 - RHMI-Capabilities / `hmi.type` unserer NBT Evo
 - Ob AV nur Fokus/Control liefert oder Audio-Bytes trägt (C5)
 - Dual-Role USB (MSC + AOA gleichzeitig)
+- Ob der HU-Reconnect-Loop bei Direct-`18D1:2D00` an fehlendem G3/G4-Peer liegt (siehe Kampagne INFERENCE) — Messschicht G1/G2 kann das nicht entscheiden
 
 ---
 

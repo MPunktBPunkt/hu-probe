@@ -5,7 +5,8 @@
 | **FW** | **0.3.36** (clean dist) |
 | **Mode** | `aoa_id_303a` — VID/PID `303A:1001`, Vendor-only `FF/FF/00`, **kein MSC** |
 | **respond** | `hypothesis_respond=false` (kein AOA-51-Auto-ACK) |
-| **Nicht** | BCL · Etch · EP0-Hook · Blind-Knock · weitere MSC-Novel-Muster |
+| **Nicht** | BCL · Etch · SAS · EP0-Hook · Blind-Knock · weitere MSC-Novel-Muster |
+| **Misst** | nur **G1** (Identity/Class); G2 nur soweit Callback zählt; **nicht** G3/G4 |
 
 Lab-Voraussetzungen geschlossen: sticky A/B/C/D PASS · AOA Lab A/B PASS · Host-CI  
 ([Kampagne](2026-11-06-c1-identity-gate-kampagne.md) · [Lab sticky/AOA](2026-11-06-lab-c1-036-sticky-aoa.md)).
@@ -59,9 +60,9 @@ Beobachten / notieren — nur FACT:
 ## Danach
 
 1. Heartbeat stoppen; Status-Endsnap + Events JSONL sichern.
-2. Kurzbericht: FACT / UNKNOWN / INFERENCE — keine BCL-Claims.
+2. Kurzbericht: FACT / UNKNOWN / INFERENCE — keine BCL-/SAS-Claims; AOA ≠ Connected-App.
 3. Nur wenn Callback weiter 0 **und** Identity-Gate die Messlücke als Blocker setzt → EP0-Hook priorisieren.
-4. Kein weiterer Code vor diesem Feldlauf.
+4. Kein weiterer Code vor diesem Feldlauf. SAS erklärt Null-Befunde strukturell, ändert I-303A nicht.
 
 Vergleichspole (nicht erneut als Hauptlauf):  
 `18D1:2D00` Accessory · `04E8:6860` Reject · `303A:1001`+MSC P-MOUNT.

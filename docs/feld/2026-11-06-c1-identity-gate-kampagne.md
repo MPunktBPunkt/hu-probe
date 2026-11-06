@@ -62,7 +62,16 @@ Epistemik: Callback/RX = 0 ≠ Bus-Negativ — [epistemik-messluecke](2026-10-30
 | **I-303A** | **`aoa_id_303a`** | **VID ohne MSC-Class** | **NEXT** — [Runsheet](2026-11-06-i303a-feld-runsheet.md) |
 | I-ACC / I-PHN | nur bei Bedarf | Rebaseline | kurze Timeline, kein Blind-Knock |
 
-**Vor I-303A kein weiterer Code:** kein EP0-Hook, kein BCL/Etch, keine weiteren MSC-Novel-Muster, keine Blind-Knocks.
+**Vor I-303A kein weiterer Code:** kein EP0-Hook, kein BCL/Etch/SAS, keine weiteren MSC-Novel-Muster, keine Blind-Knocks.
+
+SAS/Connected-Auth (Gate G4) sitzt **zwei Stufen über** I-303A — siehe [GATES-Connected § Vier Gates](../GATES-Connected.md#referenzmodell--vier-gates-usb--connected). Ändert den Feldlauf nicht.
+
+---
+
+## INFERENCE (nicht FACT)
+
+**H-Reconnect (G3/G4-Erwartung):** Der Feld-Loop bei Direct-`18D1:2D00` (Zubehör-UI → Reconnect; Callback 51/52/53=0; Bulk absent) *könnte* bedeuten: HU schließt AOA-Accessory ab und erwartet danach BCL/Etch-Peer-Verkehr (ggf. Cert/SAS); ohne Peer resettet sie den Kanal.  
+**Messbarkeit:** hu-probe G1/G2 kann das weder bestätigen noch widerlegen. Alternative (EP0 außerhalb Callback, Transport) bleibt offen — [epistemik](2026-10-30-epistemik-messluecke-ep0-bulk.md).
 
 ---
 
@@ -70,4 +79,5 @@ Epistemik: Callback/RX = 0 ≠ Bus-Negativ — [epistemik-messluecke](2026-10-30
 
 - **FACT:** Identity X + configuration Y → HU reaction Z  
 - **FACT:** Varianten erzeugen trotz unterschiedlicher Identity keinen beobachtbaren AOA-Start auf der aktuellen Messschicht  
-- Rest: **UNKNOWN** (Bus außerhalb Callback, AOA-Trigger, BCL/Etch)
+- **REJECTED:** „AOA erkannt / Bulk ⇒ Connected-App (SAS) offen“  
+- Rest: **UNKNOWN** (Bus außerhalb Callback, AOA-Trigger, BCL/Etch/SAS Wire)
