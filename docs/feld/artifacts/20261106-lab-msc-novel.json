@@ -1,0 +1,931 @@
+{
+  "fw": "0.3.36",
+  "steps": [
+    {
+      "ensure_msc": {
+        "fw": "0.3.36",
+        "usb_gadget": "msc",
+        "msc_reads": 0,
+        "read_count": 0,
+        "plug_count": 1,
+        "msc_soft_attached": false,
+        "tur_hz": 0,
+        "media_variant": "folders_30",
+        "media_files": null,
+        "scsi_hist": {
+          "tur": 0,
+          "inquiry": 0,
+          "mode_sense6": 0,
+          "prevent_allow": 0,
+          "read_capacity10": 0,
+          "read10": 0,
+          "write10": 0,
+          "other": 0
+        },
+        "read_bytes": 0,
+        "write_count": 0,
+        "offline": {
+          "state": "idle",
+          "active": false,
+          "capturing": false,
+          "records": 0,
+          "post_finalize_records": 0,
+          "bytes": 0,
+          "cap": 0,
+          "overflow": 0,
+          "wallclock": "",
+          "stop_reason": "",
+          "soft_usb": true,
+          "auto_detach_ms": 0,
+          "end_strategy": "media_hide",
+          "end_on_unmount": true,
+          "free_markers": false,
+          "fine_data": false,
+          "soft_replugs": 0,
+          "upload_status": "idle",
+          "media_hidden": false,
+          "fallback_detached": false,
+          "transport_epoch_start": 0,
+          "transport_epoch_end": 0,
+          "last_marker": "",
+          "marker_index": 0,
+          "marker_count": 0,
+          "markers": [],
+          "capture_budget": {
+            "capacity_bytes": 1048576,
+            "capacity_target_bytes": 1048576,
+            "capacity_fallback_bytes": 49152,
+            "capacity_allocated": false,
+            "record_format": "compact/1",
+            "record_size": 22,
+            "record_size_max": 64,
+            "estimated_max_records": 47662,
+            "fine_data": false,
+            "est_bytes_per_s": 80,
+            "est_duration_s": 1800,
+            "arm_heap_free": 0,
+            "arm_heap_max_alloc": 0,
+            "max_duration_ms": 1800000,
+            "measure_ms": 0
+          }
+        },
+        "sequence": {
+          "state": "idle",
+          "active": false
+        }
+      }
+    },
+    {
+      "attach": {
+        "fw": "0.3.36",
+        "usb_gadget": "msc",
+        "msc_reads": 0,
+        "read_count": 0,
+        "plug_count": 1,
+        "msc_soft_attached": true,
+        "tur_hz": 0,
+        "media_variant": "folders_30",
+        "media_files": null,
+        "scsi_hist": {
+          "tur": 0,
+          "inquiry": 0,
+          "mode_sense6": 0,
+          "prevent_allow": 0,
+          "read_capacity10": 0,
+          "read10": 0,
+          "write10": 0,
+          "other": 0
+        },
+        "read_bytes": 0,
+        "write_count": 0,
+        "offline": {
+          "state": "idle",
+          "active": false,
+          "capturing": false,
+          "records": 0,
+          "post_finalize_records": 0,
+          "bytes": 0,
+          "cap": 0,
+          "overflow": 0,
+          "wallclock": "",
+          "stop_reason": "",
+          "soft_usb": true,
+          "auto_detach_ms": 0,
+          "end_strategy": "media_hide",
+          "end_on_unmount": true,
+          "free_markers": false,
+          "fine_data": false,
+          "soft_replugs": 0,
+          "upload_status": "idle",
+          "media_hidden": false,
+          "fallback_detached": false,
+          "transport_epoch_start": 0,
+          "transport_epoch_end": 0,
+          "last_marker": "",
+          "marker_index": 0,
+          "marker_count": 0,
+          "markers": [],
+          "capture_budget": {
+            "capacity_bytes": 1048576,
+            "capacity_target_bytes": 1048576,
+            "capacity_fallback_bytes": 49152,
+            "capacity_allocated": false,
+            "record_format": "compact/1",
+            "record_size": 22,
+            "record_size_max": 64,
+            "estimated_max_records": 47662,
+            "fine_data": false,
+            "est_bytes_per_s": 80,
+            "est_duration_s": 1800,
+            "arm_heap_free": 0,
+            "arm_heap_max_alloc": 0,
+            "max_duration_ms": 1800000,
+            "measure_ms": 0
+          }
+        },
+        "sequence": {
+          "state": "idle",
+          "active": false
+        }
+      },
+      "host_dut": {
+        "present": true,
+        "id": "303a:1001",
+        "vid": 12346,
+        "pid": 4097,
+        "address": 7,
+        "configurationValue": 1,
+        "interfaces": 2,
+        "hidIface": false,
+        "speed": "full",
+        "manufacturer": "Espressif Systems",
+        "product": "Espressif ESP32-S3-DevKitC-1-N8 (8 MB QD, No PSRAM)",
+        "serial": "HP0001"
+      }
+    },
+    {
+      "media_size_1_4_8": {
+        "http": 200,
+        "files": [
+          {
+            "idx": 0,
+            "path": "S1M.MP3",
+            "dir": false,
+            "size": 1048471,
+            "first_lba": 65,
+            "extents": 1,
+            "kbps": 128,
+            "dur_ms": 65671,
+            "seed": 1,
+            "title": "HP S1M.MP3 v1",
+            "artist": "hu-probe",
+            "album": "HUPROBE"
+          },
+          {
+            "idx": 1,
+            "path": "S4M.MP3",
+            "dir": false,
+            "size": 4193902,
+            "first_lba": 2113,
+            "extents": 1,
+            "kbps": 128,
+            "dur_ms": 262713,
+            "seed": 2,
+            "title": "HP S4M.MP3 v2",
+            "artist": "hu-probe",
+            "album": "HUPROBE"
+          },
+          {
+            "idx": 2,
+            "path": "S8M.MP3",
+            "dir": false,
+            "size": 8388505,
+            "first_lba": 10305,
+            "extents": 1,
+            "kbps": 128,
+            "dur_ms": 525479,
+            "seed": 3,
+            "title": "HP S8M.MP3 v3",
+            "artist": "hu-probe",
+            "album": "HUPROBE"
+          }
+        ],
+        "snap": {
+          "fw": "0.3.36",
+          "usb_gadget": "msc",
+          "msc_reads": 0,
+          "read_count": 0,
+          "plug_count": 2,
+          "msc_soft_attached": true,
+          "tur_hz": 0,
+          "media_variant": "size_1_4_8",
+          "media_files": null,
+          "scsi_hist": {
+            "tur": 0,
+            "inquiry": 0,
+            "mode_sense6": 0,
+            "prevent_allow": 0,
+            "read_capacity10": 0,
+            "read10": 0,
+            "write10": 0,
+            "other": 0
+          },
+          "read_bytes": 0,
+          "write_count": 0,
+          "offline": {
+            "state": "idle",
+            "active": false,
+            "capturing": false,
+            "records": 0,
+            "post_finalize_records": 0,
+            "bytes": 0,
+            "cap": 0,
+            "overflow": 0,
+            "wallclock": "",
+            "stop_reason": "",
+            "soft_usb": true,
+            "auto_detach_ms": 0,
+            "end_strategy": "media_hide",
+            "end_on_unmount": true,
+            "free_markers": false,
+            "fine_data": false,
+            "soft_replugs": 0,
+            "upload_status": "idle",
+            "media_hidden": false,
+            "fallback_detached": false,
+            "transport_epoch_start": 0,
+            "transport_epoch_end": 0,
+            "last_marker": "",
+            "marker_index": 0,
+            "marker_count": 0,
+            "markers": [],
+            "capture_budget": {
+              "capacity_bytes": 1048576,
+              "capacity_target_bytes": 1048576,
+              "capacity_fallback_bytes": 49152,
+              "capacity_allocated": false,
+              "record_format": "compact/1",
+              "record_size": 22,
+              "record_size_max": 64,
+              "estimated_max_records": 47662,
+              "fine_data": false,
+              "est_bytes_per_s": 80,
+              "est_duration_s": 1800,
+              "arm_heap_free": 0,
+              "arm_heap_max_alloc": 0,
+              "max_duration_ms": 1800000,
+              "measure_ms": 0
+            }
+          },
+          "sequence": {
+            "state": "idle",
+            "active": false
+          }
+        }
+      }
+    },
+    {
+      "offline_start": {
+        "ok": true,
+        "action": "offline_arm",
+        "experiment": "s0_plug_enum",
+        "vehicle": "lab_debian",
+        "scenario": "s0_plug_enum",
+        "profile_id": "lab_debian",
+        "soft_usb": true,
+        "auto_detach_ms": 20000,
+        "measure_ms": 20000,
+        "end_strategy": "media_hide",
+        "end_on_unmount": true,
+        "free_markers": false,
+        "fine_data": true,
+        "note": "wifi_off_then_capture",
+        "markers": [
+          "plug_ready",
+          "stop"
+        ],
+        "capture_budget": {
+          "capacity_bytes": 1048576,
+          "capacity_target_bytes": 1048576,
+          "capacity_fallback_bytes": 49152,
+          "capacity_allocated": false,
+          "record_size": 22,
+          "estimated_max_records": 47662,
+          "fine_data": true,
+          "est_bytes_per_s": 480,
+          "est_duration_s": 1800,
+          "max_duration_ms": 1800000,
+          "measure_ms": 20000
+        }
+      }
+    },
+    {
+      "bmw_mount_scan": {
+        "ok": true,
+        "profile": "bmw_mount_scan",
+        "inquiryOk": 1,
+        "capacityOk": 3,
+        "turOk": 16,
+        "turFail": 0,
+        "senseOk": 1,
+        "senseFail": 0,
+        "maxLunOk": 1,
+        "maxLun": 0,
+        "syncCacheOk": 1,
+        "modeSenseOk": 6,
+        "modeSenseFail": 0,
+        "preventOk": 7,
+        "preventFail": 0,
+        "readOk": 19,
+        "readFail": 0,
+        "bytesRead": 59904,
+        "capacityBlocks": 32768,
+        "inquiryProduct": "HU_PROBE        ",
+        "duration_ms": 109,
+        "claim": "bmw_hu_stimulus_lab",
+        "note": "not_real_hu;+sense+maxlun+sync+mode_sense6x6+preventx7"
+      },
+      "before": {
+        "fw": null,
+        "usb_gadget": null,
+        "msc_reads": null,
+        "read_count": null,
+        "plug_count": null,
+        "msc_soft_attached": null,
+        "tur_hz": null,
+        "media_variant": null,
+        "media_files": null,
+        "scsi_hist": null,
+        "read_bytes": null,
+        "write_count": null,
+        "offline": null,
+        "sequence": null
+      },
+      "after": {
+        "fw": "0.3.36",
+        "usb_gadget": "msc",
+        "msc_reads": 19,
+        "read_count": 0,
+        "plug_count": 3,
+        "msc_soft_attached": false,
+        "tur_hz": 0,
+        "media_variant": "size_1_4_8",
+        "media_files": null,
+        "scsi_hist": {
+          "tur": 0,
+          "inquiry": 0,
+          "mode_sense6": 0,
+          "prevent_allow": 0,
+          "read_capacity10": 0,
+          "read10": 0,
+          "write10": 0,
+          "other": 0
+        },
+        "read_bytes": 0,
+        "write_count": 0,
+        "offline": {
+          "state": "uploading",
+          "active": true,
+          "capturing": false,
+          "records": 177,
+          "post_finalize_records": 0,
+          "bytes": 3556,
+          "cap": 1048576,
+          "overflow": 0,
+          "wallclock": "2026-11-06T16:37:56Z",
+          "stop_reason": "auto_media_hide",
+          "soft_usb": true,
+          "auto_detach_ms": 20000,
+          "end_strategy": "media_hide",
+          "end_on_unmount": true,
+          "free_markers": false,
+          "fine_data": true,
+          "soft_replugs": 0,
+          "upload_status": "replaying",
+          "media_hidden": true,
+          "fallback_detached": true,
+          "transport_epoch_start": 3,
+          "transport_epoch_end": 5,
+          "last_marker": "",
+          "marker_index": 0,
+          "marker_count": 2,
+          "markers": [
+            "plug_ready",
+            "stop"
+          ],
+          "capture_budget": {
+            "capacity_bytes": 1048576,
+            "capacity_target_bytes": 1048576,
+            "capacity_fallback_bytes": 49152,
+            "capacity_allocated": true,
+            "record_format": "compact/1",
+            "record_size": 22,
+            "record_size_max": 64,
+            "estimated_max_records": 47662,
+            "fine_data": true,
+            "est_bytes_per_s": 480,
+            "est_duration_s": 1800,
+            "arm_heap_free": 173120,
+            "arm_heap_max_alloc": 147444,
+            "max_duration_ms": 1800000,
+            "measure_ms": 20000
+          }
+        },
+        "sequence": {
+          "state": "idle",
+          "active": false
+        }
+      },
+      "delta_msc_reads": 19
+    },
+    {
+      "novel": {
+        "reads": [],
+        "write": {
+          "ok": false,
+          "msc_ready": false,
+          "pattern_ok": false,
+          "pattern_fail_bytes": 0,
+          "dut": "",
+          "inquiry": {
+            "vendor": "",
+            "product": "",
+            "revision": ""
+          },
+          "capacity_blocks": 0,
+          "block_size": 0,
+          "chunk": 1,
+          "transfers": 0,
+          "blocks_read": 0,
+          "bytes_read": 0,
+          "duration_ms": 0,
+          "rate_kBs": 0,
+          "rtt_us": {
+            "min": 0,
+            "avg": 0,
+            "p50": 0,
+            "p95": 0,
+            "max": 0
+          },
+          "dir": "write",
+          "path": "usb_otg_host_write_device_msc",
+          "note": "direct_otg_cable_not_wifi_mitm",
+          "err": "no_dut"
+        },
+        "reverse": [
+          {
+            "lba": 200,
+            "http": 500,
+            "ok": false,
+            "ms": 0
+          },
+          {
+            "lba": 150,
+            "http": 500,
+            "ok": false,
+            "ms": 0
+          },
+          {
+            "lba": 100,
+            "http": 500,
+            "ok": false,
+            "ms": 0
+          },
+          {
+            "lba": 50,
+            "http": 500,
+            "ok": false,
+            "ms": 0
+          },
+          {
+            "lba": 20,
+            "http": 500,
+            "ok": false,
+            "ms": 0
+          },
+          {
+            "lba": 10,
+            "http": 500,
+            "ok": false,
+            "ms": 0
+          },
+          {
+            "lba": 5,
+            "http": 500,
+            "ok": false,
+            "ms": 0
+          },
+          {
+            "lba": 1,
+            "http": 500,
+            "ok": false,
+            "ms": 0
+          }
+        ],
+        "sequential_256": {
+          "ok": false,
+          "msc_ready": false,
+          "pattern_ok": false,
+          "pattern_fail_bytes": 0,
+          "dut": "",
+          "inquiry": {
+            "vendor": "",
+            "product": "",
+            "revision": ""
+          },
+          "capacity_blocks": 0,
+          "block_size": 0,
+          "chunk": 1,
+          "transfers": 0,
+          "blocks_read": 0,
+          "bytes_read": 0,
+          "duration_ms": 0,
+          "rate_kBs": 0,
+          "rtt_us": {
+            "min": 0,
+            "avg": 0,
+            "p50": 0,
+            "p95": 0,
+            "max": 0
+          },
+          "dir": "read",
+          "path": "usb_otg_host_to_device_msc",
+          "note": "direct_otg_cable_not_wifi_mitm",
+          "err": "no_dut"
+        }
+      },
+      "after": {
+        "fw": "0.3.36",
+        "usb_gadget": "msc",
+        "msc_reads": 19,
+        "read_count": 0,
+        "plug_count": 3,
+        "msc_soft_attached": false,
+        "tur_hz": 0,
+        "media_variant": "size_1_4_8",
+        "media_files": null,
+        "scsi_hist": {
+          "tur": 0,
+          "inquiry": 0,
+          "mode_sense6": 0,
+          "prevent_allow": 0,
+          "read_capacity10": 0,
+          "read10": 0,
+          "write10": 0,
+          "other": 0
+        },
+        "read_bytes": 0,
+        "write_count": 0,
+        "offline": {
+          "state": "uploading",
+          "active": true,
+          "capturing": false,
+          "records": 177,
+          "post_finalize_records": 0,
+          "bytes": 3556,
+          "cap": 1048576,
+          "overflow": 0,
+          "wallclock": "2026-11-06T16:37:56Z",
+          "stop_reason": "auto_media_hide",
+          "soft_usb": true,
+          "auto_detach_ms": 20000,
+          "end_strategy": "media_hide",
+          "end_on_unmount": true,
+          "free_markers": false,
+          "fine_data": true,
+          "soft_replugs": 0,
+          "upload_status": "replaying",
+          "media_hidden": true,
+          "fallback_detached": true,
+          "transport_epoch_start": 3,
+          "transport_epoch_end": 5,
+          "last_marker": "",
+          "marker_index": 0,
+          "marker_count": 2,
+          "markers": [
+            "plug_ready",
+            "stop"
+          ],
+          "capture_budget": {
+            "capacity_bytes": 1048576,
+            "capacity_target_bytes": 1048576,
+            "capacity_fallback_bytes": 49152,
+            "capacity_allocated": true,
+            "record_format": "compact/1",
+            "record_size": 22,
+            "record_size_max": 64,
+            "estimated_max_records": 47662,
+            "fine_data": true,
+            "est_bytes_per_s": 480,
+            "est_duration_s": 1800,
+            "arm_heap_free": 173120,
+            "arm_heap_max_alloc": 147444,
+            "max_duration_ms": 1800000,
+            "measure_ms": 20000
+          }
+        },
+        "sequence": {
+          "state": "idle",
+          "active": false
+        }
+      },
+      "delta_msc_reads": 0,
+      "scsi_hist": {
+        "tur": 0,
+        "inquiry": 0,
+        "mode_sense6": 0,
+        "prevent_allow": 0,
+        "read_capacity10": 0,
+        "read10": 0,
+        "write10": 0,
+        "other": 0
+      }
+    },
+    {
+      "media_cache_b": {
+        "ok": false,
+        "err": "capture_or_sequence_active"
+      },
+      "stim_after": {
+        "ok": false,
+        "profile": "bmw_mount",
+        "inquiryOk": 0,
+        "capacityOk": 0,
+        "turOk": 0,
+        "turFail": 0,
+        "senseOk": 0,
+        "senseFail": 0,
+        "maxLunOk": 0,
+        "maxLun": 0,
+        "syncCacheOk": 0,
+        "modeSenseOk": 0,
+        "modeSenseFail": 0,
+        "preventOk": 0,
+        "preventFail": 0,
+        "readOk": 0,
+        "readFail": 0,
+        "bytesRead": 0,
+        "capacityBlocks": 0,
+        "inquiryProduct": "",
+        "duration_ms": 0,
+        "err": "no_dut",
+        "claim": "bmw_hu_stimulus_lab",
+        "note": "not_real_hu;+sense+maxlun+sync+mode_sense6x6+preventx7"
+      },
+      "snap": {
+        "fw": "0.3.36",
+        "usb_gadget": "msc",
+        "msc_reads": 19,
+        "read_count": 0,
+        "plug_count": 3,
+        "msc_soft_attached": false,
+        "tur_hz": 0,
+        "media_variant": "size_1_4_8",
+        "media_files": null,
+        "scsi_hist": {
+          "tur": 0,
+          "inquiry": 0,
+          "mode_sense6": 0,
+          "prevent_allow": 0,
+          "read_capacity10": 0,
+          "read10": 0,
+          "write10": 0,
+          "other": 0
+        },
+        "read_bytes": 0,
+        "write_count": 0,
+        "offline": {
+          "state": "uploading",
+          "active": true,
+          "capturing": false,
+          "records": 177,
+          "post_finalize_records": 0,
+          "bytes": 3556,
+          "cap": 1048576,
+          "overflow": 0,
+          "wallclock": "2026-11-06T16:37:56Z",
+          "stop_reason": "auto_media_hide",
+          "soft_usb": true,
+          "auto_detach_ms": 20000,
+          "end_strategy": "media_hide",
+          "end_on_unmount": true,
+          "free_markers": false,
+          "fine_data": true,
+          "soft_replugs": 0,
+          "upload_status": "replaying",
+          "media_hidden": true,
+          "fallback_detached": true,
+          "transport_epoch_start": 3,
+          "transport_epoch_end": 5,
+          "last_marker": "",
+          "marker_index": 0,
+          "marker_count": 2,
+          "markers": [
+            "plug_ready",
+            "stop"
+          ],
+          "capture_budget": {
+            "capacity_bytes": 1048576,
+            "capacity_target_bytes": 1048576,
+            "capacity_fallback_bytes": 49152,
+            "capacity_allocated": true,
+            "record_format": "compact/1",
+            "record_size": 22,
+            "record_size_max": 64,
+            "estimated_max_records": 47662,
+            "fine_data": true,
+            "est_bytes_per_s": 480,
+            "est_duration_s": 1800,
+            "arm_heap_free": 173120,
+            "arm_heap_max_alloc": 147444,
+            "max_duration_ms": 1800000,
+            "measure_ms": 20000
+          }
+        },
+        "sequence": {
+          "state": "idle",
+          "active": false
+        }
+      }
+    },
+    {
+      "sequence": {
+        "start": {
+          "ok": false,
+          "err": "offline_active",
+          "runner": {
+            "state": "idle",
+            "active": false
+          }
+        },
+        "next": {
+          "ok": true,
+          "cmd": "next",
+          "runner": {
+            "state": "idle",
+            "active": false
+          }
+        },
+        "abort": {
+          "ok": true,
+          "cmd": "abort",
+          "runner": {
+            "state": "idle",
+            "active": false
+          }
+        },
+        "snap": {
+          "fw": "0.3.36",
+          "usb_gadget": "msc",
+          "msc_reads": 19,
+          "read_count": 0,
+          "plug_count": 3,
+          "msc_soft_attached": false,
+          "tur_hz": 0,
+          "media_variant": "size_1_4_8",
+          "media_files": null,
+          "scsi_hist": {
+            "tur": 0,
+            "inquiry": 0,
+            "mode_sense6": 0,
+            "prevent_allow": 0,
+            "read_capacity10": 0,
+            "read10": 0,
+            "write10": 0,
+            "other": 0
+          },
+          "read_bytes": 0,
+          "write_count": 0,
+          "offline": {
+            "state": "uploading",
+            "active": true,
+            "capturing": false,
+            "records": 177,
+            "post_finalize_records": 0,
+            "bytes": 3556,
+            "cap": 1048576,
+            "overflow": 0,
+            "wallclock": "2026-11-06T16:37:56Z",
+            "stop_reason": "auto_media_hide",
+            "soft_usb": true,
+            "auto_detach_ms": 20000,
+            "end_strategy": "media_hide",
+            "end_on_unmount": true,
+            "free_markers": false,
+            "fine_data": true,
+            "soft_replugs": 0,
+            "upload_status": "replaying",
+            "media_hidden": true,
+            "fallback_detached": true,
+            "transport_epoch_start": 3,
+            "transport_epoch_end": 5,
+            "last_marker": "",
+            "marker_index": 0,
+            "marker_count": 2,
+            "markers": [
+              "plug_ready",
+              "stop"
+            ],
+            "capture_budget": {
+              "capacity_bytes": 1048576,
+              "capacity_target_bytes": 1048576,
+              "capacity_fallback_bytes": 49152,
+              "capacity_allocated": true,
+              "record_format": "compact/1",
+              "record_size": 22,
+              "record_size_max": 64,
+              "estimated_max_records": 47662,
+              "fine_data": true,
+              "est_bytes_per_s": 480,
+              "est_duration_s": 1800,
+              "arm_heap_free": 173120,
+              "arm_heap_max_alloc": 147444,
+              "max_duration_ms": 1800000,
+              "measure_ms": 20000
+            }
+          },
+          "sequence": {
+            "state": "idle",
+            "active": false
+          }
+        }
+      }
+    }
+  ],
+  "final": {
+    "fw": "0.3.36",
+    "usb_gadget": "msc",
+    "msc_reads": 19,
+    "read_count": 0,
+    "plug_count": 3,
+    "msc_soft_attached": false,
+    "tur_hz": 0,
+    "media_variant": "size_1_4_8",
+    "media_files": null,
+    "scsi_hist": {
+      "tur": 0,
+      "inquiry": 0,
+      "mode_sense6": 0,
+      "prevent_allow": 0,
+      "read_capacity10": 0,
+      "read10": 0,
+      "write10": 0,
+      "other": 0
+    },
+    "read_bytes": 0,
+    "write_count": 0,
+    "offline": {
+      "state": "uploading",
+      "active": true,
+      "capturing": false,
+      "records": 177,
+      "post_finalize_records": 0,
+      "bytes": 3556,
+      "cap": 1048576,
+      "overflow": 0,
+      "wallclock": "2026-11-06T16:37:56Z",
+      "stop_reason": "auto_media_hide",
+      "soft_usb": true,
+      "auto_detach_ms": 20000,
+      "end_strategy": "media_hide",
+      "end_on_unmount": true,
+      "free_markers": false,
+      "fine_data": true,
+      "soft_replugs": 0,
+      "upload_status": "replaying",
+      "media_hidden": true,
+      "fallback_detached": true,
+      "transport_epoch_start": 3,
+      "transport_epoch_end": 5,
+      "last_marker": "",
+      "marker_index": 0,
+      "marker_count": 2,
+      "markers": [
+        "plug_ready",
+        "stop"
+      ],
+      "capture_budget": {
+        "capacity_bytes": 1048576,
+        "capacity_target_bytes": 1048576,
+        "capacity_fallback_bytes": 49152,
+        "capacity_allocated": true,
+        "record_format": "compact/1",
+        "record_size": 22,
+        "record_size_max": 64,
+        "estimated_max_records": 47662,
+        "fine_data": true,
+        "est_bytes_per_s": 480,
+        "est_duration_s": 1800,
+        "arm_heap_free": 173120,
+        "arm_heap_max_alloc": 147444,
+        "max_duration_ms": 1800000,
+        "measure_ms": 20000
+      }
+    },
+    "sequence": {
+      "state": "idle",
+      "active": false
+    }
+  },
+  "pass": true
+}

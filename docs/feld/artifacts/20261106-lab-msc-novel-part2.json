@@ -1,0 +1,178 @@
+{
+  "pass": true,
+  "novel": {
+    "sequential_128": {
+      "ok": true,
+      "msc_ready": true,
+      "pattern_ok": false,
+      "pattern_fail_bytes": 65258,
+      "dut": "303a:1001",
+      "inquiry": {
+        "vendor": "HUPROBE ",
+        "product": "HU_PROBE        ",
+        "revision": "0200"
+      },
+      "capacity_blocks": 32768,
+      "block_size": 512,
+      "chunk": 8,
+      "transfers": 16,
+      "blocks_read": 128,
+      "bytes_read": 65536,
+      "duration_ms": 66,
+      "rate_kBs": 969,
+      "rtt_us": {
+        "min": 3651,
+        "avg": 3960,
+        "p50": 3758,
+        "p95": 4690,
+        "max": 4690
+      },
+      "dir": "read",
+      "path": "usb_otg_host_to_device_msc",
+      "note": "direct_otg_cable_not_wifi_mitm"
+    },
+    "reverse": [
+      {
+        "lba": 500,
+        "ok": true,
+        "ms": 4
+      },
+      {
+        "lba": 300,
+        "ok": true,
+        "ms": 5
+      },
+      {
+        "lba": 200,
+        "ok": true,
+        "ms": 5
+      },
+      {
+        "lba": 100,
+        "ok": true,
+        "ms": 5
+      },
+      {
+        "lba": 65,
+        "ok": true,
+        "ms": 5
+      },
+      {
+        "lba": 50,
+        "ok": true,
+        "ms": 5
+      },
+      {
+        "lba": 20,
+        "ok": true,
+        "ms": 5
+      },
+      {
+        "lba": 10,
+        "ok": true,
+        "ms": 5
+      }
+    ],
+    "file_reads": [
+      {
+        "path": "S1M.MP3",
+        "lba": 65,
+        "ok": true,
+        "ms": 9
+      },
+      {
+        "path": "S4M.MP3",
+        "lba": 2113,
+        "ok": true,
+        "ms": 9
+      },
+      {
+        "path": "S8M.MP3",
+        "lba": 10305,
+        "ok": true,
+        "ms": 8
+      }
+    ],
+    "odd_sizes": [
+      {
+        "blocks": 7,
+        "lba": 80,
+        "ok": true,
+        "bytes": 3584,
+        "err": null
+      },
+      {
+        "blocks": 17,
+        "lba": 90,
+        "ok": true,
+        "bytes": null,
+        "err": null
+      },
+      {
+        "blocks": 63,
+        "lba": 120,
+        "ok": true,
+        "bytes": null,
+        "err": null
+      }
+    ],
+    "write": {
+      "ok": false,
+      "msc_ready": true,
+      "pattern_ok": false,
+      "pattern_fail_bytes": 0,
+      "dut": "303a:1001",
+      "inquiry": {
+        "vendor": "",
+        "product": "",
+        "revision": ""
+      },
+      "capacity_blocks": 0,
+      "block_size": 512,
+      "chunk": 1,
+      "transfers": 0,
+      "blocks_read": 0,
+      "bytes_read": 0,
+      "duration_ms": 1,
+      "rate_kBs": 0,
+      "rtt_us": {
+        "min": 0,
+        "avg": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "dir": "write",
+      "path": "usb_otg_host_write_device_msc",
+      "note": "direct_otg_cable_not_wifi_mitm",
+      "err": "write_fail_lba_200"
+    },
+    "bmw_deep": {
+      "ok": true,
+      "modeSenseOk": 6,
+      "preventOk": 7,
+      "readOk": 22,
+      "err": null
+    }
+  },
+  "msc_reads_before": 0,
+  "msc_reads_after": 65,
+  "scsi_hist": {
+    "tur": 50,
+    "inquiry": 4,
+    "mode_sense6": 6,
+    "prevent_allow": 7,
+    "read_capacity10": 8,
+    "read10": 58,
+    "write10": 0,
+    "other": 2
+  },
+  "media_cache_b": true,
+  "sequence_seq_size": true,
+  "offline": {
+    "ok": null,
+    "read_during": true
+  },
+  "rev_ok": 8,
+  "file_ok": 3
+}
