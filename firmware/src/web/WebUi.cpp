@@ -1578,7 +1578,9 @@ void WebUi::handleUsbCycle() {
     const char* via = "none";
     if (cfg_ && cfg_->isAoaObserve()) {
         ok = huprobe::aoa::AoaObserveGadget::instance().softCycle(holdMs);
-        via = cfg_->isAoaPhoneLike() ? "aoa_phone_like" : "aoa_observe";
+        via = cfg_->isAoaPhoneLike()   ? "aoa_phone_like"
+              : cfg_->isAoaId303a()    ? "aoa_id_303a"
+                                       : "aoa_observe";
     } else if (msc_) {
         ok = msc_->softCycle(holdMs);
         via = "msc";
@@ -1601,7 +1603,9 @@ void WebUi::handleUsbRemount() {
         JsonDocument out;
         out["ok"] = ok;
         out["action"] = "aoa_soft_attach";
-        out["via"] = cfg_->isAoaPhoneLike() ? "aoa_phone_like" : "aoa_observe";
+        out["via"] = cfg_->isAoaPhoneLike() ? "aoa_phone_like"
+                    : cfg_->isAoaId303a()  ? "aoa_id_303a"
+                                           : "aoa_observe";
         out["note"] = "D+_pullup_on_no_cycle";
         String body;
         serializeJson(out, body);

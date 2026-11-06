@@ -1,0 +1,99 @@
+{
+  "fw": "0.3.36",
+  "lab_a": {
+    "host_ok": true,
+    "d51": 1,
+    "d52": 6,
+    "d53": 1,
+    "dok": 1,
+    "pass": true
+  },
+  "lab_b": {
+    "host_ok": false,
+    "host_err": "aoa51_fail",
+    "d51": 1,
+    "dok": 0,
+    "pass": true
+  },
+  "s0": {
+    "aoa51": 0,
+    "aoa52": 0,
+    "aoa53": 0,
+    "ok": 0,
+    "setup": 0,
+    "vid": 6353,
+    "pid": 11520,
+    "hyp": true,
+    "scope": "usbvendor_onrequest_only",
+    "enum": null,
+    "tl": 1
+  },
+  "s1": {
+    "aoa51": 1,
+    "aoa52": 6,
+    "aoa53": 1,
+    "ok": 1,
+    "setup": 8,
+    "vid": 6353,
+    "pid": 11520,
+    "hyp": true,
+    "scope": "usbvendor_onrequest_only",
+    "enum": null,
+    "tl": 17
+  },
+  "s2": {
+    "aoa51": 1,
+    "aoa52": 6,
+    "aoa53": 1,
+    "ok": 1,
+    "setup": 8,
+    "vid": 6353,
+    "pid": 11520,
+    "hyp": false,
+    "scope": "usbvendor_onrequest_only",
+    "enum": null,
+    "tl": 17
+  },
+  "s3": {
+    "aoa51": 2,
+    "aoa52": 6,
+    "aoa53": 1,
+    "ok": 1,
+    "setup": 9,
+    "vid": 6353,
+    "pid": 11520,
+    "hyp": false,
+    "scope": "usbvendor_onrequest_only",
+    "enum": null,
+    "tl": 19
+  },
+  "hostA": {
+    "ok": true,
+    "profile": "lab",
+    "protocol": 1,
+    "protocolOk": true,
+    "stringsOk": 6,
+    "startOk": true,
+    "reenumOk": true,
+    "dutBefore": "18d1:2d00",
+    "dutAfter": "0000:0000",
+    "duration_ms": 2,
+    "claim": "aoa_control_handshake_lab",
+    "note": "not_hu_wire_not_bcl_not_accessory_bulk"
+  },
+  "hostB": {
+    "ok": false,
+    "profile": "lab",
+    "protocol": 0,
+    "protocolOk": false,
+    "stringsOk": 0,
+    "startOk": false,
+    "reenumOk": false,
+    "dutBefore": "18d1:2d00",
+    "dutAfter": "0000:0000",
+    "duration_ms": 1,
+    "err": "aoa51_fail",
+    "claim": "aoa_control_handshake_lab",
+    "note": "not_hu_wire_not_bcl_not_accessory_bulk"
+  }
+}

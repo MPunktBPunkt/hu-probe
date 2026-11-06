@@ -1,0 +1,28 @@
+{
+  "fw": "0.3.36",
+  "dut": "192.168.178.89",
+  "host": "192.168.178.88",
+  "sticky": [
+    {
+      "mode": "msc",
+      "ok": true
+    },
+    {
+      "mode": "aoa_observe",
+      "ok": true
+    },
+    {
+      "mode": "aoa_phone_like",
+      "ok": true
+    },
+    {
+      "mode": "aoa_id_303a",
+      "ok": true
+    }
+  ],
+  "soft_detach_invariant": {
+    "ok": true,
+    "note": "mode unchanged after /api/usb/cycle"
+  },
+  "aoa_lab_ab": "see 20261106-lab-aoa-ab.json PASS"
+}
