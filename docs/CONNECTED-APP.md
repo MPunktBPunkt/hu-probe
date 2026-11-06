@@ -6,17 +6,18 @@
 
 Gates: [GATES-Connected.md](GATES-Connected.md). MSC-Integrität bleibt [GATES.md](GATES.md) / HU-PROBE-GATE-01.
 
-### Vier Gates (Kurz)
+### Fünf Gates (Kurz — Desk-Lifecycle)
 
 ```
-G1 USB Identity/Class     ← hu-probe (I-303A, Modes)
-G2 AOA / Vendor / Bulk    ← hu-probe (Callback-Schicht)
-G3 BCL + Etch             ← außerhalb aktueller Wire-Messung
-G4 SAS Auth (Cert+Nonce)  ← außerhalb Scope (App-Keys / MyBMW)
+G1 USB Identity/Class              ← hu-probe (I-303A)
+G2 AOA/BT + BCL knock/handshake    ← Callback teilweise; BCL-Wire nein
+G3 localhost TCP → Etch-Tunnel     ← Phone / Connected
+G4 SAS Auth (Cert + Challenge)     ← Keys; modernes MyBMW-Signieren UNKNOWN
+G5 AM / RHMI / AV / CDS            ← Authorization/Use
 ```
 
-Quellen-Abgleich Stack/SAS: PiDrive [CONNECTED-AAIDRIVE-STACK-2026-11-06](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK-2026-11-06.md) · [BMWConnectedAnalysis Authentication](https://bimmergestalt.github.io/BMWConnectedAnalysis/authentication/).  
-**REJECTED als Claim:** „AOA-Zubehör-UI / Bulk ⇒ Connected-App offen.“
+Quellen: PiDrive [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK-2026-11-06.md) · [Authentication](https://bimmergestalt.github.io/BMWConnectedAnalysis/authentication/) · [app-behavior](https://bimmergestalt.github.io/BMWConnectedAnalysis/app-behavior/).  
+**REJECTED:** „AOA-Zubehör / Bulk ⇒ Connected-App offen.“ · „MyBMW exportiert SECURITY_SERVICE / liefert signChallenge“ (nur Classic ≤5.1 **[D]**).
 
 ---
 
@@ -220,17 +221,22 @@ Post-53 Re-Enum mit VID-Wechsel: **NOT IMPLEMENTED** (Arduino TinyUSB lockt Desc
 
 ### SAS-Hard-Stop (dokumentiert) — Gate G4
 
-Desk-Reihenfolge (R0, Analysis/Authentication): `sas_certificate()` → 16-Byte-Nonce → Signatur (privater Schlüssel aus APP_AUTH) → `sas_login()`; Permissions als X509-Extensions (`SAS.CertificateType`, `Make`, `SAS.Digests.*` / RHMI-Whitelist).
+Desk-Reihenfolge (R0, [Authentication](https://bimmergestalt.github.io/BMWConnectedAnalysis/authentication/)):
+
+1. `sas_certificate(P7B)` → Challenge `byte[16]`
+2. Android/`SAS.CertificateType`: `response = RSA-MD5( challenge XOR MD5(LE uint32(2)) )` → `sas_login(byte[512])`
+3. iOS-Alt-Certs ohne `CertificateType`: Challenge direkt signieren (kein XOR)
+4. P7B: `APP_AUTH` (Pubkey) + `APP` (Permissions / `SAS.Digests.*`); HU `CRHMIAuthPermHandler::verifyResource`
 
 Weiter als Challenge beobachten nur mit:
 
-- gültigem App-Zertifikat (P7B / APP_AUTH+APP laut Analysis — **Existenz** FACT, Details Security-sensitiv),
-- Signing-Backend (Classic Connected / MyBMW SecurityService; AAIdrive nutzt das per localhost-TCP),
+- gültigem App-Zertifikat (P7B / APP_AUTH+APP — **Existenz** Desk-FACT, Details Security-sensitiv),
+- Signing-Backend: **historisch** Classic Connected ≤5.1 via exportiertem `.SECURITY_SERVICE`; **MyBMW / Connected ≥5.1 exportieren den Binder nicht** — alternative Methode **UNKNOWN**,
 - bewusster Lab-Freigabe.
 
 **Probe-Verhalten ohne Cert:** `ca_sas.phase=blocked`, Gate C1 = „Auth-Challenge sichtbar oder klar blockiert“ — **PASS möglich ohne Login**. C2–C5 bleiben geschlossen.
 
-**Scope:** G4 ist ein **eigenes Teilprojekt** (AAIdrive/BclCarLink + Cert-Material, anderes Legality-Profil) — nicht Ziel von I-303A und nicht durch EP0-/MSC-Arbeit ersetzbar.
+**Scope:** G4/G5 = **eigenes Teilprojekt** (AAIdrive/BclCarLink + Cert-Material) — nicht I-303A, nicht EP0-/MSC.
 
 ---
 

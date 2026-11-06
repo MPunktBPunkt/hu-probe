@@ -9,23 +9,28 @@ Reihenfolge ist strikt: C(n+1) erst nach messbarem C(n) oder dokumentiertem Hard
 
 ---
 
-## Referenzmodell — vier Gates (USB → Connected)
+## Referenzmodell — Gates G1–G5 (USB → Connected)
 
 Desk/Primärquellen (BimmerGestalt Authentication, PiDrive Connected/AAIdrive-Stack 2026-11-06): Connected-App ist **nicht** ein USB-Flag, sondern eine Kette.
 
 | Gate | Inhalt | hu-probe Messfläche (0.3.36) |
 |------|--------|------------------------------|
 | **G1** | USB Identity/Class (VID/PID, Descriptors, MSC vs Vendor-only) | **ja** — I-303A, sticky Modes |
-| **G2** | AOA-Start / Vendor-Control / Bulk (51/52/53, RX/TX) | **ja** — Callback-Schicht; Bus außerhalb Callback = UNKNOWN |
-| **G3** | BCL Multiplex + Etch (Application Peer) | **nein** — Lab-Parser existiert; Wire am HU-USB nicht beobachtet |
-| **G4** | SAS Auth (P7B-Cert → Challenge/Nonce → Signatur → `sas_login`) | **nein** — braucht App-Keys / MyBMW SecurityService |
+| **G2** | Transport: AOA/BT + **BCL knock/handshake** (Connected-Peer) | AOA-Callback teilweise; BCL-Wire **nein** |
+| **G3** | App-Tunnel: Phone localhost TCP → BCL→Etch | **nein** (Phone-Seite) |
+| **G4** | SAS Authentication (P7B → Challenge → Signatur → `sas_login`) | **nein** — Keys; Signierweg modern **UNKNOWN** |
+| **G5** | Authorization/Use: AM / RHMI / AV / CDS | **nein** |
+
+Feinere Desk-Lesart (BimmerGestalt Lifecycle): BCL gehört zu **G2** (Transport-Peer), nicht „Bulk = fertig“. Etch-Tunnel = **G3**.  
+PiDrive-Abgleich: [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK-2026-11-06.md) · [HU-Technical-Facts §10](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-Technical-Facts.md).
 
 **Invarianten**
 
-- AOA erkannt (G1/G2) ≠ BCL läuft (G3) ≠ Connected-App autorisiert (G4).
-- BclCarLink / BCL-Transport kann G3 ersetzen helfen; **nicht** G4 (Security bleibt bei Connected/MyBMW).
+- AOA erkannt (G1) ≠ Connected-Transport/BCL (G2) ≠ Etch-Tunnel (G3) ≠ SAS (G4) ≠ RHMI/AV (G5).
+- Direct-ESP `18D1:2D00` = USB-Accessory-Identity, **nicht** Connected-Peer-Rolle.
+- BclCarLink kann BCL-Link ersetzen helfen; **nicht** SAS. Classic Connected ≤5.1 exportierte `.SECURITY_SERVICE`; **MyBMW / Connected ≥5.1 nicht** — moderne Signierung **UNKNOWN** (Altstand „MyBMW liefert signChallenge“ **REJECTED** als Default).
 - „BCL/Etch/SAS auf echtem HU-USB = 0“ ist **Scope**, kein Firmware-Qualitätsdefizit.
-- Nächster Feldschritt bleibt **I-303A** (nur G1, eine Variable) — siehe [Kampagne](feld/2026-11-06-c1-identity-gate-kampagne.md).
+- Nächster Feldschritt bleibt **I-303A** (nur G1) — siehe [Kampagne](feld/2026-11-06-c1-identity-gate-kampagne.md).
 
 C1a–C5 unten ordnen Lab-/Wire-Stufen **innerhalb** dieses Modells ein; sie ersetzen es nicht.
 

@@ -70,8 +70,8 @@ SAS/Connected-Auth (Gate G4) sitzt **zwei Stufen über** I-303A — siehe [GATES
 
 ## INFERENCE (nicht FACT)
 
-**H-Reconnect (G3/G4-Erwartung):** Der Feld-Loop bei Direct-`18D1:2D00` (Zubehör-UI → Reconnect; Callback 51/52/53=0; Bulk absent) *könnte* bedeuten: HU schließt AOA-Accessory ab und erwartet danach BCL/Etch-Peer-Verkehr (ggf. Cert/SAS); ohne Peer resettet sie den Kanal.  
-**Messbarkeit:** hu-probe G1/G2 kann das weder bestätigen noch widerlegen. Alternative (EP0 außerhalb Callback, Transport) bleibt offen — [epistemik](2026-10-30-epistemik-messluecke-ep0-bulk.md).
+**H-Reconnect (fehlender Connected-Peer):** Der Feld-Loop bei Direct-`18D1:2D00` (Zubehör-UI → Reconnect; Callback 51/52/53=0; Bulk absent) *könnte* bedeuten: HU akzeptiert USB-Accessory-Identity, erwartet aber den **Connected-Peer** (BCL knock/handshake → Etch → ggf. SAS) — nicht nur „AOA-Gerät wartet“. Direct-ESP ≠ Phone+MyBMW+AAIdrive-Rolle.  
+**Messbarkeit:** hu-probe G1/(teilweise) G2 kann das weder bestätigen noch widerlegen. Alternative (EP0 außerhalb Callback) bleibt offen — [epistemik](2026-10-30-epistemik-messluecke-ep0-bulk.md). Desk: [BMWConnectedAnalysis app-behavior](https://bimmergestalt.github.io/BMWConnectedAnalysis/app-behavior/).
 
 ---
 
