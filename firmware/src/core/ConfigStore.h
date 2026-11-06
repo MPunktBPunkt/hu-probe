@@ -55,11 +55,12 @@ public:
     String otaManifestUrl = OTA_MANIFEST_URL_DEFAULT;
 
     /**
-     * @brief USB gadget boot mode (C1b-P0 isolation).
+     * @brief USB gadget boot mode (C1b-P0 isolation / C1 identity gate).
      *
      * "msc" = Golden Path USBMSC only (default).
      * "aoa_observe" = USBVendor Already-Accessory (0x18D1:0x2D00) — no MSC.
      * "aoa_phone_like" = USBVendor phone-like IDs for B1 switch/51–53 — no MSC.
+     * "aoa_id_303a" = USBVendor-only with Analyzer MSC VID/PID 0x303A:0x1001 — no MSC.
      * Switch via NVS + reboot only; soft-detach is not a mode change.
      */
     String usbGadget = "msc";
@@ -67,16 +68,17 @@ public:
     /** @brief Initialize the store by loading the configuration from NVS (calls load()). */
     void begin();
 
-    /** @brief True for aoa_observe or aoa_phone_like (USBVendor-only observe boots). */
-    bool isAoaObserve() const {
-        return usbGadget == "aoa_observe" || usbGadget == "aoa_phone_like";
-    }
+    /** @brief True for any USBVendor-only AOA/identity boot (never constructs USBMSC). */
+    bool isAoaObserve() const;
 
     /** @brief True when usbGadget == "aoa_phone_like" (B1 identity). */
-    bool isAoaPhoneLike() const { return usbGadget == "aoa_phone_like"; }
+    bool isAoaPhoneLike() const;
+
+    /** @brief True when usbGadget == "aoa_id_303a" (VID/PID vs MSC-class isolation). */
+    bool isAoaId303a() const;
 
     /** @brief True when usbGadget == "msc" (Golden Path). */
-    bool isMscGadget() const { return !isAoaObserve(); }
+    bool isMscGadget() const;
 
     /**
      * @brief Reset all fields to defaults, then overlay the values stored in NVS.

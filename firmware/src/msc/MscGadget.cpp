@@ -12,6 +12,7 @@
 #include "media/ProbeMedia.h"
 #include "core/PanicTail.h"
 #include "core/ProbeClock.h"
+#include "session/SessionMetrics.h"
 #include "USB.h"
 #include "USBMSC.h"
 #include <cstring>
@@ -166,6 +167,12 @@ void MscGadget::begin(Session* session, ReadInstrument* instrument, bool startDe
     softAttached_ = true;
     if (startDetached && tud_disconnect()) softAttached_ = false;
     presentMedia("boot");
+    {
+        auto& sm = huprobe::SessionMetrics::instance();
+        sm.reset();
+        sm.setPlaneMsc();
+        sm.setIdentity(0, 0, "msc_golden_path_arduino_default_vid_pid");
+    }
     DiagLog::printf("[MSC] ready media=%s sectors=%u serial=%s (soft USB cycle OK)\n",
                   media.variantId(), (unsigned)media.sectorCount(), serial_);
 }
@@ -432,13 +439,23 @@ void MscGadget::onUsbPlugged(bool on) {
     plugged_ = on;
     suspended_ = false;
     ReadStall::instance().onUsbReset();
+    auto& sm = huprobe::SessionMetrics::instance();
     if (on) {
         plugCount_++;
         transportEpoch_++;
+        sm.syncPlugCounts(plugCount_, unplugCount_);
+        // Timeline only — counts come from plugCount_ via sync (avoid double bump).
+        if (sm.timeline().active()) {
+            sm.timeline().push(huprobe::UsbTlEvent::Attach, millis(), plugCount_);
+        }
         // mount/identity/phase come from MscBotTap::drain(Kind::Mount) — same Capture-tUs.
         DiagLog::printf("[MSC] USB plugged (host started / mount)");
     } else {
         unplugCount_++;
+        sm.syncPlugCounts(plugCount_, unplugCount_);
+        if (sm.timeline().active()) {
+            sm.timeline().push(huprobe::UsbTlEvent::Detach, millis(), unplugCount_);
+        }
         // Next attach looks like a new stick — unless the media variant pins the serial.
         if (fixedSerial_) {
             applyMediaIdentity();

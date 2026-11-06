@@ -6,6 +6,7 @@
 #include "connected/aoa/AoaObserveGadget.h"
 #include "connected/aoa/AoaControlTap.h"
 #include "core/DiagLog.h"
+#include "session/SessionMetrics.h"
 
 #include "USB.h"
 #include "USBVendor.h"
@@ -42,11 +43,14 @@ void AoaObserveGadget::notifyUsbStarted() {
     plugged_ = true;
     attach_count_++;
     transport_epoch_++;
+    huprobe::SessionMetrics::instance().noteAttach(millis());
     DiagLog::printf("[AOA] USB STARTED (P0-A attach hypothesis path)\n");
 }
 
 void AoaObserveGadget::notifyUsbStopped() {
     plugged_ = false;
+    detach_count_++;
+    huprobe::SessionMetrics::instance().noteDetach(millis());
     DiagLog::printf("[AOA] USB STOPPED\n");
 }
 
@@ -55,7 +59,7 @@ void AoaObserveGadget::begin(Session* session, bool startDetached, AoaIdentityPr
     profile_ = profile;
     g_self = this;
     AoaControlTap::instance().begin();
-    // Accessory observe = passive. PhoneLike enables desk AOA 51/52/53 responder (Lab A / B1).
+    // Accessory / Id303a = passive observe. PhoneLike enables desk 51/52/53 responder.
     AoaControlTap::instance().setHypothesisRespond(profile_ == AoaIdentityProfile::PhoneLike);
 
     if (profile_ == AoaIdentityProfile::PhoneLike) {
@@ -69,6 +73,17 @@ void AoaObserveGadget::begin(Session* session, bool startDetached, AoaIdentityPr
         USB.manufacturerName("Android");
         USB.productName("AOA Phone-like");
         USB.serialNumber("HUPROBE-AOA1");
+    } else if (profile_ == AoaIdentityProfile::Id303a) {
+        // C1 identity gate: Analyzer MSC VID/PID as Vendor-only (no MSC interface).
+        // Isolates VID/PID vs USB class against field FACT MSC 303a:1001 → AOA=0.
+        vid_ = 0x303A;
+        pid_ = 0x1001;
+        identity_note_ = "experiment_id_303a_1001_vendor_only";
+        USB.VID(vid_);
+        USB.PID(pid_);
+        USB.manufacturerName("Espressif");
+        USB.productName("hu-probe id303a");
+        USB.serialNumber("HUPROBE-303A");
     } else {
         // Desk HYPOTHESIS: already-in-accessory-mode Google VID/PID. Not NBT FACT.
         vid_ = 0x18D1;
@@ -84,6 +99,13 @@ void AoaObserveGadget::begin(Session* session, bool startDetached, AoaIdentityPr
     USB.usbSubClass(0xFF);
     USB.usbProtocol(0x00);
 
+    {
+        auto& sm = huprobe::SessionMetrics::instance();
+        sm.reset();
+        sm.setPlaneAoa();
+        sm.setIdentity(vid_, pid_, identity_note_);
+    }
+
     USB.onEvent(onUsbEvent);
     g_vendor.onRequest(onVendorControl);
     g_vendor.begin();
@@ -95,10 +117,12 @@ void AoaObserveGadget::begin(Session* session, bool startDetached, AoaIdentityPr
     ready_ = true;
     soft_attached_ = true;
     if (startDetached && tud_disconnect()) soft_attached_ = false;
+    const char* pname = "accessory";
+    if (profile_ == AoaIdentityProfile::PhoneLike) pname = "phone_like";
+    else if (profile_ == AoaIdentityProfile::Id303a) pname = "id_303a";
     DiagLog::printf(
         "[AOA] observe ready profile=%s vid=0x%04X pid=0x%04X (%s) soft=%d hypothesis_respond=%d\n",
-        profile_ == AoaIdentityProfile::PhoneLike ? "phone_like" : "accessory", (unsigned)vid_,
-        (unsigned)pid_, identityNote(), soft_attached_ ? 1 : 0,
+        pname, (unsigned)vid_, (unsigned)pid_, identityNote(), soft_attached_ ? 1 : 0,
         AoaControlTap::instance().hypothesisRespond() ? 1 : 0);
 }
 
@@ -130,6 +154,7 @@ bool AoaObserveGadget::softDetach(uint16_t holdMs) {
     soft_reattach_at_ms_ = 0;
     if (!tud_disconnect()) return false;
     soft_attached_ = false;
+    huprobe::SessionMetrics::instance().noteSoftDetach(millis());
     if (holdMs) {
         if (holdMs > 5000) holdMs = 5000;
         soft_reattach_at_ms_ = millis() + holdMs;
@@ -142,6 +167,7 @@ bool AoaObserveGadget::softAttach() {
     if (!tud_connect()) return false;
     soft_attached_ = true;
     transport_epoch_++;
+    huprobe::SessionMetrics::instance().noteSoftAttach(millis());
     return true;
 }
 

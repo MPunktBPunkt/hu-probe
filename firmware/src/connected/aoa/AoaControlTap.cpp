@@ -11,6 +11,7 @@
 
 #include "connected/aoa/AoaControlTap.h"
 #include "core/ProbeClock.h"
+#include "session/SessionMetrics.h"
 
 #include "tusb.h"
 
@@ -105,12 +106,23 @@ bool AoaControlTap::onControlRequest(uint8_t rhport, uint8_t stage,
     // Observe always: count/publish every SETUP that reaches this callback (not full EP0).
     if (stage == CONTROL_STAGE_SETUP) {
         setup_count_++;
+        auto& sm = huprobe::SessionMetrics::instance();
+        const uint32_t t_ms = static_cast<uint32_t>(s.t_us / 1000);
+        sm.noteSetup(t_ms, vendor_type);
         if (vendor_type) {
             vendor_setup_count_++;
-            if (bRequest == 51) aoa51_++;
-            else if (bRequest == 52) aoa52_++;
-            else if (bRequest == 53) aoa53_++;
-            else if (bRequest == 58) aoa58_++;
+            if (bRequest == 51) {
+                aoa51_++;
+                sm.noteAoa51(t_ms);
+            } else if (bRequest == 52) {
+                aoa52_++;
+                sm.noteAoa52(t_ms);
+            } else if (bRequest == 53) {
+                aoa53_++;
+                sm.noteAoa53(t_ms);
+            } else if (bRequest == 58) {
+                aoa58_++;
+            }
         }
     }
 
@@ -123,7 +135,10 @@ bool AoaControlTap::onControlRequest(uint8_t rhport, uint8_t stage,
         if (bRequest == 51 && (bmRequestType & 0x80)) {
             handled = vendor->sendResponse(rhport, request, &aoa_protocol_le_, 2);
             s.hypothesis_handled = handled;
-            if (handled) aoa51_respond_ok_++;
+            if (handled) {
+                aoa51_respond_ok_++;
+                huprobe::SessionMetrics::instance().noteAoa51RespondOk();
+            }
         } else if (bRequest == 52 && !(bmRequestType & 0x80)) {
             pending_string_index_ = static_cast<uint8_t>(wIndex & 0xff);
             string_scratch_len_ = wLength > sizeof(string_scratch_) ? sizeof(string_scratch_)

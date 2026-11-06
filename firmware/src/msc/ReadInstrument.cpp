@@ -7,6 +7,7 @@
 #include "core/ProbeClock.h"
 #include "media/ProbeMedia.h"
 #include "net/EventBus.h"
+#include "session/SessionMetrics.h"
 #include "tusb.h"
 #include "class/msc/msc.h"
 #include <cstring>
@@ -412,17 +413,26 @@ void ReadInstrument::onBotCsw(uint32_t botTag, uint32_t residue, uint8_t status)
 }
 
 void ReadInstrument::emitBotCbwTinyusb(const uint8_t cbwRaw[31], int64_t tUs) {
-    if (!session_ || !session_->active() || !cbwRaw) return;
+    if (!cbwRaw) return;
     msc_cbw_t cbw;
     memcpy(&cbw, cbwRaw, 31);
     if (cbw.signature != MSC_CBW_SIGNATURE) return;
 
     uint8_t op = cbw.command[0];
+    // Opcode histogram is MEASURED on MSC plane even before an active capture session.
+    huprobe::SessionMetrics::instance().noteScsiOpcode(
+        op, static_cast<uint32_t>(ProbeClock::nowMsCompat(tUs)));
+
+    if (!session_ || !session_->active()) return;
+
     if (op == 0x00) {
         turCountWindow_++;
         noteTur(tUs);
     }
-    if (op == 0x2A) writeCount_++;
+    if (op == 0x2A) {
+        writeCount_++;
+        huprobe::SessionMetrics::instance().noteWrite(cbw.total_bytes);
+    }
 
     char cdbHex[33];
     char cbwHex[63];
@@ -600,6 +610,7 @@ void ReadInstrument::emitReadAggregate(int64_t tUs, uint32_t botTag, uint32_t lb
                                        uint32_t durUs, uint32_t gapUs, const char* tag,
                                        const char* kind) {
     readCount_++;
+    huprobe::SessionMetrics::instance().noteRead(nBytes);
     if (!session_ || !session_->active()) return;
     JsonDocument doc;
     stampAt(doc, tUs);

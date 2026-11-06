@@ -200,9 +200,9 @@ void App::begin() {
         using huprobe::aoa::AoaObserveGadget;
         using huprobe::aoa::AoaIdentityProfile;
         const bool labWifiFirst = isLabDebian();
-        const AoaIdentityProfile profile = config_.isAoaPhoneLike()
-                                               ? AoaIdentityProfile::PhoneLike
-                                               : AoaIdentityProfile::Accessory;
+        AoaIdentityProfile profile = AoaIdentityProfile::Accessory;
+        if (config_.isAoaPhoneLike()) profile = AoaIdentityProfile::PhoneLike;
+        else if (config_.isAoaId303a()) profile = AoaIdentityProfile::Id303a;
         AoaObserveGadget::instance().begin(&session_, labWifiFirst, profile);
         ConnectedAppProbe::instance().bindAoaObserveStack();
         DiagLog::printf("[USB] gadget=%s msc_interface=0 vendor=1\n",

@@ -7,6 +7,7 @@
  * Profiles (NVS usb_gadget + reboot):
  * - Accessory (`aoa_observe`): VID/PID 0x18D1:0x2D00 — observe-only (hypothesis_respond=false)
  * - PhoneLike (`aoa_phone_like`): non-accessory IDs + desk 51/52/53 responder (Lab A / B1)
+ * - Id303a (`aoa_id_303a`): VID/PID 0x303A:0x1001 Vendor-only — isolate vs Analyzer MSC identity
  *
  * Soft-detach is D+ only — not a gadget-mode or identity switch.
  */
@@ -23,6 +24,7 @@ namespace aoa {
 enum class AoaIdentityProfile : uint8_t {
     Accessory = 0,  ///< Google accessory 0x18D1:0x2D00
     PhoneLike = 1,  ///< Non-accessory IDs for B1 reachability
+    Id303a = 2,     ///< Analyzer MSC VID/PID as Vendor-only (C1 identity gate)
 };
 
 class AoaObserveGadget {
@@ -70,6 +72,7 @@ public:
     bool vendorMounted() const;
 
     uint32_t attachCount() const { return attach_count_; }
+    uint32_t detachCount() const { return detach_count_; }
     uint32_t transportEpoch() const { return transport_epoch_; }
 
     /** @brief USB event path (STARTED/STOPPED) — called from Arduino USB callback. */
@@ -88,6 +91,7 @@ private:
     uint16_t pid_ = 0x2D00;
     const char* identity_note_ = "hypothesis_google_accessory_0x18D1_0x2D00";
     uint32_t attach_count_ = 0;
+    uint32_t detach_count_ = 0;
     uint32_t transport_epoch_ = 0;
     uint32_t soft_reattach_at_ms_ = 0;
 };

@@ -6,6 +6,7 @@
  * "huprobe" blob (wifi2_pass / ota_url) cannot silently drop the mode key.
  */
 #include "ConfigStore.h"
+#include "core/GadgetMode.h"
 #include <Preferences.h>
 
 static Preferences prefs;
@@ -17,7 +18,23 @@ static constexpr const char *kNsGadget = "hpgad";
 static constexpr const char *kKeyGadget = "mode";
 
 static bool gadgetModeValid(const String &g) {
-    return g == "msc" || g == "aoa_observe" || g == "aoa_phone_like";
+    return huprobe::gadgetModeValid(g.c_str());
+}
+
+bool ConfigStore::isAoaObserve() const {
+    return huprobe::gadgetModeIsAoaVendorOnly(usbGadget.c_str());
+}
+
+bool ConfigStore::isAoaPhoneLike() const {
+    return huprobe::gadgetModeIsPhoneLike(usbGadget.c_str());
+}
+
+bool ConfigStore::isAoaId303a() const {
+    return huprobe::gadgetModeIsId303a(usbGadget.c_str());
+}
+
+bool ConfigStore::isMscGadget() const {
+    return !isAoaObserve();
 }
 
 bool ConfigStore::saveUsbGadgetNvs() {
@@ -135,14 +152,11 @@ void ConfigStore::load() {
         }
         prefs.end();
     }
-    // Dedicated namespace wins (sticky fix 0.3.35).
+    // Dedicated namespace wins (sticky fix 0.3.35 / host-tested resolveGadgetMode).
     String sticky;
-    if (loadUsbGadgetNvs(sticky)) {
-        usbGadget = sticky;
-    }
-    if (!gadgetModeValid(usbGadget)) {
-        usbGadget = "msc";
-    }
+    const char* stickyC = nullptr;
+    if (loadUsbGadgetNvs(sticky)) stickyC = sticky.c_str();
+    usbGadget = huprobe::resolveGadgetMode(stickyC, usbGadget.c_str(), "msc");
     Serial.printf("[CFG] load usbGadget=%s enableHub=%d\n", usbGadget.c_str(),
                   (int)enableHub);
 }

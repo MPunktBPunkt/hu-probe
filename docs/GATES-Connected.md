@@ -102,7 +102,9 @@ B1 phone_like **NEGATIVE**. B2b hex4 **TX ok / keine HU-Antwort**. Blind-Knock b
 **Feld 2026-10-30 FW 0.3.34** (`aoa_observe`, passiv): Attach/P0-A/C/D PASS; Vendor-Callback **51/52/53 absent**; Device-RX Bulk **absent**; HU reconnect-Loop. Bus-Negativ **UNKNOWN** — [epistemik](feld/2026-10-30-epistemik-messluecke-ep0-bulk.md). `phone_like` Fingerprint reject. [erster Lauf](feld/2026-10-30-feld-c1b-p0-fw034-erster-lauf.md) · [Abend](feld/2026-10-30-feld-c1b-p0-fw034-abend.md).  
 **Lab 2026-10-30:** Stage+51-Fix; AAIdrive UI / Bulk absent auf App-Ebene.
 
-**FW 0.3.34:** Control-Tap belastbar für Vendor-CB. **Nächster Gatekeeper:** read-only EP0-Core-Hook (Messlücke Bus↔Callback).
+**FW 0.3.34:** Control-Tap belastbar für Vendor-CB.  
+**FW 0.3.35/0.3.36:** NVS sticky `hpgad` (B1 Lab-Fix) + SessionMetrics/Timeline + Identity `aoa_id_303a`.  
+**Nächster Feld-Gatekeeper:** C1 Identity-Gate ([Kampagne](feld/2026-11-06-c1-identity-gate-kampagne.md)) — **nicht** Blind-Wiederholung von C1b-P0. EP0-Core-Hook bleibt offen (Messlücke Bus↔Callback).
 
 **Boot-Mode Isolation (P0-0) — Voraussetzung:**
 
@@ -111,15 +113,16 @@ B1 phone_like **NEGATIVE**. B2b hex4 **TX ok / keine HU-Antwort**. Blind-Knock b
 | `msc` (default) | Golden Path USBMSC only — **kein** Vendor/AOA |
 | `aoa_observe` | USBVendor only Already-Accessory `0x18D1:0x2D00` — **kein** MSC; observe-only |
 | `aoa_phone_like` | USBVendor only B1 phone-like `0x04E8:0x6860` — **kein** MSC; 51/52/53 Responder |
+| `aoa_id_303a` | USBVendor only Analyzer-VID `0x303A:0x1001` — **kein** MSC; Identity-Isolation |
 
-Umschalten **nur** NVS + Reboot (`POST /api/config` + `/api/connected/gadget/reboot`). Soft-Detach ≠ Moduswechsel.
+Umschalten **nur** NVS + Reboot (`POST /api/config` + `/api/connected/gadget/reboot`). Soft-Detach ≠ Moduswechsel. Factory: `POST /api/factory-reset`.
 
 | Level | Befund |
 |-------|--------|
 | **P0-0** | Gadget isolation: `msc_interface_present` / `vendor_interface_present` match boot mode |
 | **P0-A** | USB attach/enum observed (`ca_usb` attach) |
 | **P0-B** | AOA-relevant control seen (`bRequest` ∈ {51,52,53,58}). Generic callback SETUPs count in `setup_count` only — do **not** set P0_B. Direct-2D00-Boot: Absent ≠ AOA-FAIL |
-| **P0-C** | VID/PID path documented (`aoa_observe` → `0x18D1:0x2D00`; `aoa_phone_like` → `0x04E8:0x6860`; post-53 re-enum **NOT IMPLEMENTED**) |
+| **P0-C** | VID/PID path documented (`aoa_observe` → `0x18D1:0x2D00`; `aoa_phone_like` → `0x04E8:0x6860`; `aoa_id_303a` → `0x303A:0x1001`; post-53 re-enum **NOT IMPLEMENTED**) |
 | **P0-D** | Bulk endpoints identified (USBVendor duplex) |
 | **P0-E** | First bulk RX capturable as raw `ca_usb` / counters — **not** fed to `BclFramer` |
 

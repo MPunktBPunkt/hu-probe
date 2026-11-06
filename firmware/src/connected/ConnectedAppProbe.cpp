@@ -10,6 +10,8 @@
 #include "core/DiagLog.h"
 #include "core/ProbeClock.h"
 #include "net/EventBus.h"
+#include "session/SessionMetrics.h"
+#include "session/SessionMetricsJson.h"
 
 #include "tusb.h"
 
@@ -229,6 +231,9 @@ void ConnectedAppProbe::drainTransportRaw() {
     for (;;) {
         const size_t n = aoa_.read(buf, sizeof(buf));
         if (n == 0) break;
+        huprobe::SessionMetrics::instance().noteBulkRx(
+            static_cast<uint32_t>(ProbeClock::nowMsCompat(ProbeClock::nowUs())),
+            static_cast<uint32_t>(n));
         publishTransportEvent(TransportEvent::RxBytes, static_cast<uint32_t>(n), "bulk_rx");
         if (!p0_e_) {
             p0_e_ = true;
@@ -445,7 +450,8 @@ bool ConnectedAppProbe::startCaC1Link() {
     if (!aoa_observe_boot_) {
         lastErr_ = "wrong_usb_gadget";
         state_ = "blocked";
-        DiagLog::printf("[CA] ca_c1_link rejected: need usb_gadget=aoa_observe|aoa_phone_like + reboot\n");
+        DiagLog::printf(
+            "[CA] ca_c1_link rejected: need usb_gadget=aoa_observe|aoa_phone_like|aoa_id_303a + reboot\n");
         return false;
     }
     if (!aoa_.usbStackBound() || !AoaObserveGadget::instance().ready()) {
@@ -481,6 +487,10 @@ bool ConnectedAppProbe::startCaC1Link() {
     lastErr_ = "";
     link_runs_++;
 
+    huprobe::SessionMetrics::instance().timeline().beginSession(
+        session_->id().c_str(),
+        static_cast<uint32_t>(ProbeClock::nowMsCompat(ProbeClock::nowUs())));
+
     {
         JsonDocument extra;
         extra["msc_interface_present"] = false;
@@ -503,6 +513,8 @@ bool ConnectedAppProbe::stopCaC1Link() {
     publishTransportEvent(TransportEvent::Disconnected, 0, "stop");
     aoa_.disarm();
     link_observing_ = false;
+    huprobe::SessionMetrics::instance().timeline().endSession(
+        static_cast<uint32_t>(ProbeClock::nowMsCompat(ProbeClock::nowUs())));
     if (session_ && session_->active()) session_->stop();
     state_ = "idle";
     lastErr_ = "";
@@ -571,6 +583,9 @@ bool ConnectedAppProbe::sendKnock(const char* pattern) {
     aoa_.enableWireTx(true);
     const size_t n = aoa_.write(buf, len);
     aoa_.enableWireTx(false);
+    if (n > 0) {
+        huprobe::SessionMetrics::instance().noteBulkTx(static_cast<uint32_t>(n));
+    }
 
     JsonDocument extra;
     extra["pattern"] = name;
@@ -685,11 +700,11 @@ void ConnectedAppProbe::toStatusJson(JsonObject obj) const {
     obj["vendor_interface_present"] =
         aoa_observe_boot_ && AoaObserveGadget::instance().vendorInterfacePresent();
     if (aoa_observe_boot_) {
-        obj["aoa_identity_profile"] =
-            AoaObserveGadget::instance().profile() ==
-                    huprobe::aoa::AoaIdentityProfile::PhoneLike
-                ? "phone_like"
-                : "accessory";
+        const auto prof = AoaObserveGadget::instance().profile();
+        const char* pname = "accessory";
+        if (prof == huprobe::aoa::AoaIdentityProfile::PhoneLike) pname = "phone_like";
+        else if (prof == huprobe::aoa::AoaIdentityProfile::Id303a) pname = "id_303a";
+        obj["aoa_identity_profile"] = pname;
     }
     obj["frames"] = frames_;
     obj["malformed"] = malformed_;
@@ -742,6 +757,7 @@ void ConnectedAppProbe::toStatusJson(JsonObject obj) const {
         tr["identity_note"] = g.identityNote();
         tr["vendor_mounted"] = g.vendorMounted();
         tr["attach_count"] = g.attachCount();
+        tr["detach_count"] = g.detachCount();
         const AoaControlTap& tap = AoaControlTap::instance();
         tr["setup_count"] = tap.setupCount();
         tr["vendor_setup_count"] = tap.vendorSetupCount();
@@ -759,6 +775,10 @@ void ConnectedAppProbe::toStatusJson(JsonObject obj) const {
         tr["hypothesis_respond"] = tap.hypothesisRespond();
         tr["aoa_mode"] = tap.hypothesisRespond() ? "phone_like_responder" : "observe";
     }
+
+    // Analyzer-style session metrics: null = UNKNOWN on this layer; 0 = measured absent.
+    huprobe::sessionMetricsToJson(obj["session_metrics"].to<JsonObject>(),
+                                  huprobe::SessionMetrics::instance());
 
     if (has_last_) {
         JsonObject last = obj["last_frame"].to<JsonObject>();
