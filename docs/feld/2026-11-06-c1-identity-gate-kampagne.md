@@ -35,10 +35,11 @@ Epistemik: Callback/RX = 0 ≠ Bus-Negativ — [epistemik-messluecke](2026-10-30
 ## Protokoll (pro Steckversuch)
 
 1. FW 0.3.36, Mode NVS sticky verifiziert ([Lab-Checkliste](2026-11-06-lab-nvs-sticky-checklist.md))
-2. Definierte Identity + Session-ID (`ca_c1_link` start)
-3. Artefakte: `GET /api/status` → `connected_app.session_metrics` + `timeline[]`, Events JSONL
-4. HU-UI Observation (ohne Interpretation während Messung)
-5. Ergebnis als **FACT / UNKNOWN / INFERENCE**
+2. Status-Heartbeat über die volle Messdauer (`tools/feld_status_heartbeat.py`) — Web-UI kann sterben
+3. Definierte Identity + Session-ID (`ca_c1_link` start)
+4. Artefakte: Heartbeat-JSONL + `session_metrics`/`timeline[]` + Events JSONL
+5. HU-UI Observation (ohne Interpretation während Messung)
+6. Ergebnis als **FACT / UNKNOWN / INFERENCE** — Details: [I-303A-Runsheet](2026-11-06-i303a-feld-runsheet.md)
 
 ### Semantik Counter
 
@@ -52,13 +53,16 @@ Epistemik: Callback/RX = 0 ≠ Bus-Negativ — [epistemik-messluecke](2026-10-30
 
 ## Matrix (Reihenfolge)
 
-| ID | Mode | Variable | Erwartung |
-|----|------|----------|-----------|
-| Lab-S | sticky A/B/C/D | NVS | Mode hält nach Reboot |
-| Lab-A | `aoa_observe` × Analyzer-Host | AOA Lab A/B | Counter bewegen sich |
-| I-MSC | `msc` (kurz) | MSC Golden Path | MODE_SENSE/PREVENT in `scsi_opcode_histogram` oder UNKNOWN |
-| **I-303A** | **`aoa_id_303a`** | **VID ohne MSC-Class** | HU-Reaktion FACT; AOA-cb MEASURED oder 0 |
+| ID | Mode | Variable | Status |
+|----|------|----------|--------|
+| Lab-S | sticky A/B/C/D | NVS | **PASS** ([Lab](2026-11-06-lab-c1-036-sticky-aoa.md)) |
+| Lab-A | `aoa_observe` × Analyzer-Host | AOA Lab A/B | **PASS** (respond an/aus unterscheidbar) |
+| Lab-MSC | MSC + Novel-Host | Stimulus/Instrument | **PASS** ([Lab](2026-11-06-lab-msc-novel-access.md)) — nicht BMW-Wire |
+| I-MSC | `msc` (kurz am BMW) | MSC Golden Path | optional / Analyzer bereits P-MOUNT |
+| **I-303A** | **`aoa_id_303a`** | **VID ohne MSC-Class** | **NEXT** — [Runsheet](2026-11-06-i303a-feld-runsheet.md) |
 | I-ACC / I-PHN | nur bei Bedarf | Rebaseline | kurze Timeline, kein Blind-Knock |
+
+**Vor I-303A kein weiterer Code:** kein EP0-Hook, kein BCL/Etch, keine weiteren MSC-Novel-Muster, keine Blind-Knocks.
 
 ---
 

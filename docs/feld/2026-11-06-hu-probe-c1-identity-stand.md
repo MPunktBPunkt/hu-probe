@@ -21,7 +21,8 @@
 - Neuer Boot-Mode **`aoa_id_303a`**: Vendor-only `0x303A:0x1001` (kein MSC) für Identity-Isolation.
 - MSC: SCSI-Opcode-Histogramm inkl. `mode_sense6` / `prevent_allow` (aus CBW-Tap).
 - Factory-Reset-API dokumentiert (`POST /api/factory-reset`).
-- Host-Tests: `gadget_nvs`, `session_metrics`, `bcl_c1a` grün; Firmware-Build `huprobe-s3` OK.
+- Host-Tests: `gadget_nvs`, `session_metrics`, `bcl_c1a` — lokal und via CI `.github/workflows/host-tests.yml` (Binaries gitignored).
+- Lab MEASURED 2026-11-06: sticky alle 4 Modes PASS; AOA Lab A/B PASS; MSC-Novel Instrument PASS ([Lab-Berichte](2026-11-06-lab-c1-036-sticky-aoa.md)).
 
 **Bereits bekannte Feld-FACTS (unverändert, nicht neu gemessen):**
 
@@ -29,7 +30,7 @@
 - `aoa_phone_like` `04E8:6860` → HU REJECTED.
 - Analyzer MSC `303a:1001` am NBT → P-MOUNT inkl. MODE_SENSE(6)+PREVENT; AOA 51/52/53=0 (Analyzer 2026-11-06).
 
-**BMW-Feld mit FW 0.3.36:** in dieser Session **nicht** ausgeführt → siehe NEXT.
+**BMW-Feld mit FW 0.3.36:** **nicht** ausgeführt → **I-303A** ist der Engpass ([Runsheet](2026-11-06-i303a-feld-runsheet.md)).
 
 ---
 
@@ -82,9 +83,9 @@ Auf MSC-Plane: Plug/Unplug, SCSI-Opcode-Histogramm (`tur`, `inquiry`, `mode_sens
 
 ## NEXT
 
-1. Lab-Checkliste sticky + Soft-Detach auf Board abhaken.  
-2. BMW **I-303A** mit FW 0.3.36 / `aoa_id_303a` — eine Variable.  
-3. Ergebnis als FACT Identity+Config→HU-Reaktion **oder** FACT kein AOA-Start auf Messschicht.  
-4. EP0-Core-Hook erst wenn Identity-Gate die Messlücke als Blocker bestätigt.
+1. ~~Lab sticky + Soft-Detach + AOA A/B~~ — **PASS** (Board).  
+2. **BMW I-303A** — einzige nächste Handlung ([Runsheet](2026-11-06-i303a-feld-runsheet.md)).  
+3. Ergebnis: FACT Identity+Config→HU-Reaktion **oder** FACT kein AOA-Start auf Messschicht.  
+4. EP0-Core-Hook / BCL / weitere MSC-Novel **erst danach**, und nur wenn I-303A die Messlücke als Blocker setzt.
 
 Kampagne: [2026-11-06-c1-identity-gate-kampagne.md](2026-11-06-c1-identity-gate-kampagne.md)

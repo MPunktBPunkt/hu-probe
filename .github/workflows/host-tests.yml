@@ -1,0 +1,33 @@
+# Host-only regressions (no ESP32 / PlatformIO).
+# Keeps "gadget_nvs / session_metrics / bcl_c1a grün" reproducible after
+# test binaries were gitignored (50ca8d7) — see C1 identity reviews.
+name: host-tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: host-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install g++
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq g++ make
+
+      - name: gadget_nvs
+        run: make -C tools/gadget_nvs clean test
+
+      - name: session_metrics
+        run: make -C tools/session_metrics clean test
+
+      - name: bcl_c1a test + scenario
+        run: make -C tools/bcl_c1a clean test scenario

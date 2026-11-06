@@ -8,10 +8,15 @@
 
 ## Host-Tests (ohne Board)
 
+Lokal und in CI (`host-tests` Workflow auf `main` / PR):
+
 ```bash
 make -C tools/gadget_nvs test
 make -C tools/session_metrics test
+make -C tools/bcl_c1a test scenario
 ```
+
+Test-Binaries sind gitignored — „grün“ = CI-Lauf oder lokaler `make`, nicht committed Artifacts.
 
 ## Board-Regression (vor BMW)
 
