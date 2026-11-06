@@ -89,9 +89,15 @@ Auf MSC-Plane: Plug/Unplug, SCSI-Opcode-Histogramm (`tur`, `inquiry`, `mode_sens
 
 ## NEXT
 
-1. ~~Lab sticky + Soft-Detach + AOA A/B~~ — **PASS** (Board).  
-2. **BMW I-303A** — einzige nächste Handlung ([Runsheet](2026-11-06-i303a-feld-runsheet.md)).  
-3. Ergebnis: FACT Identity+Config→HU-Reaktion **oder** FACT kein AOA-Start auf Messschicht.  
-4. EP0-Core-Hook / BCL / weitere MSC-Novel **erst danach**, und nur wenn I-303A die Messlücke als Blocker setzt.
+**Phase:** weg von Protokoll-Doku → ein instrumentierter Realtest.
+
+| Prio | Handlung |
+|------|----------|
+| **P0** | **I-303A** — G1-Abschluss only ([Runsheet](2026-11-06-i303a-feld-runsheet.md)); keine Identity-Matrix danach |
+| **P1** | **FIELD-CONNECTED-REAL-01** — Phone×MyBMW/AAIdrive×F20×Analyzer, 4 Ebenen ([Plan](2026-11-06-field-connected-real-01.md)) |
+| **P2** | **FX-G3-01** — wenn Bulk da: `sas_*`-Sequenz korrelieren |
+| **P3** | ESP-Nachbau nur mit REAL-PHONE-Referenz |
+
+**Freeze:** Blind-Knock · BCL-on-ESP · SAS-FW · L0 als Blocker · weitere Desk-Serie ohne Feldartefakt.
 
 Kampagne: [2026-11-06-c1-identity-gate-kampagne.md](2026-11-06-c1-identity-gate-kampagne.md)

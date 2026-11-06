@@ -1,68 +1,69 @@
-# Feld-Runsheet — BMW I-303A (C1 Identity Gate)
+# Feld-Runsheet — BMW I-303A (G1-Abschluss)
 
 | | |
 |--|--|
+| **Priorität** | **P0** — billiger Identity-Abschluss, **nicht** der Connected-Hauptversuch |
 | **FW** | **0.3.36** (clean dist) |
 | **Mode** | `aoa_id_303a` — VID/PID `303A:1001`, Vendor-only `FF/FF/00`, **kein MSC** |
-| **respond** | `hypothesis_respond=false` (kein AOA-51-Auto-ACK) |
-| **Nicht** | BCL · Etch · SAS · EP0-Hook · Blind-Knock · weitere MSC-Novel-Muster |
-| **Misst** | nur **G1** (Identity/Class); G2 nur soweit Callback zählt; **nicht** G3/G4 |
+| **respond** | `hypothesis_respond=false` |
+| **Misst** | nur **G1** (Identity/Class); Callback höchstens als Nebenbeobachtung |
+| **Beantwortet** | „Wie reagiert die HU auf diese USB-Identity?“ |
+| **Beantwortet nicht** | Connected-Session · BCL/Etch/SAS · „wie sieht echter Phone-USB-Pfad aus?“ |
 
-Lab-Voraussetzungen geschlossen: sticky A/B/C/D PASS · AOA Lab A/B PASS · Host-CI  
-([Kampagne](2026-11-06-c1-identity-gate-kampagne.md) · [Lab sticky/AOA](2026-11-06-lab-c1-036-sticky-aoa.md)).
+Danach ohne Identity-Matrix-Aufblasen → **[FIELD-CONNECTED-REAL-01](2026-11-06-field-connected-real-01.md)** (P1).
+
+Lab-Voraussetzungen: sticky A/B/C/D PASS · AOA Lab A/B PASS · Host-CI  
+([Kampagne](2026-11-06-c1-identity-gate-kampagne.md) · [Lab](2026-11-06-lab-c1-036-sticky-aoa.md)).
 
 ---
 
 ## Vor dem Stecken
 
 1. Mode speichern → Reboot → `/api/status`: `usb_gadget=aoa_id_303a`.
-2. Soft-cycle einmal: Mode bleibt `aoa_id_303a`.
-3. Heartbeat starten (kein `.88`-Fallback im Auto):
+2. Soft-cycle: Mode bleibt `aoa_id_303a`.
+3. Heartbeat:
 
 ```bash
 python3 tools/feld_status_heartbeat.py --dut <PROBE_IP> \
   --interval 5 --out docs/feld/artifacts/i303a-$(date -u +%Y%m%dT%H%M%SZ)-hb.jsonl
 ```
 
-4. Session starten (`ca_c1_link` / Connected-App-Gate wie Kampagne).
-5. Wandnotiz bereit: Uhrzeit, HU-UI-Text, Reconnect ja/nein — **ohne Interpretation**.
+4. Session (`ca_c1_link` o.ä.).
+5. Wandnotiz: Uhrzeit, HU-UI wörtlich, Reconnect ja/nein — **ohne Interpretation**.
 
 ---
 
 ## Während der Messung (eine Variable)
 
-Beobachten / notieren — nur FACT:
-
 | # | Frage | Eintrag |
 |---|--------|---------|
-| 1 | Erkennt BMW das Device? | ja/nein + UI-Text wörtlich |
+| 1 | Erkennt BMW das Device? | ja/nein + UI-Text |
 | 2 | Reconnect-Loop? | ja/nein · Intervall grob |
 | 3 | `aoa_51` / `52` / `53` | Zahlen oder unverändert |
-| 4 | `aoa51_respond_ok` | (soll bei respond=false unverändert bleiben) |
+| 4 | `aoa51_respond_ok` | bei respond=false unverändert erwartet |
 | 5 | `vendor_setup_count` | Zahl / null |
 | 6 | `bulk_rx` / timeline | Zahlen |
 | 7 | vs. MSC `303A:1001` | anders / gleich / UNKNOWN |
 
-`0` = gemessen absent · `null` = auf Messschicht nicht beobachtbar ·  
-`visibility_scope` muss `usbvendor_onrequest_only` (o.ä.) bleiben.
+`0` = gemessen absent · `null` = nicht beobachtbar · `visibility_scope` bleibt Callback-Schicht.
 
 ---
 
 ## Ops-Fallen
 
-- **Web-UI tot ≠ Messung tot.** Heartbeat-JSONL + Collector/Events sind die Quelle.
-- Unter Lab-OTG hing LocalWeb; im Fahrzeug nur WiFi der Probe — Heartbeat Pflicht.
-- Nach `media_hide`/Offline-Lab: DUT oft soft-detached. I-303A braucht **AOA-Gadget attached** (Mode wechseln + soft-attach/cycle laut UI).
-- Lab-Offline `Integrity: FAIL` mit `replay_records=0` ist bekannt (OTG-Coex) und **blockiert I-303A nicht**.
+- Web-UI tot ≠ Messung tot — Heartbeat/Events sind Quelle.
+- Soft-detached nach Offline-Lab → Mode + soft-attach/cycle.
+- Lab-Offline Integrity FAIL (`replay_records=0`) blockiert I-303A nicht.
 
 ---
 
-## Danach
+## Danach (G1 schließen)
 
-1. Heartbeat stoppen; Status-Endsnap + Events JSONL sichern.
-2. Kurzbericht: FACT / UNKNOWN / INFERENCE — keine BCL-/SAS-Claims; AOA ≠ Connected-App.
-3. Nur wenn Callback weiter 0 **und** Identity-Gate die Messlücke als Blocker setzt → EP0-Hook priorisieren.
-4. Kein weiterer Code vor diesem Feldlauf. SAS erklärt Null-Befunde strukturell, ändert I-303A nicht.
+1. Heartbeat stoppen; Endsnap + Events sichern.
+2. Kurzbericht: FACT Identity+Config→HU-Reaktion — **keine** BCL/SAS-Claims.
+3. **Keine** weitere Identity-Serie (I-ACC/I-PHN nur bei klarem Bedarf).
+4. EP0-Hook nur wenn I-303A die Messlücke **als Blocker für G1** setzt — nicht „für Connected“.
+5. Sofort Priorität **P1:** [FIELD-CONNECTED-REAL-01](2026-11-06-field-connected-real-01.md).
 
 Vergleichspole (nicht erneut als Hauptlauf):  
 `18D1:2D00` Accessory · `04E8:6860` Reject · `303A:1001`+MSC P-MOUNT.

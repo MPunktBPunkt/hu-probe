@@ -4,80 +4,77 @@
 |--|--|
 | **Datum** | 2026-11-06 |
 | **FW** | **0.3.36** |
-| **Fokus** | Welche Variable zwischen `303a:1001` (MSC), `18D1:2D00`, `04E8:6860` den HU-USB-Pfad steuert |
-| **Nicht** | BCL/Etch · Blind-Wiederholung C1b-P0 · Analyzer-Duplikat |
+| **Phase** | Desk/Lab geschlossen → **Feld: G1 abschließen, dann Real-Phone** |
+| **Nicht** | weitere Protokoll-Doku · Blind-Knock · BCL-on-ESP · SAS-FW · L0-Analyzer als Blocker |
 
-**Methodenherkunft:** Host-Behaviour-/Fingerprinting aus `esp32.usb-analyzer` Feldmatrix 2026-11-06 (BMW/TV/Soundbar/FRITZ!Box/Windows).  
-**Audit:** technology-audit PR #32 — MSC-Identity-Negativ verstärkt Gate-Hypothese; Trigger **UNKNOWN**.
+**Methodenherkunft:** usb-analyzer Feldmatrix 2026-11-06.  
+**Audits:** technology-audit PR #32 (Identity) · PR #34 (SAS CarAPI/Cleartext/AIDL).
+
+---
+
+## Prioritäten (jetzt)
+
+| Prio | ID | Ziel | Doc |
+|------|-----|------|-----|
+| **P0** | **I-303A** | G1 Identity abschließen (billig) | [Runsheet](2026-11-06-i303a-feld-runsheet.md) |
+| **P1** | **FIELD-CONNECTED-REAL-01** | G2→G3 am echten Phone×HU×Analyzer | [Plan](2026-11-06-field-connected-real-01.md) |
+| **P2** | **FX-G3-01** | `sas_certificate`→Challenge→`sas_login` korreliert | Audit + Plan §Success |
+| **P3** | ESP-Rollen-Nachbau | nur mit REAL-PHONE-Referenz | — |
+
+I-303A beantwortet **nicht** „wie sieht Connected auf USB aus?“ — das ist P1.
+
+---
+
+## Gate-Lage (Kurz)
+
+| Gate | Inhalt | Stand |
+|------|--------|-------|
+| G1 | USB Identity/Enumeration | gut belegt; I-303A schließt Vendor-only `303A:1001` |
+| G2 | AOA/BT + BCL Transport | AOA teilweise; **BCL HU-Wire UNKNOWN** |
+| G3 | BCL→Etch→`sas_*` | **UNKNOWN im Fahrzeug** |
+| G4 | SAS Auth | Desk sehr gut; Real-Session UNKNOWN; MyBMW-Signierung UNKNOWN |
+| G5 | RHMI/AV/CDS/AM | abhängig G3/G4 |
 
 ---
 
 ## Bekannte Pole (nicht erneut als Hauptlauf)
 
-| Identity | Mode | Feld-FACT (2026-10-30) |
-|----------|------|------------------------|
-| `18D1:2D00` Vendor | `aoa_observe` | HU Zubehör + Reconnect-Loop; Callback 51/52/53=0; Bulk RX=0 |
-| `04E8:6860` Vendor | `aoa_phone_like` | HU REJECTED („nicht unterstützt“) |
-| `303a:1001` **MSC** | Analyzer Gadget | P-MOUNT inkl. MODE_SENSE(6)+PREVENT; `aoa51/52/53=0` |
-
-Epistemik: Callback/RX = 0 ≠ Bus-Negativ — [epistemik-messluecke](2026-10-30-epistemik-messluecke-ep0-bulk.md).
+| Identity | Mode | Feld-FACT |
+|----------|------|-----------|
+| `18D1:2D00` Vendor | `aoa_observe` | Zubehör + Reconnect; Callback 51/52/53=0; Bulk RX=0 (2026-10-30) |
+| `04E8:6860` Vendor | `aoa_phone_like` | HU REJECTED |
+| `303a:1001` **MSC** | Analyzer | P-MOUNT; `aoa51/52/53=0` |
 
 ---
 
-## Hypothese (eine Variable)
+## I-303A (P0) — eine Variable
 
-**H1:** VID/PID `303A:1001` allein (ohne MSC-Class) erklärt noch nicht den Stick-Pfad; die USB-Class/Interface entscheidet mit.
+**H1:** VID/PID `303A:1001` ohne MSC-Class ≠ Stick-Pfad; Class/Interface entscheidet mit.  
+Mode `aoa_id_303a`, `hypothesis_respond=false`. Heartbeat Pflicht.
 
-**Experiment `aoa_id_303a`:** gleiche VID/PID wie Analyzer-MSC, aber **Vendor-only** (`0xFF/0xFF/0x00`), kein MSC-Interface, `hypothesis_respond=false`.
-
----
-
-## Protokoll (pro Steckversuch)
-
-1. FW 0.3.36, Mode NVS sticky verifiziert ([Lab-Checkliste](2026-11-06-lab-nvs-sticky-checklist.md))
-2. Status-Heartbeat über die volle Messdauer (`tools/feld_status_heartbeat.py`) — Web-UI kann sterben
-3. Definierte Identity + Session-ID (`ca_c1_link` start)
-4. Artefakte: Heartbeat-JSONL + `session_metrics`/`timeline[]` + Events JSONL
-5. HU-UI Observation (ohne Interpretation während Messung)
-6. Ergebnis als **FACT / UNKNOWN / INFERENCE** — Details: [I-303A-Runsheet](2026-11-06-i303a-feld-runsheet.md)
-
-### Semantik Counter
-
-| Wert | Bedeutung |
-|------|-----------|
-| `0` | auf Messschicht gemessen und **nicht** vorhanden |
-| `null` / UNKNOWN | auf dieser Messschicht **nicht beobachtbar** |
-| `visibility_scope` | z. B. `usbvendor_onrequest_only` |
+Nach PASS/FAIL-Dokumentation: **Identity-Matrix nicht aufblasen** → P1.
 
 ---
 
-## Matrix (Reihenfolge)
+## Freeze (bis nach P1)
 
-| ID | Mode | Variable | Status |
-|----|------|----------|--------|
-| Lab-S | sticky A/B/C/D | NVS | **PASS** ([Lab](2026-11-06-lab-c1-036-sticky-aoa.md)) |
-| Lab-A | `aoa_observe` × Analyzer-Host | AOA Lab A/B | **PASS** (respond an/aus unterscheidbar) |
-| Lab-MSC | MSC + Novel-Host | Stimulus/Instrument | **PASS** ([Lab](2026-11-06-lab-msc-novel-access.md)) — nicht BMW-Wire |
-| I-MSC | `msc` (kurz am BMW) | MSC Golden Path | optional / Analyzer bereits P-MOUNT |
-| **I-303A** | **`aoa_id_303a`** | **VID ohne MSC-Class** | **NEXT** — [Runsheet](2026-11-06-i303a-feld-runsheet.md) |
-| I-ACC / I-PHN | nur bei Bedarf | Rebaseline | kurze Timeline, kein Blind-Knock |
-
-**Vor I-303A kein weiterer Code:** kein EP0-Hook, kein BCL/Etch/SAS, keine weiteren MSC-Novel-Muster, keine Blind-Knocks.
-
-SAS/Connected-Auth (Gate G4) sitzt **zwei Stufen über** I-303A — siehe [GATES-Connected § Vier Gates](../GATES-Connected.md#referenzmodell--vier-gates-usb--connected). Ändert den Feldlauf nicht.
+- keine neuen AOA-Kommandos / Blind-Knocks  
+- kein synthetischer BCL-on-ESP als „HU-Beweis“  
+- keine SAS-Implementierung auf der Probe  
+- kein L0-Analyzer vor Real-Phone  
+- keine weitere Desk-Serie ohne Feldartefakt  
 
 ---
 
 ## INFERENCE (nicht FACT)
 
-**H-Reconnect (fehlender Connected-Peer):** Der Feld-Loop bei Direct-`18D1:2D00` (Zubehör-UI → Reconnect; Callback 51/52/53=0; Bulk absent) *könnte* bedeuten: HU akzeptiert USB-Accessory-Identity, erwartet aber den **Connected-Peer** (BCL knock/handshake → Etch → ggf. SAS) — nicht nur „AOA-Gerät wartet“. Direct-ESP ≠ Phone+MyBMW+AAIdrive-Rolle.  
-**Messbarkeit:** hu-probe G1/(teilweise) G2 kann das weder bestätigen noch widerlegen. Alternative (EP0 außerhalb Callback) bleibt offen — [epistemik](2026-10-30-epistemik-messluecke-ep0-bulk.md). Desk: [BMWConnectedAnalysis app-behavior](https://bimmergestalt.github.io/BMWConnectedAnalysis/app-behavior/).
+**H-Reconnect:** Direct-`18D1:2D00`-Loop *kann* fehlenden Connected-Peer bedeuten (BCL/Etch/SAS). Messschicht G1 kann das nicht entscheiden — P1 liefert den Divergenzvergleich Phone vs ESP.
 
 ---
 
 ## Erlaubte Abschluss-Aussagen
 
-- **FACT:** Identity X + configuration Y → HU reaction Z  
-- **FACT:** Varianten erzeugen trotz unterschiedlicher Identity keinen beobachtbaren AOA-Start auf der aktuellen Messschicht  
-- **REJECTED:** „AOA erkannt / Bulk ⇒ Connected-App (SAS) offen“  
-- Rest: **UNKNOWN** (Bus außerhalb Callback, AOA-Trigger, BCL/Etch/SAS Wire)
+- **FACT:** Identity X + configuration Y → HU reaction Z (I-303A)  
+- **FACT:** korrelierte Transportstufe G2/G3 in Real-Phone-Session (P1)  
+- **REJECTED:** AOA/Bulk ⇒ Connected-App offen · jede App = Etch-Client · Lab-BCL = HU-Wire  
+- Rest: **UNKNOWN**
