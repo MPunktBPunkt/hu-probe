@@ -9,9 +9,18 @@ Reihenfolge ist strikt: C(n+1) erst nach messbarem C(n) oder dokumentiertem Hard
 
 ---
 
-## Referenzmodell — Gates G1–G5 (USB → Connected)
+## Referenzmodell — Gates G1–G4 (USB → Connected)
 
-Desk/Primärquellen (BimmerGestalt Authentication, PiDrive Connected/AAIdrive-Stack 2026-11-06): Connected-App ist **nicht** ein USB-Flag, sondern eine Kette.
+Desk/Primärquellen (BimmerGestalt Authentication, PiDrive Connected/AAIdrive-Stack 2026-11-06; Vier-Gate-Commit `a68ef3b`): Connected-App ist **nicht** ein USB-Flag, sondern eine Kette. **Keine Gate-ID G5** — RHMI/CDS/AV/AM sind Nutzerebene **nach** G4.
+
+```
+G1  USB Identity / Class
+G2  AOA / BT Transport + BCL
+G3  Phone → localhost TCP → BCL → Etch
+G4  SAS Authentication
+    │
+    └── danach: RHMI / CDS / AV / AM
+```
 
 | Gate | Inhalt | hu-probe Messfläche (0.3.36) |
 |------|--------|------------------------------|
@@ -19,21 +28,21 @@ Desk/Primärquellen (BimmerGestalt Authentication, PiDrive Connected/AAIdrive-St
 | **G2** | Transport: AOA/BT + **BCL knock/handshake** (Connected-Peer) | AOA-Callback teilweise; BCL-Wire **nein** |
 | **G3** | App-Tunnel: Phone localhost TCP → BCL→Etch | **nein** (Phone-Seite) |
 | **G4** | SAS Authentication (P7B → Challenge → Signatur → `sas_login`) | **nein** — Keys; Signierweg modern **UNKNOWN** |
-| **G5** | Authorization/Use: AM / RHMI / AV / CDS | **nein** |
+| *(danach)* | Nutzung: AM / RHMI / AV / CDS | **nein** — keine Gate-Nummer |
 
 Feinere Desk-Lesart (BimmerGestalt Lifecycle): BCL gehört zu **G2** (Transport-Peer), nicht „Bulk = fertig“. Etch-Tunnel = **G3**.  
-PiDrive-Abgleich: [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK-2026-11-06.md) · [HU-Technical-Facts §10](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-Technical-Facts.md).
+PiDrive-Abgleich: [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK-2026-11-06.md) · [HU-BESCHREIBUNG §5.1](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-BESCHREIBUNG.md) · [HU-Technical-Facts §10](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-Technical-Facts.md).
 
 **Invarianten**
 
-- AOA erkannt (G1) ≠ Connected-Transport/BCL (G2) ≠ Etch-Tunnel (G3) ≠ SAS (G4) ≠ RHMI/AV (G5).
+- AOA erkannt (G1) ≠ Connected-Transport/BCL (G2) ≠ Etch-Tunnel (G3) ≠ SAS (G4); RHMI/AV erst **danach**.
 - Direct-ESP `18D1:2D00` = USB-Accessory-Identity, **nicht** Connected-Peer-Rolle.
 - BclCarLink kann BCL-Link ersetzen helfen; **nicht** SAS. Classic Connected ≤5.1 exportierte `.SECURITY_SERVICE`; **MyBMW / Connected ≥5.1 nicht** — moderne Signierung **UNKNOWN** (Altstand „MyBMW liefert signChallenge“ **REJECTED** als Default).
 - CarAPI ≠ AAIdrive-Call-Graph: Connected kann `sas_*` **stellvertretend** ausführen; Wire trotzdem BCL/Etch-Tunnel (Cleartext laut Analysis — FX-G3-01).
 - „BCL/Etch/SAS auf echtem HU-USB = 0“ ist **Scope**, kein Firmware-Qualitätsdefizit.
 - Feld-Priorität: **P0 I-303A** (G1) → **P1 [FIELD-CONNECTED-REAL-01](feld/2026-11-06-field-connected-real-01.md)** (G2→G3) → **P2 FX-G3-01** → **P3** ESP-Nachbau nur mit Phone-Referenz.
 
-C1a–C5 unten ordnen Lab-/Wire-Stufen **innerhalb** dieses Modells ein; sie ersetzen es nicht.
+C1a–C5 unten ordnen Lab-/Wire-Stufen **innerhalb** dieses Modells ein; sie ersetzen es nicht. Lab-Gates C2–C5 (RHMI/…) bleiben Instrumentierungsstufen — **keine** parallele Gate-Nummerierung G5.
 
 ---
 

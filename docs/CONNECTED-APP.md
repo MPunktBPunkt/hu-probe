@@ -6,18 +6,18 @@
 
 Gates: [GATES-Connected.md](GATES-Connected.md). MSC-Integrität bleibt [GATES.md](GATES.md) / HU-PROBE-GATE-01.
 
-### Fünf Gates (Kurz — Desk-Lifecycle)
+### Vier Gates (Kurz — `a68ef3b` / Desk-Lifecycle)
 
 ```
-G1 USB Identity/Class              ← hu-probe (I-303A)
-G2 AOA/BT + BCL knock/handshake    ← Callback teilweise; BCL-Wire nein
-G3 localhost TCP → Etch-Tunnel     ← Phone / Connected
-G4 SAS Auth (Cert + Challenge)     ← Keys; modernes MyBMW-Signieren UNKNOWN
-G5 AM / RHMI / AV / CDS            ← Authorization/Use
+G1  USB Identity / Class              ← hu-probe (I-303A)
+G2  AOA / BT Transport + BCL          ← Callback teilweise; BCL-Wire nein
+G3  Phone → localhost TCP → BCL→Etch  ← Phone / Connected
+G4  SAS Auth (Cert + Challenge)       ← Keys; modernes MyBMW-Signieren UNKNOWN
+    └── danach: RHMI / CDS / AV / AM  ← Nutzung, keine Gate-ID G5
 ```
 
-Quellen: PiDrive [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK-2026-11-06.md) · [Authentication](https://bimmergestalt.github.io/BMWConnectedAnalysis/authentication/) · [app-behavior](https://bimmergestalt.github.io/BMWConnectedAnalysis/app-behavior/).  
-**REJECTED:** „AOA-Zubehör / Bulk ⇒ Connected-App offen.“ · „MyBMW exportiert SECURITY_SERVICE / liefert signChallenge“ (nur Classic ≤5.1 **[D]**). · „Jede Connected-App ist direkter Etch-Client“ (CarAPI: Connected führt `sas_*` stellvertretend).
+Quellen: PiDrive [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK-2026-11-06.md) · [HU-BESCHREIBUNG](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-BESCHREIBUNG.md) · [Authentication](https://bimmergestalt.github.io/BMWConnectedAnalysis/authentication/) · [app-behavior](https://bimmergestalt.github.io/BMWConnectedAnalysis/app-behavior/).  
+**REJECTED:** „AOA-Zubehör / Bulk ⇒ Connected-App offen.“ · Parallelmodell mit Gate **G5** für RHMI. · „MyBMW exportiert SECURITY_SERVICE / liefert signChallenge“ (nur Classic ≤5.1 **[D]**). · „Jede Connected-App ist direkter Etch-Client“ (CarAPI: Connected führt `sas_*` stellvertretend).
 
 Desk-Nachzug technology-audit [PR #34](https://github.com/MPunktBPunkt/technology-audit/pull/34) / [bmw-connected-sas-auth-2026-11-06](https://github.com/MPunktBPunkt/technology-audit/tree/main/audits/bmw-connected-sas-auth-2026-11-06): Cleartext-Claim („Nothing is encrypted“) → FX-G3-01 wertvoll sobald BCL/Etch sichtbar; AIDL-Namen (`createSecurityContext`/`loadAppCert`) vor Mermaid; AAIdrive `MainService` wartet auf Security connected.
 
