@@ -5,7 +5,7 @@
 | **Priorität** | **P1** (nach I-303A = P0 G1-Abschluss) |
 | **Ziel** | Erste zeitlich korrelierbare Transportstufe **G2→G3** am echten HU-USB; ideal **FX-G3-01** |
 | **Nicht-Ziel** | „AAIdrive funktioniert“ · ESP-Emulation · weitere Blind-Knocks · L0-Analyzer-Bau · SAS selbst implementieren |
-| **Desk** | [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK-2026-11-06.md) · Audit [SAS PR #34](https://github.com/MPunktBPunkt/technology-audit/pull/34) |
+| **Desk** | [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK.md) · Audit [SAS PR #34](https://github.com/MPunktBPunkt/technology-audit/pull/34) |
 
 **Phase:** Protokoll-Doku ist ausreichend. Engpass = Grenze **Android-Connected-Stack ↔ BMW-HU-Transport**.
 
@@ -68,7 +68,7 @@ Erster **entscheidender Divergenzpunkt** = Forschungsprodukt — nicht „ESP ka
 
 ## Ablauf (kurz)
 
-1. ~~I-303A~~ wenn noch offen — G1 abschließen, **keine** Identity-Matrix aufblasen ([Runsheet](2026-11-06-i303a-feld-runsheet.md)).
+1. ~~I-303A~~ wenn noch offen — G1 abschließen, **keine** Identity-Matrix aufblasen ([Runsheet](I303A-RUNSHEET.md)).
 2. Phone: MyBMW/Connected + AAIdrive; F20 Apps/6NR prüfen (sonst Pfad C tot).
 3. Analyzer am USB-Pfad (Topologie dokumentieren: Phone↔HU vs. Hub).
 4. Connect → 2–5 min stabile Session → gezieltes Disconnect/Reconnect (optional FX-G3-02 später).

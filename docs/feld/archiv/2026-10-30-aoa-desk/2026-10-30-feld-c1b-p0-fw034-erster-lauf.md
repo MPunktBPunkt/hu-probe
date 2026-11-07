@@ -51,7 +51,7 @@ Nicht zulässig: *„Die HU hat kein 51 gesendet“* — bei Already-Accessory o
 
 1. **Instrument:** Erster Feldlauf, in dem „51/52/53=0“ im **Vendor-Callback** nicht mehr Stage-Blindheit sein kann (Lab A: 51→`0100`).  
 2. **HU:** Zubehör erkannt/wählbar; Direct-Accessory ohne Callback-51/52/53; Device-RX Bulk **absent** trotz UI-Wahl.  
-3. **Caveat:** Callback/RX-Absent ≠ Bus-Negativbeweis — [epistemik-messluecke-ep0-bulk](2026-10-30-epistemik-messluecke-ep0-bulk.md).  
+3. **Caveat:** Callback/RX-Absent ≠ Bus-Negativbeweis — [epistemik-messluecke-ep0-bulk](AOA-EPISTEMIK-EP0.md).  
 4. **Kein BCL** auf der beobachteten Schicht.
 
 ---

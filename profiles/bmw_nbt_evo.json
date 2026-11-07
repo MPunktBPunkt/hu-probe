@@ -17,10 +17,10 @@
     ],
     "pidrive_profile_geometry": "tools/profiles/nbt_evo_2026-10-06.json",
     "pidrive_profile_transport": "tools/profiles/nbt_evo_lab_2026-10-19.json",
-    "analysis_2026_10_19": "docs/feld/2026-10-19-unabhaengige-auswertung.md",
-    "feld_2026_10_20_free": "docs/feld/2026-10-20-bmw-free-offline-0.2.40.md",
-    "multi_review_2026_10_20": "docs/reports/2026-10-20_Multi-Review",
-    "pidrive_matrix": "docs/fahrzeug/HU-PARAMETER-MATRIX-2026-10-16.md",
+    "analysis_2026_10_19": "docs/feld/MSC-TUR-MOUNT-FACTS.md",
+    "feld_2026_10_20_free": "docs/feld/archiv/2026-10-gate01-offline/2026-10-20-bmw-free-offline-0.2.40.md",
+    "multi_review_2026_10_20": "docs/feld/archiv/reports/",
+    "pidrive_matrix": "../pidrive/docs/fahrzeug/HU-PARAMETER-MATRIX.md",
     "p1c": "2026-10-17",
     "notes": [
       "Device-stack CBW/CSW/read events — not Wire.",
@@ -29,7 +29,7 @@
       "2026-10-20 free offline: demo_v1 medium; full 240+69 atom on track change; no file prefetch in idle; TUR idle 2238-2239 ms.",
       "demo_v1 tracks: MPEG-1 L3 48 kbit/s 44.1 kHz joint stereo, ID3v2 34 B, no Xing/Info, 1014 frames (last cut by 20 B), 1013 complete = 26.462 s.",
       "Sessions before collector fix carry a global parse_errors (B44); since the fix parse_errors is per session, total in collector_parse_errors_total.",
-      "2026-10-20 re-analysis: docs/feld/2026-10-20-bmw-free-offline-0.2.40.md section 7."
+      "2026-10-20 re-analysis: docs/feld/archiv/2026-10-gate01-offline/2026-10-20-bmw-free-offline-0.2.40.md section 7."
     ]
   },
   "expectations": {

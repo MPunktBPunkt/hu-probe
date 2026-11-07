@@ -10,10 +10,10 @@
 | **Beantwortet** | „Wie reagiert die HU auf diese USB-Identity?“ |
 | **Beantwortet nicht** | Connected-Session · BCL/Etch/SAS · „wie sieht echter Phone-USB-Pfad aus?“ |
 
-Danach ohne Identity-Matrix-Aufblasen → **[FIELD-CONNECTED-REAL-01](2026-11-06-field-connected-real-01.md)** (P1).
+Danach ohne Identity-Matrix-Aufblasen → **[FIELD-CONNECTED-REAL-01](FIELD-CONNECTED-REAL-01.md)** (P1).
 
 Lab-Voraussetzungen: sticky A/B/C/D PASS · AOA Lab A/B PASS · Host-CI  
-([Kampagne](2026-11-06-c1-identity-gate-kampagne.md) · [Lab](2026-11-06-lab-c1-036-sticky-aoa.md)).
+([Kampagne](C1-IDENTITY-KAMPAGNE.md) · [Lab](lab/C1-036-STICKY-AOA.md)).
 
 ---
 
@@ -63,7 +63,7 @@ python3 tools/feld_status_heartbeat.py --dut <PROBE_IP> \
 2. Kurzbericht: FACT Identity+Config→HU-Reaktion — **keine** BCL/SAS-Claims.
 3. **Keine** weitere Identity-Serie (I-ACC/I-PHN nur bei klarem Bedarf).
 4. EP0-Hook nur wenn I-303A die Messlücke **als Blocker für G1** setzt — nicht „für Connected“.
-5. Sofort Priorität **P1:** [FIELD-CONNECTED-REAL-01](2026-11-06-field-connected-real-01.md).
+5. Sofort Priorität **P1:** [FIELD-CONNECTED-REAL-01](FIELD-CONNECTED-REAL-01.md).
 
 Vergleichspole (nicht erneut als Hauptlauf):  
 `18D1:2D00` Accessory · `04E8:6860` Reject · `303A:1001`+MSC P-MOUNT.

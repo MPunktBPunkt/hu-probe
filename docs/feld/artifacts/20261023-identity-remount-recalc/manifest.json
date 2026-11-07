@@ -170,17 +170,17 @@
   ],
   "reports": [
     {
-      "path": "docs/feld/2026-10-23-gesamtbericht-identity-remount-multireview.md",
+      "path": "docs/feld/MSC-IDENTITY-REMOUNT.md",
       "bytes": 20373,
       "sha256": "b9b068448719288ea6c43f2067ea23088b1ab52b65e8eba487c53c1438adf961"
     },
     {
-      "path": "docs/feld/2026-10-23-wire-nachtrag-074319-074455.md",
+      "path": "docs/feld/archiv/2026-10-22-msc-kampagne/2026-10-23-wire-nachtrag-074319-074455.md",
       "bytes": 6619,
       "sha256": "376e86fe3d998bb0b55cb6b918e13444a2541c1f1457cfe440cb6e21d39d0645"
     },
     {
-      "path": "docs/feld/2026-10-23-wire-nachtrag-detach-browse.md",
+      "path": "docs/feld/archiv/2026-10-22-msc-kampagne/2026-10-23-wire-nachtrag-detach-browse.md",
       "bytes": 4714,
       "sha256": "fee6deacf1b9fc3983f40eca557f05d2c5f9100919c20378ca6e6daacb683fba"
     },

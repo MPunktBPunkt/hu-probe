@@ -2,7 +2,7 @@
 
 Ziel: Der HU genau **eine** Variable pro Vergleich präsentieren, damit Cache-, Prefetch- und Identity-Hypothesen (HU-A2, M3, tail_then_head) trennbar werden.
 
-Bis FW 0.2.30 gab es nur das Flash-Image `demo_v1` mit drei byte-identischen Tracks gleicher Größe. Damit sind Cache-Hit und „kein Prefetch“ nicht unterscheidbar (siehe [unabhängige Auswertung 2026-10-19](feld/2026-10-19-unabhaengige-auswertung.md), K4). Ab **FW 0.2.31** erzeugt die Sonde das Medium zur Laufzeit (`firmware/src/media/SynthFat`).
+Bis FW 0.2.30 gab es nur das Flash-Image `demo_v1` mit drei byte-identischen Tracks gleicher Größe. Damit sind Cache-Hit und „kein Prefetch“ nicht unterscheidbar (siehe [unabhängige Auswertung 2026-10-19](feld/MSC-TUR-MOUNT-FACTS.md), K4). Ab **FW 0.2.31** erzeugt die Sonde das Medium zur Laufzeit (`firmware/src/media/SynthFat`).
 
 ## Wie das synthetische Medium funktioniert
 
@@ -37,7 +37,7 @@ Bis FW 0.2.30 gab es nur das Flash-Image `demo_v1` mit drei byte-identischen Tra
 | ID3-Texte und Cover | eigene Texte, Cover 1–3, eine Datei mit leerem Cover-Slot, ID3v1 auf COVER2 | zeigt die HU Texte/Cover aus ID3v2 oder ID3v1? Wann liest sie sie neu? | `id3_cover` |
 | Referenz | Flash-Image FAT12, 3 identische Tracks | Vergleich mit Feldläufen bis 0.2.30 | `demo_v1` |
 
-Die Presets `cache_a`, `cache_b`, `cache_place` und `ident_b` unterscheiden sich jeweils in genau einer Dimension von `cache_a`. Ab 0.3.18 gilt dasselbe für `cache_a_pin` → `ident_serial` / `ident_label` / `ident_vol` (eine Identity-Dimension). Sequenz: `seq_ident` ([Feldplan Cache-Key](feld/2026-10-22-feldplan-cache-key-identity.md)).
+Die Presets `cache_a`, `cache_b`, `cache_place` und `ident_b` unterscheiden sich jeweils in genau einer Dimension von `cache_a`. Ab 0.3.18 gilt dasselbe für `cache_a_pin` → `ident_serial` / `ident_label` / `ident_vol` (eine Identity-Dimension). Sequenz: `seq_ident` ([Feldplan Cache-Key](feld/archiv/2026-10-22-msc-kampagne/2026-10-22-feldplan-cache-key-identity.md)).
 
 ## Auswahl
 
@@ -133,7 +133,7 @@ Keine dieser Reaktionen ist am Fahrzeug gemessen. Insbesondere ist offen, ob das
 
 ## Matrix (Kampagne ab 0.2.31)
 
-Die Reihenfolge und die Abnahmekriterien stehen in der [Feldsequenz GATE-01 bis S6](feld/2026-10-19-feldsequenz-gate01-s6.md). Die automatisierten Abläufe (`SEQ-DUR`, `SEQ-SIZE`, `SEQ-CACHE`, `SEQ-STRUCT`) sind in `firmware/src/capture/ExperimentProfiles.h` definiert.
+Die Reihenfolge und die Abnahmekriterien stehen in der [Feldsequenz GATE-01 bis S6](feld/archiv/2026-10-gate01-offline/2026-10-19-feldsequenz-gate01-s6.md). Die automatisierten Abläufe (`SEQ-DUR`, `SEQ-SIZE`, `SEQ-CACHE`, `SEQ-STRUCT`) sind in `firmware/src/capture/ExperimentProfiles.h` definiert.
 
 1. **Content-only:** `cache_a` → `cache_b` bei festgehaltener Serial (SEQ-CACHE Schritt 2/3).
 2. **Replug same:** `cache_a` → Re-Enum → `cache_a` mit gleicher Serial.

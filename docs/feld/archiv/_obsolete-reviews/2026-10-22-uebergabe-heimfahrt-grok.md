@@ -1,7 +1,7 @@
 # Übergabebericht Heimfahrt 2026-10-22 (Grok)
 
 **hu-probe / BMW NBT Evo · drive_mix · FW 0.3.17 → 0.3.19**  
-Stand: Commits `28249de` / `c413480` · Sessions `#22`–`#24` delivered · Gesamtbericht [`2026-10-22-gesamtbericht-heimfahrt.md`](2026-10-22-gesamtbericht-heimfahrt.md) · Artefakte `docs/feld/artifacts/20261022-heimfahrt/`
+Stand: Commits `28249de` / `c413480` · Sessions `#22`–`#24` delivered · Gesamtbericht [`MSC-HEIMFAHRT.md`](MSC-HEIMFAHRT.md) · Artefakte `docs/feld/artifacts/20261022-heimfahrt/`
 
 ---
 

@@ -36,7 +36,7 @@
 
 ## Korrekturen nach unabhängiger Auswertung (2026-10-19)
 
-Details: [`2026-10-19-unabhaengige-auswertung.md`](2026-10-19-unabhaengige-auswertung.md)
+Details: [`MSC-TUR-MOUNT-FACTS.md`](MSC-TUR-MOUNT-FACTS.md)
 
 | Claim (Multi-KI) | Neu | Klasse |
 |------------------|-----|--------|

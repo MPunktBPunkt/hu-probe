@@ -31,7 +31,7 @@ G4  SAS Authentication
 | *(danach)* | Nutzung: AM / RHMI / AV / CDS | **nein** — keine Gate-Nummer |
 
 Feinere Desk-Lesart (BimmerGestalt Lifecycle): BCL gehört zu **G2** (Transport-Peer), nicht „Bulk = fertig“. Etch-Tunnel = **G3**.  
-PiDrive-Abgleich: [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK-2026-11-06.md) · [HU-BESCHREIBUNG §5.1](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-BESCHREIBUNG.md) · [HU-Technical-Facts §10](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-Technical-Facts.md).
+PiDrive-Abgleich: [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK.md) · [HU-BESCHREIBUNG §5.1](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-BESCHREIBUNG.md) · [HU-Technical-Facts §10](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-Technical-Facts.md).
 
 **Invarianten**
 
@@ -40,7 +40,7 @@ PiDrive-Abgleich: [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pid
 - BclCarLink kann BCL-Link ersetzen helfen; **nicht** SAS. Classic Connected ≤5.1 exportierte `.SECURITY_SERVICE`; **MyBMW / Connected ≥5.1 nicht** — moderne Signierung **UNKNOWN** (Altstand „MyBMW liefert signChallenge“ **REJECTED** als Default).
 - CarAPI ≠ AAIdrive-Call-Graph: Connected kann `sas_*` **stellvertretend** ausführen; Wire trotzdem BCL/Etch-Tunnel (Cleartext laut Analysis — FX-G3-01).
 - „BCL/Etch/SAS auf echtem HU-USB = 0“ ist **Scope**, kein Firmware-Qualitätsdefizit.
-- Feld-Priorität: **P0 I-303A** (G1) → **P1 [FIELD-CONNECTED-REAL-01](feld/2026-11-06-field-connected-real-01.md)** (G2→G3) → **P2 FX-G3-01** → **P3** ESP-Nachbau nur mit Phone-Referenz.
+- Feld-Priorität: **P0 I-303A** (G1) → **P1 [FIELD-CONNECTED-REAL-01](feld/FIELD-CONNECTED-REAL-01.md)** (G2→G3) → **P2 FX-G3-01** → **P3** ESP-Nachbau nur mit Phone-Referenz.
 
 C1a–C5 unten ordnen Lab-/Wire-Stufen **innerhalb** dieses Modells ein; sie ersetzen es nicht. Lab-Gates C2–C5 (RHMI/…) bleiben Instrumentierungsstufen — **keine** parallele Gate-Nummerierung G5.
 
@@ -136,12 +136,12 @@ C1b wird **gestuft** gewertet — ein erfolgreicher USB-AOA-Link ist *nicht* „
 
 **Status:** PARTIAL — P0-0/A/C/D **PASS** am NBT; P0-E **ABSENT**.  
 B1 phone_like **NEGATIVE**. B2b hex4 **TX ok / keine HU-Antwort**. Blind-Knock beendet.  
-**Feld 2026-10-30 FW 0.3.34** (`aoa_observe`, passiv): Attach/P0-A/C/D PASS; Vendor-Callback **51/52/53 absent**; Device-RX Bulk **absent**; HU reconnect-Loop. Bus-Negativ **UNKNOWN** — [epistemik](feld/2026-10-30-epistemik-messluecke-ep0-bulk.md). `phone_like` Fingerprint reject. [erster Lauf](feld/2026-10-30-feld-c1b-p0-fw034-erster-lauf.md) · [Abend](feld/2026-10-30-feld-c1b-p0-fw034-abend.md).  
+**Feld 2026-10-30 FW 0.3.34** (`aoa_observe`, passiv): Attach/P0-A/C/D PASS; Vendor-Callback **51/52/53 absent**; Device-RX Bulk **absent**; HU reconnect-Loop. Bus-Negativ **UNKNOWN** — [epistemik](feld/AOA-EPISTEMIK-EP0.md). `phone_like` Fingerprint reject. [Feldbericht konsolidiert](feld/AOA-C1B-P0-NBT.md).  
 **Lab 2026-10-30:** Stage+51-Fix; AAIdrive UI / Bulk absent auf App-Ebene.
 
 **FW 0.3.34:** Control-Tap belastbar für Vendor-CB.  
 **FW 0.3.35/0.3.36:** NVS sticky `hpgad` (B1 Lab-Fix) + SessionMetrics/Timeline + Identity `aoa_id_303a`.  
-**Nächster Feld-Gatekeeper:** C1 Identity-Gate ([Kampagne](feld/2026-11-06-c1-identity-gate-kampagne.md)) — **nicht** Blind-Wiederholung von C1b-P0. EP0-Core-Hook bleibt offen (Messlücke Bus↔Callback).
+**Nächster Feld-Gatekeeper:** C1 Identity-Gate ([Kampagne](feld/C1-IDENTITY-KAMPAGNE.md)) — **nicht** Blind-Wiederholung von C1b-P0. EP0-Core-Hook bleibt offen (Messlücke Bus↔Callback).
 
 **Boot-Mode Isolation (P0-0) — Voraussetzung:**
 

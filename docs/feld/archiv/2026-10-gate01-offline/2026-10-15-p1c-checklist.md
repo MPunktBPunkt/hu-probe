@@ -2,7 +2,7 @@
 
 **Status: done 2026-10-17** — Upstream `profiles/bmw_nbt_evo.json` schema 3.
 
-Pin / Audit: `technology-audit` Kampagne `hu-probe-bmw-s0s2-field-2026` · Evidence `EVID-HUPROBE-2026-10-15-*` · PiDrive Matrix `HU-PARAMETER-MATRIX-2026-10-16.md` / MessCapture A7.
+Pin / Audit: `technology-audit` Kampagne `hu-probe-bmw-s0s2-field-2026` · Evidence `EVID-HUPROBE-2026-10-15-*` · PiDrive Matrix `HU-PARAMETER-MATRIX.md` / MessCapture A7.
 
 ## Eingetragen (`origin: hu_probe_field`)
 

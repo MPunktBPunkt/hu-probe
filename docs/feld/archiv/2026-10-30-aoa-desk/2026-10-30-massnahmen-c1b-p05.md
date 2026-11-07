@@ -166,7 +166,7 @@ Bulk Device-RX             → ABSENT (Messschicht)
 Application peer / BCL     → UNKNOWN / false beobachtet
 ```
 
-P0.5 Stage/Passiv **done**. Nächster diskriminierender Block: **M5 EP0-Core-Hook** ([epistemik](2026-10-30-epistemik-messluecke-ep0-bulk.md)), parallel M0 Consumer.
+P0.5 Stage/Passiv **done**. Nächster diskriminierender Block: **M5 EP0-Core-Hook** ([epistemik](AOA-EPISTEMIK-EP0.md)), parallel M0 Consumer.
 
 ---
 
@@ -197,5 +197,5 @@ Danach erst: umfassende Statussemantik und ggf. EP0-Hook laut Verbesserungsplan 
 | MSC: AOA `transport_epoch` / `aoa_capture_valid` in `capture_health` bei AOA-Boot | **Code** |
 | M0 Android-Consumer | offen (parallel) |
 | M2/M3 Lab A/B | **PASS** — [`lab-c1b-p05-stage-fix`](2026-10-30-lab-c1b-p05-stage-fix.md); 51→`0100` in 0.3.34 |
-| M4.6 Retro-Caveat Feldberichte | **teilweise** — siehe [`epistemik-messluecke-ep0-bulk`](2026-10-30-epistemik-messluecke-ep0-bulk.md) |
+| M4.6 Retro-Caveat Feldberichte | **teilweise** — siehe [`epistemik-messluecke-ep0-bulk`](AOA-EPISTEMIK-EP0.md) |
 | M5 EP0-Hook | **wieder priorisiert** — Feld 0-RX/0-Vendor schließt Bus-Verkehr nicht aus; nächster Gatekeeper |

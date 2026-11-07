@@ -4,7 +4,7 @@
 **Plan:** [`2026-10-22-feldplan-cache-key-identity.md`](2026-10-22-feldplan-cache-key-identity.md) · Presets ab 0.3.18  
 **Collector:** `192.168.178.187:9100` (während Lauf kurz neu gestartet)  
 **Artefakte:** `docs/feld/artifacts/20261023-identity-remount/`  
-**Multi-Review (maßgeblich):** [`2026-10-23-gesamtbericht-identity-remount-multireview.md`](2026-10-23-gesamtbericht-identity-remount-multireview.md)  
+**Multi-Review (maßgeblich):** [`MSC-IDENTITY-REMOUNT.md`](MSC-IDENTITY-REMOUNT.md)  
 **Wire-Nachtrag:** [`2026-10-23-wire-nachtrag-074319-074455.md`](2026-10-23-wire-nachtrag-074319-074455.md) · [`2026-10-23-wire-nachtrag-detach-browse.md`](2026-10-23-wire-nachtrag-detach-browse.md)  
 **Self-recalc-Paket:** `docs/feld/artifacts/20261023-identity-remount-recalc/` · Builder `tools/build_identity_remount_recalc_2026_10_23.py`  
 **Methode:** Operator-Beobachtung HU + API-gesteuerte Soft-Remount / USB-Cycle / Preset-Wechsel; `seq_ident` nur teilweise (Upload-Stall)

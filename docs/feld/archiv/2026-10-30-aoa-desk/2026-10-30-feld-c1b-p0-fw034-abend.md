@@ -46,7 +46,7 @@
 1. Nachmittags- und Abendbefund **identisch** auf der **Messschicht**: Accessory-Erkennung; Callback ohne 51/52/53; Device-RX ohne Bulk; HU-UI-Loop.  
 2. Weiteres Replug ändert diese Messung nicht.  
 3. `phone_like` an dieser HU: Fingerprint **REJECTED**.  
-4. **Nicht bewiesen:** „HU sendet keinen USB-Verkehr.“ Tap/RX ≠ Bus — siehe [epistemik-messluecke-ep0-bulk](2026-10-30-epistemik-messluecke-ep0-bulk.md).  
+4. **Nicht bewiesen:** „HU sendet keinen USB-Verkehr.“ Tap/RX ≠ Bus — siehe [epistemik-messluecke-ep0-bulk](AOA-EPISTEMIK-EP0.md).  
 5. Nächste Messpriorität: **read-only EP0-Core-Hook** (+ Endpoint-Sicht); parallel Consumer-Filter. Kein Blind-Knock.
 
 ---

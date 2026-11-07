@@ -5,7 +5,7 @@
 **Repo-Basis:** `main` @ `849f30e`  
 **Gegenstand:** Umsetzungsplan zur Messsemantik und Capture-Gültigkeit des AOA-Observe-Pfads. Nicht implementiert.  
 **Code-Analyse:** [`2026-10-30-codeanalyse-connected-aoa.md`](2026-10-30-codeanalyse-connected-aoa.md)  
-**Multi-Review:** [`2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md`](2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md)  
+**Multi-Review:** [`AOA-DESK-STAND.md`](AOA-DESK-STAND.md)  
 **Problemfelder:** [`2026-10-30-aoa-problemfelder.md`](2026-10-30-aoa-problemfelder.md)  
 **Gesamtbewertung:** [`2026-10-30-gesamtbewertung-aoa-fuenf-reports.md`](2026-10-30-gesamtbewertung-aoa-fuenf-reports.md)  
 **Reports:** [1](2026-10-30-research-01-aoa-direct-accessory.md) · [2](2026-10-30-research-02-usb-sniffing-gadget-validation.md) · [3](2026-10-30-research-03-esp32-tinyusb-ep0-callbacks.md) · [4](2026-10-30-research-04-composite-vs-vendor-only.md) · [5](2026-10-30-research-05-bcl-etch-nbt.md)  

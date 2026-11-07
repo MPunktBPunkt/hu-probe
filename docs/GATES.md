@@ -5,7 +5,7 @@ Connected-App Control Plane (C1–C5): [GATES-Connected.md](GATES-Connected.md).
 
 ## HU-PROBE-GATE-01 — Measurement Integrity
 
-**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8**; Control/STALL ab **0.2.13**; Lab Kill 1–3 **PASS** — lange BMW-Timeline **blockiert** durch OTG/WiFi-Death, siehe [wifi-otg-0.2.15](feld/2026-10-14-wifi-otg-0.2.15.md); **Burst-Epistemik** (kurze Blau→Grün→Blau-Fenster) als brauchbare Messform akzeptiert, formale Kriterien noch offen — [massnahmen-01d](feld/2026-10-15-massnahmen-01d.md) · [0.2.17-review](feld/2026-10-15-bmw-s0-0.2.17-review.md))
+**Status:** open (Stufe A ≥0.2.6; Stufe B BOT/SCSI ab **0.2.8**; Control/STALL ab **0.2.13**; Lab Kill 1–3 **PASS** — lange BMW-Timeline historisch durch OTG/WiFi-Death limitiert, siehe Archiv [wifi-otg-0.2.15](feld/archiv/2026-10-gate01-offline/2026-10-14-wifi-otg-0.2.15.md); **Burst-Epistemik** akzeptiert — [massnahmen-01d](feld/archiv/2026-10-gate01-offline/2026-10-15-massnahmen-01d.md) · [0.2.17-review](feld/archiv/2026-10-gate01-offline/2026-10-15-bmw-s0-0.2.17-review.md). Produkt-/Ampelstand MSC: PiDrive [`MSC-AKTUELL`](../../pidrive/docs/betrieb/MSC-AKTUELL.md).)
 
 ### Zeit & Sequenz
 
@@ -19,7 +19,7 @@ Connected-App Control Plane (C1–C5): [GATES-Connected.md](GATES-Connected.md).
 - [x] USB attach/detach/suspend/resume sichtbar (Host + Soft)
 - [x] Control-Transfer-Visibility: **MSC-Class** (GET_MAX_LUN / BOT_RESET) ab 0.2.8; Standard via `dcd_set_address` + Mount/Umount (0.2.13)
 - [~] Descriptor-Capture: **gadget_identity**-Events bei Attach (synthetisch) + ggf. Class-Control
-- [x] SET_ADDRESS (`dcd_set_address` wrap) + Mount/Umount (`tud_mount_cb`/`umount_cb`, ≡ SET_CONFIGURATION n/0) — [control-stall intake](feld/2026-10-14-audit-control-stall-recovery.md)
+- [x] SET_ADDRESS (`dcd_set_address` wrap) + Mount/Umount (`tud_mount_cb`/`umount_cb`, ≡ SET_CONFIGURATION n/0) — [control-stall intake](feld/archiv/2026-10-gate01-offline/2026-10-14-audit-control-stall-recovery.md)
 - [~] Endpoint / Direction auf USB-Events (teilweise; `ep_stall`/`ep_clear_halt` mit ep_addr ab 0.2.13)
 - [x] STALL / CLEAR_HALT / Reset-Recovery — `bot_need_reset` + `ep_stall`/`ep_clear_halt` + `msc_bot_reset`; Clear-Halt heilt NEED_RESET **nicht** (note `need_reset_active_not_healed`); Mount clear BOT-Epoch
 
@@ -47,6 +47,6 @@ Connected-App Control Plane (C1–C5): [GATES-Connected.md](GATES-Connected.md).
 ### Freigabe
 
 **Closed** erst wenn Stufe B vollständig (BOT ok ab 0.2.8/0.2.9 + Standard-Control/STALL **implementiert und Lab-Dry-Run**) + Event-`t_us` monoton + `dropped=0` / keine `recv_seq_gaps` + formale Freigabe.  
-Lab 0.2.13: Kill 1–3 PASS, Gap-p50 ~4,0–4,4 ms, `publishUs`-Clamp Smoke `t_us` OK — siehe [lab-debian-s0-0.2.13](feld/2026-10-14-lab-debian-s0-0.2.13.md). Wire-Paketebene bleibt UNKNOWN.
+Lab 0.2.13: Kill 1–3 PASS, Gap-p50 ~4,0–4,4 ms, `publishUs`-Clamp Smoke `t_us` OK — siehe [lab-debian-s0-0.2.13](feld/archiv/2026-10-gate01-offline/2026-10-14-lab-debian-s0-0.2.13.md). Wire-Paketebene bleibt UNKNOWN.
 
-Verwandt: [BOT instrument-sources](feld/2026-10-14-audit-instrument-sources.md) · [Control/STALL recovery](feld/2026-10-14-audit-control-stall-recovery.md). GATE-01 ist die **Instrumenten**-Voraussetzung.
+Verwandt: [BOT instrument-sources](feld/archiv/2026-10-gate01-offline/2026-10-14-audit-instrument-sources.md) · [Control/STALL recovery](feld/archiv/2026-10-gate01-offline/2026-10-14-audit-control-stall-recovery.md). GATE-01 ist die **Instrumenten**-Voraussetzung.

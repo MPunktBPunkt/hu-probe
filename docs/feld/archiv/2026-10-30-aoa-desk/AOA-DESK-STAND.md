@@ -1,3 +1,5 @@
+> **ARCHIV / nicht Einstieg.** Aktueller Connected-Stand: [`../../C1-STAND.md`](../../C1-STAND.md) · Gates: [`../../../GATES-Connected.md`](../../../GATES-Connected.md).
+
 # Gesamtbericht: hu-probe / USB-Zubehör-Weg (AOA)
 
 ## Stand nach Lab-Referenz, HU-Fotos und Multi-KI-Auswertung
@@ -15,10 +17,10 @@
 **Research 3 (ESP32-S3 / TinyUSB / `USBVendor.onRequest`):** [`2026-10-30-research-03-esp32-tinyusb-ep0-callbacks.md`](2026-10-30-research-03-esp32-tinyusb-ep0-callbacks.md)  
 **Research 4 (Composite vs. vendor-only):** [`2026-10-30-research-04-composite-vs-vendor-only.md`](2026-10-30-research-04-composite-vs-vendor-only.md)  
 **Research 5 (BCL / Etch / NBT, öffentlicher Stand):** [`2026-10-30-research-05-bcl-etch-nbt.md`](2026-10-30-research-05-bcl-etch-nbt.md)  
-**Gesamtbewertung der fünf Reports:** [`2026-10-30-gesamtbewertung-aoa-fuenf-reports.md`](2026-10-30-gesamtbewertung-aoa-fuenf-reports.md)  
+**Gesamtbewertung der fünf Reports:** [`2026-10-30-gesamtbewertung-aoa-fuenf-reports.md`](../_obsolete-reviews/2026-10-30-gesamtbewertung-aoa-fuenf-reports.md)  
 **Code-Analyse Connected:** [`2026-10-30-codeanalyse-connected-aoa.md`](2026-10-30-codeanalyse-connected-aoa.md)  
 **Verbesserungsplan C1b-P0:** [`2026-10-30-verbesserungsplan-c1b-p0.md`](2026-10-30-verbesserungsplan-c1b-p0.md)  
-**Verwandt:** [`2026-10-29-c1b-p0-aoa-observe-feld.md`](2026-10-29-c1b-p0-aoa-observe-feld.md) · [`2026-10-29-c1b-p05a-instrumentation.md`](2026-10-29-c1b-p05a-instrumentation.md) · [`2026-10-29-c1b-massnahmen-nach-b1-b2b.md`](2026-10-29-c1b-massnahmen-nach-b1-b2b.md) · [`../GATES-Connected.md`](../GATES-Connected.md)
+**Verwandt:** [`2026-10-29-c1b-p0-aoa-observe-feld.md`](../2026-10-29-c1b-p0/2026-10-29-c1b-p0-aoa-observe-feld.md) · [`2026-10-29-c1b-p05a-instrumentation.md`](../2026-10-29-c1b-p0/2026-10-29-c1b-p05a-instrumentation.md) · [`2026-10-29-c1b-massnahmen-nach-b1-b2b.md`](../2026-10-29-c1b-p0/2026-10-29-c1b-massnahmen-nach-b1-b2b.md) · [`../GATES-Connected.md`](../GATES-Connected.md)
 
 **Quellenbasis für diesen Bericht:**
 

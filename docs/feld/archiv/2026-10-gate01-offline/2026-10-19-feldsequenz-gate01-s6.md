@@ -1,6 +1,6 @@
 # Feldsequenz BMW NBT Evo: GATE-01 bis S6
 
-**Stand:** 2026-10-19 · **Firmware:** ab 0.2.31 (F1, SynthFat, Sequenz-Runner) · **Basis:** [unabhängige Auswertung](2026-10-19-unabhaengige-auswertung.md)
+**Stand:** 2026-10-19 · **Firmware:** ab 0.2.31 (F1, SynthFat, Sequenz-Runner) · **Basis:** [unabhängige Auswertung](MSC-TUR-MOUNT-FACTS.md)
 **Reihenfolge:** nach Erkenntnis pro Fahrt. Jeder Schritt baut auf dem vorherigen auf. Ein Schritt gilt erst als erledigt, wenn seine Abnahme erfüllt ist.
 **Geltung:** nur BMW NBT Evo. Keine Aussage „Feld PASS“ ohne die hier beschriebene Messung.
 

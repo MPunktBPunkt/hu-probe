@@ -34,5 +34,5 @@ Ohne Roh-Git: `session-summaries.json` allein reicht für M2/B10-Nachrechnung
 
 ## Verweise
 
-- Übergabe: [`docs/reports/2026-10-18-hu-probe-bmw-s2-abend-offline.md`](../../docs/reports/2026-10-18-hu-probe-bmw-s2-abend-offline.md)
-- Feld: [`docs/feld/2026-10-18-bmw-s2-abend-offline.md`](../../docs/feld/2026-10-18-bmw-s2-abend-offline.md)
+- Übergabe: [`docs/feld/archiv/reports/2026-10-18-hu-probe-bmw-s2-abend-offline.md`](../../docs/feld/archiv/reports/2026-10-18-hu-probe-bmw-s2-abend-offline.md)
+- Feld: [`docs/feld/archiv/2026-10-gate01-offline/2026-10-18-bmw-s2-abend-offline.md`](../../docs/feld/archiv/2026-10-gate01-offline/2026-10-18-bmw-s2-abend-offline.md)

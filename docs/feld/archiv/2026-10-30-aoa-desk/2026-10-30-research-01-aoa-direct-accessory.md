@@ -8,7 +8,7 @@
 **Datum:** 2026-10-30  
 **Reihe:** Research-Report 1 von 5  
 **Problemfelder:** [`2026-10-30-aoa-problemfelder.md`](2026-10-30-aoa-problemfelder.md) — Block 1, Thema 4  
-**Gesamtbericht:** [`2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md`](2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md)  
+**Gesamtbericht:** [`AOA-DESK-STAND.md`](AOA-DESK-STAND.md)  
 **Charakter:** gelieferte Recherche-Notiz. Exakte URLs, AOSP-Pfade und die offizielle Formulierung zu Request 58 sind im Text selbst als noch live zu prüfen markiert. [Q8] (externe Praxistraces) ist offen.
 
 **Repo-Anker, die [Q8] repo-intern schon teilweise füllen:**

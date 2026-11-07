@@ -110,5 +110,5 @@ Host `bmw_mount` (INQUIRY/CAPACITY/TUR/READ10) gegen `aoa_observe`:
 
 - Analyzer Evidence:  
   - https://github.com/MPunktBPunkt/esp32.usb-analyzer (Pfad `docs/evidence/LAB_HUPROBE_*`, `LAB_BMW_HU_STIMULUS_HUPROBE_*`)  
-- Desk FACT Mount-Grammatik: [`2026-10-19-unabhaengige-auswertung.md`](2026-10-19-unabhaengige-auswertung.md) (P-MOUNT / P-MREAD)  
-- Schwesterbericht: esp32.pidrive `docs/lab/2026-11-02-lab-usb-analyzer-crosscheck.md`
+- Desk FACT Mount-Grammatik: [`MSC-TUR-MOUNT-FACTS.md`](MSC-TUR-MOUNT-FACTS.md) (P-MOUNT / P-MREAD)  
+- Schwesterbericht: esp32.pidrive `docs/lab/USB-ANALYZER-CROSSCHECK.md`

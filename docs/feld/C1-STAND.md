@@ -22,7 +22,7 @@
 - MSC: SCSI-Opcode-Histogramm inkl. `mode_sense6` / `prevent_allow` (aus CBW-Tap).
 - Factory-Reset-API dokumentiert (`POST /api/factory-reset`).
 - Host-Tests: `gadget_nvs`, `session_metrics`, `bcl_c1a` — lokal und via CI `.github/workflows/host-tests.yml` (Binaries gitignored).
-- Lab MEASURED 2026-11-06: sticky alle 4 Modes PASS; AOA Lab A/B PASS; MSC-Novel Instrument PASS ([Lab-Berichte](2026-11-06-lab-c1-036-sticky-aoa.md)).
+- Lab MEASURED 2026-11-06: sticky alle 4 Modes PASS; AOA Lab A/B PASS; MSC-Novel Instrument PASS ([Lab-Berichte](lab/C1-036-STICKY-AOA.md)).
 
 **Bereits bekannte Feld-FACTS (unverändert, nicht neu gemessen):**
 
@@ -30,7 +30,7 @@
 - `aoa_phone_like` `04E8:6860` → HU REJECTED.
 - Analyzer MSC `303a:1001` am NBT → P-MOUNT inkl. MODE_SENSE(6)+PREVENT; AOA 51/52/53=0 (Analyzer 2026-11-06).
 
-**BMW-Feld mit FW 0.3.36:** **nicht** ausgeführt → **I-303A** ist der Engpass ([Runsheet](2026-11-06-i303a-feld-runsheet.md)).
+**BMW-Feld mit FW 0.3.36:** **nicht** ausgeführt → **I-303A** ist der Engpass ([Runsheet](I303A-RUNSHEET.md)).
 
 ---
 
@@ -58,7 +58,7 @@ Auf MSC-Plane: Plug/Unplug, SCSI-Opcode-Histogramm (`tur`, `inquiry`, `mode_sens
 
 - Analyzer-MSC-Negativ (`303a:1001` → kein AOA) und hu-probe Accessory-Positiv-UI (`18D1:2D00`) zusammen legen nahe, dass **Identity + Class/Configuration** den HU-Pfad steuern — nicht „MSC-Endpoint antwortet“.
 - `aoa_id_303a` ist der nächste empirische Schritt, um VID/PID vs. MSC-Class zu trennen.
-- **H-Reconnect:** Reconnect-Loop bei `18D1:2D00` *kann* fehlenden BCL/Etch/SAS-Peer (G3/G4) bedeuten statt reinem USB-Transportfehler — nicht messbar auf aktueller Schicht ([Kampagne](2026-11-06-c1-identity-gate-kampagne.md)).
+- **H-Reconnect:** Reconnect-Loop bei `18D1:2D00` *kann* fehlenden BCL/Etch/SAS-Peer (G3/G4) bedeuten statt reinem USB-Transportfehler — nicht messbar auf aktueller Schicht ([Kampagne](C1-IDENTITY-KAMPAGNE.md)).
 
 ---
 
@@ -93,11 +93,11 @@ Auf MSC-Plane: Plug/Unplug, SCSI-Opcode-Histogramm (`tur`, `inquiry`, `mode_sens
 
 | Prio | Handlung |
 |------|----------|
-| **P0** | **I-303A** — G1-Abschluss only ([Runsheet](2026-11-06-i303a-feld-runsheet.md)); keine Identity-Matrix danach |
-| **P1** | **FIELD-CONNECTED-REAL-01** — Phone×MyBMW/AAIdrive×F20×Analyzer, 4 Ebenen ([Plan](2026-11-06-field-connected-real-01.md)) |
+| **P0** | **I-303A** — G1-Abschluss only ([Runsheet](I303A-RUNSHEET.md)); keine Identity-Matrix danach |
+| **P1** | **FIELD-CONNECTED-REAL-01** — Phone×MyBMW/AAIdrive×F20×Analyzer, 4 Ebenen ([Plan](FIELD-CONNECTED-REAL-01.md)) |
 | **P2** | **FX-G3-01** — wenn Bulk da: `sas_*`-Sequenz korrelieren |
 | **P3** | ESP-Nachbau nur mit REAL-PHONE-Referenz |
 
 **Freeze:** Blind-Knock · BCL-on-ESP · SAS-FW · L0 als Blocker · weitere Desk-Serie ohne Feldartefakt.
 
-Kampagne: [2026-11-06-c1-identity-gate-kampagne.md](2026-11-06-c1-identity-gate-kampagne.md)
+Kampagne: [C1-IDENTITY-KAMPAGNE.md](C1-IDENTITY-KAMPAGNE.md)

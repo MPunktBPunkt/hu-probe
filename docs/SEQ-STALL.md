@@ -21,7 +21,7 @@ Die HU-Probe sieht dabei jedes Kommando der HU mit Zeitstempel, auch offline. Pi
 
 - Ein passendes READ10 wird vor seinem ersten Datenbyte für `delay_ms` gehalten. Danach läuft es ungebremst bis zum Ende.
 - Pro Retry wartet der Callback 2 ms (`vTaskDelay`), damit WLAN und Loop weiterlaufen, wie in esp32.pidrive.
-- Ein neues Kommando wird am **CBW-Tag** erkannt, nicht an `offset == 0`. Bei TinyUSB ist `offset` in fast jedem 4-KiB-Chunk 0; ein Zurücksetzen des Timers bei jedem Retry war der PiDrive-Fehler in 0.4.47. Die HU vergibt die Tags monoton ([unabhängige Auswertung 2026-10-19](feld/2026-10-19-unabhaengige-auswertung.md)).
+- Ein neues Kommando wird am **CBW-Tag** erkannt, nicht an `offset == 0`. Bei TinyUSB ist `offset` in fast jedem 4-KiB-Chunk 0; ein Zurücksetzen des Timers bei jedem Retry war der PiDrive-Fehler in 0.4.47. Die HU vergibt die Tags monoton ([unabhängige Auswertung 2026-10-19](feld/MSC-TUR-MOUNT-FACTS.md)).
 - Das Kommando, das beim Aktivieren gerade läuft, wird nie gehalten.
 - BOT hat Warteschlangentiefe 1: Während ein READ10 gehalten wird, kommt keine TEST UNIT READY und kein anderes Kommando (E6).
 - **Abgebrochen** heißt: Die HU schickt ein neues Kommando, setzt den Bus zurück oder wird abgesteckt, bevor die Haltezeit vorbei ist.

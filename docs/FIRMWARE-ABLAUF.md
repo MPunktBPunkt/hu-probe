@@ -239,5 +239,5 @@ Ein Freeze ohne Watchdog hinterlässt nichts — das kann kein Log nachholen. Da
 | Firmware holen | Hub-OTA, WebUI-Upload oder GitHub-Manifest (`enabled: true`) |
 | Nachschauen was die Sonde tat | WebUI Karte Diagnose, `/api/diag/log`, `/api/diag/saved` |
 
-Siehe [Offline-Capture](OFFLINE-CAPTURE.md), [Heimfahrt-Modus](feld/heimfahrt-modus.md),
+Siehe [Offline-Capture](OFFLINE-CAPTURE.md), [Heimfahrt-Modus](feld/archiv/2026-10-22-msc-kampagne/heimfahrt-modus.md),
 [Szenarien](SZENARIEN.md).

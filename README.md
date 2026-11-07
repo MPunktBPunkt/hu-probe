@@ -2,15 +2,17 @@
 
 Messplattform für Head-Unit-USB-Host-Verhalten (BMW NBT Evo als Golden Probe, Mazda CX-30 als Discovery-Ziel).
 
-Die Sonde läuft auf einem **ESP32-S3** als USB-MSC-Gadget mit Timing-Instrumentierung, meldet sich am **esp-hub** (`fwType: hu-probe`), streamt High-Rate-Events per **TCP/JSONL** an einen lokalen Collector und bietet eine schlanke On-Device-WebUI.
+Die Sonde läuft auf einem **ESP32-S3** als USB-Gadget (MSC und/oder AOA-Observe), meldet sich am **esp-hub** (`fwType: hu-probe`), streamt High-Rate-Events per **TCP/JSONL** an einen lokalen Collector und bietet eine schlanke On-Device-WebUI.
+
+**FW aktuell:** **0.3.36** (`-DFW_VERSION` in `firmware/platformio.ini`).
 
 ## Repo-Layout
 
 | Pfad | Inhalt |
 |------|--------|
-| `docs/` | Konzept, Event-/Session-Schema |
+| `docs/` | Konzept, Gates, Schema — **[Index](docs/README.md)** |
 | `firmware/` | PlatformIO ESP32-S3 Firmware |
-| `collector/` | TCP-Empfänger, Session-Store, einfache Web-UI |
+| `collector/` | TCP-Empfänger, Session-Store, Web-UI |
 | `profiles/` | Golden `bmw_nbt_evo`, Stub `mazda_cx30` |
 | `sessions/` | Aufgezeichnete Messungen (gitignored) |
 
@@ -35,42 +37,22 @@ pio run -e huprobe-s3
 pio run -e huprobe-s3 -t upload
 ```
 
-OTA-Artifact-Name: `hu-probe.<semver>.esp32s3.bin` → Hub-`firmware/`.
+OTA-Artifact-Name: `hu-probe.<semver>.esp32s3.bin` → Hub-`firmware/`. SoftAP-Setup: `ESP-HuProbe-Setup`.
 
-SoftAP-Setup: `ESP-HuProbe-Setup`.
+## Dokumentation (Kurz)
 
-## Dokumentation
+**Aktueller Stand:** **[docs/AKTUELL.md](docs/AKTUELL.md)** · Index: [docs/README.md](docs/README.md).
 
-- [Konzept](docs/KONZEPT.md)
-- [Schema v2](docs/SCHEMA.md) — `t_us`, USB/BOT/SCSI, `capture_health`
-- [Offline-Capture 0.2.26](docs/OFFLINE-CAPTURE.md) — Experiment-Messlauf, Marker, Integrity-Gate, Hub-OTA-Guard
-- [GATE-01 Measurement Integrity](docs/GATES.md)
-- [Szenarien](docs/SZENARIEN.md)
-- [Medienvariation](docs/MEDIA_VARIATION.md)
-- [Feldauswertung BMW S0](docs/feld/2026-10-14-bmw-s0-auswertung.md) · [Review-Triage](docs/feld/2026-10-14-review-triage.md)
+| Plane | Einstieg |
+|-------|----------|
+| **Jetzt** | [AKTUELL](docs/AKTUELL.md) · [C1-STAND](docs/feld/C1-STAND.md) |
+| Storage (MSC) | [KONZEPT](docs/KONZEPT.md) · [GATES](docs/GATES.md) · [SCHEMA](docs/SCHEMA.md) |
+| Control (Connected) | [CONNECTED-APP](docs/CONNECTED-APP.md) · [GATES-Connected](docs/GATES-Connected.md) |
 
-## Status (v0.2.13) — Control/STALL-Epochs
+Sibling: `pidrive` (Produkt/HU-Facts) · `usb-analyzer` · `technology-audit`.
 
-- FW **0.2.13**: `set_address` / `mount`·`umount`·`set_configuration` / `ep_stall`·`ep_clear_halt` / `msc_bot_reset`; Clear-Halt heilt NEED_RESET nicht; Mount clear BOT-Epoch
-- FW **0.2.12**: Capture-`tUs` auf deferred BOT; WiFi-Restart ~25 s
-- Feld 0.2.11: [Auswertung](docs/feld/2026-10-14-bmw-s0-0.2.11-auswertung.md) · [Abend-Triage](docs/feld/2026-10-14-review-abend-triage.md)
-- Audit: [Control/STALL](docs/feld/2026-10-14-audit-control-stall-recovery.md) · [Maßnahmen 01C](docs/feld/2026-10-14-massnahmen-01c.md)
-- GATE-01 **offen** (Lab-Dry-Run Kill-Kriterien; Wire UNKNOWN)
-- Auto/Lab: Bin `firmware/dist/hu-probe.0.2.13.esp32s3.bin`
+## Status (0.3.36)
 
-### Status-LED (ESP32-S3 RGB)
-
-| Farbe | Bedeutung |
-|-------|-----------|
-| Gelb blink | WiFi-Portal / nicht verbunden |
-| Blau dim | WiFi OK, USB nicht gesteckt — wartet auf HU |
-| Cyan | USB gesteckt, Host da, wenig/keine Reads |
-| Grün | HU liest aktiv (Messung läuft) |
-| Orange blink | USB gesteckt, aber TCP zum Collector down |
-| Magenta blink | TinyUSB `NEED_RESET` (BOT stuck) |
-| Rot blink | Capture unhealthy (Drops / Sample-Overflow) |
-
-```bash
-cd firmware && pio run -e huprobe-s3 -t upload
-# oder: ./tools/ota_car_esp.sh
-```
+- **MSC:** Golden Path + SynthFat/Media-Variation; GATE-01 Lab-Kern PASS, Wire-Paketebene UNKNOWN
+- **Connected:** C1a/C1a.5/C1b-0 PASS; C1b-P0 PARTIAL am NBT (P0-E ABSENT); nächster Gatekeeper **I-303A** (G1), dann FIELD-CONNECTED-REAL-01
+- **Nicht claimen:** AOA erkannt ≠ BCL ≠ SAS ≠ RHMI-Menü

@@ -2,7 +2,7 @@
 
 **Auswertung** · Gate-Nähe C1b / FOLLOW-ON #9 (Lab-HU-Emulation, **nicht** NBT-Wire)  
 **Artefakte:** [`artifacts/20261030-lab-aoa-aaidrive/`](artifacts/20261030-lab-aoa-aaidrive/)  
-**Multi-Review (Mistral, Grok, GPT, Claude):** [`2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md`](2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md)  
+**Multi-Review (Mistral, Grok, GPT, Claude):** [`AOA-DESK-STAND.md`](AOA-DESK-STAND.md)  
 **FW Lab-Probe (Kontrast, danach wieder gesteckt):** **0.3.32** `aoa_phone_like` @ `192.168.178.88`  
 **Tools:** `tools/lab_aoa_iface.py`, `tools/lab_usbmon_capture.sh`, Host-Skripte unter Artefakte/`tools/`
 
@@ -129,7 +129,7 @@ Ursache **hochwahrscheinlich:** Stage-Enum-Mismatch in `AoaControlTap` (TinyUSB 
 | Artefakt | Pfad |
 |----------|------|
 | Dieser Bericht | `docs/feld/2026-10-30-lab-aoa-aaidrive-phone-host.md` |
-| Multi-Review | `docs/feld/2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md` |
+| Multi-Review | `docs/feld/archiv/2026-10-30-aoa-desk/AOA-DESK-STAND.md` |
 | Rohdaten | `docs/feld/artifacts/20261030-lab-aoa-aaidrive/` |
 | Lab-Host-CLI | `tools/lab_aoa_iface.py` · `tools/lab_usbmon_capture.sh` |
 | Tap-Check Wrapper | `tools/lab_aoa_control_tap_check.py` → iface |

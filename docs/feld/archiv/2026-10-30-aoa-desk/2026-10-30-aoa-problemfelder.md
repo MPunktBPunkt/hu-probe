@@ -4,7 +4,7 @@
 **Datum:** 2026-10-30  
 **Repo-Basis:** `main` @ `849f30e`  
 **Methode:** nur die Problemfelder aus dem Gesamtbericht, ohne externe Recherche  
-**Quelle:** [`2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md`](2026-10-30-gesamtbericht-aoa-zubehoer-multireview.md)  
+**Quelle:** [`AOA-DESK-STAND.md`](AOA-DESK-STAND.md)  
 **Lab-Bericht:** [`2026-10-30-lab-aoa-aaidrive-phone-host.md`](2026-10-30-lab-aoa-aaidrive-phone-host.md)  
 **Instrumentierung:** [`2026-10-29-c1b-p05a-instrumentation.md`](2026-10-29-c1b-p05a-instrumentation.md)  
 **Gesamtbewertung der fünf Reports:** [`2026-10-30-gesamtbewertung-aoa-fuenf-reports.md`](2026-10-30-gesamtbewertung-aoa-fuenf-reports.md)  

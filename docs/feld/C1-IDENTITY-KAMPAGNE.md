@@ -16,8 +16,8 @@
 
 | Prio | ID | Ziel | Doc |
 |------|-----|------|-----|
-| **P0** | **I-303A** | G1 Identity abschließen (billig) | [Runsheet](2026-11-06-i303a-feld-runsheet.md) |
-| **P1** | **FIELD-CONNECTED-REAL-01** | G2→G3 am echten Phone×HU×Analyzer | [Plan](2026-11-06-field-connected-real-01.md) |
+| **P0** | **I-303A** | G1 Identity abschließen (billig) | [Runsheet](I303A-RUNSHEET.md) |
+| **P1** | **FIELD-CONNECTED-REAL-01** | G2→G3 am echten Phone×HU×Analyzer | [Plan](FIELD-CONNECTED-REAL-01.md) |
 | **P2** | **FX-G3-01** | `sas_certificate`→Challenge→`sas_login` korreliert | Audit + Plan §Success |
 | **P3** | ESP-Rollen-Nachbau | nur mit REAL-PHONE-Referenz | — |
 
