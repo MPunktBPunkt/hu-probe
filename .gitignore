@@ -141,7 +141,7 @@ sessions/**/derived/
 !sessions/20261027-080529_bmw_seq_size_ladder_1r1/derived/
 !sessions/20261027-080529_bmw_seq_size_ladder_1r1/derived/**
 
-# Firmware artifacts (release bins under firmware/dist/ are tracked)
+# Firmware artifacts (only recent release bins under firmware/dist/ — keep ~3)
 firmware/.pio/
 *.bin
 !firmware/dist/
