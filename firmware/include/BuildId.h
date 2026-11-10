@@ -1,5 +1,5 @@
 #pragma once
-#define FW_GIT_SHA "9efde3d65fb9"
-#define FW_BUILD_ID "9efde3d65fb9-dirty-20261110T064655Z"
-#define FW_BUILD_UTC "20261110T064655Z"
+#define FW_GIT_SHA "c5c4123ed625"
+#define FW_BUILD_ID "c5c4123ed625-dirty-20261110T175440Z"
+#define FW_BUILD_UTC "20261110T175440Z"
 #define FW_GIT_DIRTY 1

@@ -1,6 +1,6 @@
 # Aktueller Stand — hu-probe
 
-**FW:** 0.3.37 (MSC USB-Anzeigename) · **Feld zuletzt:** 2026-11-10 · DUT noch 0.3.36 bis OTA  
+**FW:** 0.3.38 (free→soft_detach, Upload-Detach bei Host, kein False-delivered) · **Feld zuletzt:** 2026-11-10 · DUT ggf. noch älter bis OTA  
 Dies ist der **einzige Einstieg**, wenn du wissen willst, wo wir stehen. Lange Alt-Reviews liegen unter `feld/archiv/` und sind kein Einstieg.
 
 ## Connected (Control Plane)

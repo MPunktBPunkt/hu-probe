@@ -79,8 +79,10 @@ static const ExperimentProfile kTable[] = {
      kMarkersGeneric, 5},
     // Car default: already plugged into HU — no soft re-enum (umount would kill a short window).
     // keepOnUnmount=true → WebUI end_on_unmount unchecked; stop via timer / BOOT lang.
+    // soft_detach at measure end: media_hide leaves BMW TUR flood that starves RAM replay
+    // (Feld 2026-11-10 Größenleiter: replay_records=0 / integrity FAIL).
     {"free", "Freie Aufnahme (1 min, bis 30 min · BOOT 2x = Steckzyklus)", "free", 60000, false,
-     "media_hide", nullptr, 0, true, true},
+     "soft_detach", nullptr, 0, true, true},
     // Drive mode (0.3.0): armed at boot with MSC still detached, so softUsb is the HU's
     // first enumeration. Ends at max duration, BOOT long or power loss (flash checkpoints).
     {"drive_home", "Heimfahrt automatisch (bis 30 min, Flash-Checkpoints)", "drive_home",

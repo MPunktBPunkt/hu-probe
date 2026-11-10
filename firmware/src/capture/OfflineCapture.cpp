@@ -1107,7 +1107,11 @@ bool OfflineCapture::isLabDebian() const {
 void OfflineCapture::ensureLabDetached(const char* why) {
     if (!msc_) return;
     // Lab always; stored trip upload also (BMW coex during multi-minute replay).
-    if (!isLabDebian() && !replayingStored_) return;
+    // Vehicle RAM offline: detach when a host is still on the bus — media_hide alone
+    // leaves TUR/REQUEST_SENSE flooding EventBus so RAM replay starves (0.3.38).
+    if (!isLabDebian() && !replayingStored_) {
+        if (!msc_->plugged()) return;
+    }
     // Home WebUI upload: WiFi already up, no USB host — soft-detach races the live STA
     // (.89: TX died ~10s into #17 after batch+upload detach with plugged=0).
     if (replayingStored_ && WiFi.status() == WL_CONNECTED && msc_ && !msc_->plugged()) {
@@ -1495,7 +1499,20 @@ void OfflineCapture::pollUpload() {
             // Live offline: soft timeout may end as queued. Stored: only hard timeout.
             const bool giveUp = replayingStored_ ? hardTimedOut : softTimedOut;
             if (empty || giveUp) {
-                uploadStatus_ = empty ? "delivered" : "queued";
+                // Ring empty ≠ capture body replayed (Feld: post_finalize drain → false
+                // "delivered" with replay_records=0). Require replayComplete for delivered.
+                const bool bodyOk = empty && replayComplete();
+                if (empty && !replayComplete()) {
+                    uploadStatus_ = "replay_incomplete";
+                    DiagLog::printf(
+                        "[OFFLINE] ring empty but replay incomplete off=%u/%u seq=%u "
+                        "want=%u stored=%d\n",
+                        (unsigned)replayOff_, (unsigned)used_, (unsigned)replaySeq_,
+                        (unsigned)(recordCount_ + postFinalizeRecords_),
+                        replayingStored_ ? 1 : 0);
+                } else {
+                    uploadStatus_ = bodyOk ? "delivered" : "queued";
+                }
                 if (empty) publishOfflineHealth(true);
                 // Stored give-up: clear orphan ring lines so WebUi drain cannot hang on zombies.
                 if (replayingStored_ && !empty) {
@@ -1516,10 +1533,9 @@ void OfflineCapture::pollUpload() {
                 }
                 if (replayingStored_) PhaseGate::pass(PhaseGate::StoredOcDrain);
                 const uint32_t dropped = bus.dropped();
-                saveLastRun(empty && overflow_ == 0 && dropped == 0 && timeRangeDropped_ == 0 &&
-                                replayComplete(),
+                saveLastRun(bodyOk && overflow_ == 0 && dropped == 0 && timeRangeDropped_ == 0,
                             dropped);
-                finishRun(empty);
+                finishRun(bodyOk);
             }
             break;
         }
