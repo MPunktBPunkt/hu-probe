@@ -2,10 +2,10 @@
 
 | | |
 |--|--|
-| **Datum** | 2026-11-06 |
+| **Datum** | 2026-11-07 (Feld I-303A) · Soft/Lab 2026-11-06 |
 | **Repo** | MPunktBPunkt/hu-probe |
 | **FW** | **0.3.36** |
-| **Quellen** | esp32.usb-analyzer 0.0.52 Feldmatrix; technology-audit PR #32 |
+| **Quellen** | esp32.usb-analyzer 0.0.52 Feldmatrix; technology-audit PR #32 · [I303A-Feld](I303A-FELD-2026-11-07.md) |
 
 **Methodenherkunft:** Die Host-Behaviour-/Fingerprinting-Methode wurde aus den realen Feldmessungen des `esp32.usb-analyzer` übernommen; sie ist dort durch BMW/TV/Soundbar/FRITZ!Box/Windows-Messwerte empirisch validiert.  
 **Nur die tatsächlich auf hu-probe beobachtbaren Größen dürfen als MEASURED bezeichnet werden.**
@@ -29,8 +29,8 @@
 - `aoa_observe` `18D1:2D00` → HU Zubehör + Reconnect; Callback 51/52/53 absent; Bulk RX absent (2026-10-30).
 - `aoa_phone_like` `04E8:6860` → HU REJECTED.
 - Analyzer MSC `303a:1001` am NBT → P-MOUNT inkl. MODE_SENSE(6)+PREVENT; AOA 51/52/53=0 (Analyzer 2026-11-06).
-
-**BMW-Feld mit FW 0.3.36:** **nicht** ausgeführt → **I-303A** ist der Engpass ([Runsheet](I303A-RUNSHEET.md)).
+- **I-303A Feld 2026-11-07:** Vendor-only `303A:1001` → HU ohne nutzbares Medium (kein Name / nicht unterstützt); Probe Attach ja, AOA-Callbacks 0. MSC-Kontrolle gleicher Abend: Dateien sichtbar. Details: [I303A-FELD-2026-11-07.md](I303A-FELD-2026-11-07.md).
+- **I-303A Reval 2026-11-10:** gleiche Negativ-HU bei beiden USBs (kein Versorgungsartefakt). MSC: Soft-Detach bei `lab_debian`; `cache_place` ohne Dateiliste; `cache_a` ok; HU zeigte Arduino-`iProduct` Espressif (Fix 0.3.37). [Feldnotiz](FELD-2026-11-10-I303A-REVAL-MSC.md).
 
 ---
 
@@ -57,7 +57,7 @@ Auf MSC-Plane: Plug/Unplug, SCSI-Opcode-Histogramm (`tur`, `inquiry`, `mode_sens
 ## INFERENCE
 
 - Analyzer-MSC-Negativ (`303a:1001` → kein AOA) und hu-probe Accessory-Positiv-UI (`18D1:2D00`) zusammen legen nahe, dass **Identity + Class/Configuration** den HU-Pfad steuern — nicht „MSC-Endpoint antwortet“.
-- `aoa_id_303a` ist der nächste empirische Schritt, um VID/PID vs. MSC-Class zu trennen.
+- I-303A bestätigt: **gleiche VID/PID-Familie ohne MSC ≠ Stick-Pfad**; Class/Config entscheidet mit.
 - **H-Reconnect:** Reconnect-Loop bei `18D1:2D00` *kann* fehlenden BCL/Etch/SAS-Peer (G3/G4) bedeuten statt reinem USB-Transportfehler — nicht messbar auf aktueller Schicht ([Kampagne](C1-IDENTITY-KAMPAGNE.md)).
 
 ---
@@ -65,10 +65,9 @@ Auf MSC-Plane: Plug/Unplug, SCSI-Opcode-Histogramm (`tur`, `inquiry`, `mode_sens
 ## UNKNOWN
 
 - Ob die HU auf dem Bus 51/52/53 sendet, wenn der Vendor-Callback 0 zählt (EP0 außerhalb `USBVendor.onRequest`).
-- Welche Identity/Config den AOA-/Connected-App-Pfad am NBT auslöst.
+- Welche Identity/Config den AOA-/Connected-App-Pfad am NBT auslöst (Phone-Referenz = P1).
 - BCL/Etch/RHMI/**SAS** am HU-USB-Bus (G3/G4).
 - `enumeration_count` / `configuration_count` / `control_in/out` / READ-size-/LBA-Histogramme auf hu-probe (explizit null).
-- BMW-Reaktion auf `aoa_id_303a` (noch nicht im Feld).
 
 ---
 
@@ -89,15 +88,15 @@ Auf MSC-Plane: Plug/Unplug, SCSI-Opcode-Histogramm (`tur`, `inquiry`, `mode_sens
 
 ## NEXT
 
-**Phase:** weg von Protokoll-Doku → ein instrumentierter Realtest.
+**Phase:** G1-Identity (I-303A) **feld-dokumentiert** → Real-Phone-Transport.
 
 | Prio | Handlung |
 |------|----------|
-| **P0** | **I-303A** — G1-Abschluss only ([Runsheet](I303A-RUNSHEET.md)); keine Identity-Matrix danach |
-| **P1** | **FIELD-CONNECTED-REAL-01** — Phone×MyBMW/AAIdrive×F20×Analyzer, 4 Ebenen ([Plan](FIELD-CONNECTED-REAL-01.md)) |
+| ~~P0~~ | ~~I-303A~~ — erledigt ([Feldnotiz](I303A-FELD-2026-11-07.md)) |
+| **P1** | **FIELD-CONNECTED-REAL-01** — Phone×MyBMW/AAIdrive×F20×Analyzer ([Plan](FIELD-CONNECTED-REAL-01.md)) |
 | **P2** | **FX-G3-01** — wenn Bulk da: `sas_*`-Sequenz korrelieren |
 | **P3** | ESP-Nachbau nur mit REAL-PHONE-Referenz |
 
-**Freeze:** Blind-Knock · BCL-on-ESP · SAS-FW · L0 als Blocker · weitere Desk-Serie ohne Feldartefakt.
+**Freeze:** Blind-Knock · BCL-on-ESP · SAS-FW · L0 als Blocker · weitere Identity-Matrix · Desk ohne Feldartefakt.
 
 Kampagne: [C1-IDENTITY-KAMPAGNE.md](C1-IDENTITY-KAMPAGNE.md)

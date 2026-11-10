@@ -149,6 +149,9 @@ void MscGadget::begin(Session* session, ReadInstrument* instrument, bool startDe
     USBMSC& MSC = mscDev();
 
     USB.onEvent(usb_event_cb);
+    // USB iManufacturer/iProduct (HU device list). Distinct from SCSI inquiry below.
+    USB.manufacturerName("hu-probe");
+    USB.productName("hu-probe");
     MSC.vendorID("HUPROBE");
     MSC.productID("HU_PROBE");
     MSC.productRevision("0200");

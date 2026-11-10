@@ -1,6 +1,6 @@
 # hu-probe — Dokumentationsindex
 
-**Stand:** 2026-11-07 · FW **0.3.36**  
+**Stand:** 2026-11-10 · FW **0.3.37**  
 **Einstieg Stand:** [`AKTUELL.md`](AKTUELL.md) · Root-[`README.md`](../README.md)  
 Lange Alt-Reviews: nur unter [`feld/archiv/`](feld/archiv/README.md) — nicht Einstieg.
 

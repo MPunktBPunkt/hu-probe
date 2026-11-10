@@ -4,7 +4,7 @@ Messplattform für Head-Unit-USB-Host-Verhalten (BMW NBT Evo als Golden Probe, M
 
 Die Sonde läuft auf einem **ESP32-S3** als USB-Gadget (MSC und/oder AOA-Observe), meldet sich am **esp-hub** (`fwType: hu-probe`), streamt High-Rate-Events per **TCP/JSONL** an einen lokalen Collector und bietet eine schlanke On-Device-WebUI.
 
-**FW aktuell:** **0.3.36** (`-DFW_VERSION` in `firmware/platformio.ini`).
+**FW aktuell:** **0.3.37** (`-DFW_VERSION` in `firmware/platformio.ini`).
 
 ## Repo-Layout
 
@@ -51,8 +51,8 @@ OTA-Artifact-Name: `hu-probe.<semver>.esp32s3.bin` → Hub-`firmware/`. SoftAP-S
 
 Sibling: `pidrive` (Produkt/HU-Facts) · `usb-analyzer` · `technology-audit`.
 
-## Status (0.3.36)
+## Status (0.3.37)
 
-- **MSC:** Golden Path + SynthFat/Media-Variation; GATE-01 Lab-Kern PASS, Wire-Paketebene UNKNOWN
-- **Connected:** C1a/C1a.5/C1b-0 PASS; C1b-P0 PARTIAL am NBT (P0-E ABSENT); nächster Gatekeeper **I-303A** (G1), dann FIELD-CONNECTED-REAL-01
+- **MSC:** Golden Path + SynthFat/Media-Variation; USB-`iProduct` = `hu-probe` (0.3.37); GATE-01 Lab-Kern PASS, Wire-Paketebene UNKNOWN
+- **Connected:** I-303A Feld + Reval erledigt; nächster Engpass **FIELD-CONNECTED-REAL-01** (P1)
 - **Nicht claimen:** AOA erkannt ≠ BCL ≠ SAS ≠ RHMI-Menü

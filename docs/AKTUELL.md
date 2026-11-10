@@ -1,6 +1,6 @@
 # Aktueller Stand — hu-probe
 
-**FW:** 0.3.36 · **Datum:** 2026-11-07  
+**FW:** 0.3.37 (MSC USB-Anzeigename) · **Feld zuletzt:** 2026-11-10 · DUT noch 0.3.36 bis OTA  
 Dies ist der **einzige Einstieg**, wenn du wissen willst, wo wir stehen. Lange Alt-Reviews liegen unter `feld/archiv/` und sind kein Einstieg.
 
 ## Connected (Control Plane)
@@ -8,14 +8,14 @@ Dies ist der **einzige Einstieg**, wenn du wissen willst, wo wir stehen. Lange A
 | | |
 |--|--|
 | **Dashboard** | [feld/C1-STAND.md](feld/C1-STAND.md) — FACT / UNKNOWN / NEXT |
-| **Gates** | [GATES-Connected.md](GATES-Connected.md) — G1–G4, C1b-P0 PARTIAL |
+| **Gates** | [GATES-Connected.md](GATES-Connected.md) — G1–G4 |
 | **Architektur** | [CONNECTED-APP.md](CONNECTED-APP.md) |
-| **P0 jetzt** | [feld/I303A-RUNSHEET.md](feld/I303A-RUNSHEET.md) |
-| **P1 danach** | [feld/FIELD-CONNECTED-REAL-01.md](feld/FIELD-CONNECTED-REAL-01.md) |
+| **P0 I-303A** | **Feld erledigt** — [I303A-FELD-2026-11-07.md](feld/I303A-FELD-2026-11-07.md) · Reval [FELD-2026-11-10](feld/FELD-2026-11-10-I303A-REVAL-MSC.md) |
+| **P1 jetzt** | [feld/FIELD-CONNECTED-REAL-01.md](feld/FIELD-CONNECTED-REAL-01.md) |
 
-Kurzstand aus dem Dashboard: G1 Identity (I-303A) ist Engpass; AOA erkannt ≠ BCL ≠ SAS ≠ RHMI. Lab sticky/`aoa_id_303a` PASS; BMW-Feld mit 0.3.36 noch offen.
+Kurzstand: Vendor-only `303A:1001` → HU ohne Medium (auch mit beiden USBs, Reval 10.11.). MSC-Kontrolle ok (`cache_a`). AOA ≠ BCL ≠ SAS ≠ RHMI. **Nächster Engpass = echter Phone×HU-Transport (P1).**
 
-Kurze Wire-Belege (kein Review-Roman): [AOA-C1B-P0-NBT](feld/AOA-C1B-P0-NBT.md) · [AOA-EPISTEMIK-EP0](feld/AOA-EPISTEMIK-EP0.md).
+Kurze Wire-Belege: [AOA-C1B-P0-NBT](feld/AOA-C1B-P0-NBT.md) · [AOA-EPISTEMIK-EP0](feld/AOA-EPISTEMIK-EP0.md).
 
 ## Storage (MSC)
 
@@ -28,4 +28,4 @@ Kurze Wire-Belege (kein Review-Roman): [AOA-C1B-P0-NBT](feld/AOA-C1B-P0-NBT.md) 
 
 ## Nicht lesen als Einstieg
 
-`feld/archiv/` — inkl. `_obsolete-reviews/` und der langen AOA-/Identity-Multi-KI-Berichte. Inhalt bleibt erhalten, überschattet den Stand aber nicht.
+`feld/archiv/` — inkl. `_obsolete-reviews/` und der langen AOA-/Identity-Multi-KI-Berichte.
