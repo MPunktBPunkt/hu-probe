@@ -1,6 +1,6 @@
 # Aktueller Stand — hu-probe
 
-**FW:** 0.3.38 (free→soft_detach, Upload-Detach bei Host, kein False-delivered) · **Feld zuletzt:** 2026-11-10 · DUT ggf. noch älter bis OTA  
+**FW:** 0.3.38 (free→soft_detach, Upload-Detach bei Host, kein False-delivered) · **Feld zuletzt:** 2026-11-11 Größenleiter (Schritt 1–2)  
 Dies ist der **einzige Einstieg**, wenn du wissen willst, wo wir stehen. Lange Alt-Reviews liegen unter `feld/archiv/` und sind kein Einstieg.
 
 ## Connected (Control Plane)
@@ -23,7 +23,9 @@ Kurze Wire-Belege: [AOA-C1B-P0-NBT](feld/AOA-C1B-P0-NBT.md) · [AOA-EPISTEMIK-EP
 |--|--|
 | **Integrität** | [GATES.md](GATES.md) |
 | **Konzept/Schema** | [KONZEPT.md](KONZEPT.md) · [SCHEMA.md](SCHEMA.md) |
-| **Feld-Survivors** | [MSC-HEIMFAHRT](feld/MSC-HEIMFAHRT.md) · [MSC-GROESSENLEITER-GO](feld/MSC-GROESSENLEITER-GO.md) · [MSC-TUR-MOUNT-FACTS](feld/MSC-TUR-MOUNT-FACTS.md) |
+| **Feld-Survivors** | [MSC-HEIMFAHRT](feld/MSC-HEIMFAHRT.md) · [MSC-GROESSENLEITER-GO](feld/MSC-GROESSENLEITER-GO.md) · [FELD-2026-11-11 Größenleiter](feld/FELD-2026-11-11-MSC-GROESSENLEITER.md) · [MSC-TUR-MOUNT-FACTS](feld/MSC-TUR-MOUNT-FACTS.md) |
+
+MSC-Kurz: Soft-Detach ops **PASS**, RAM-Replay-Body weiterhin **FAIL** (`replay_records=0`) — Details im 11.11.-Bericht. **NEXT MSC = Replay-Fix**, nicht Leiter fortsetzen.
 | **Produkt-Ampel** | PiDrive [MSC-AKTUELL](../../pidrive/docs/betrieb/MSC-AKTUELL.md) · [HU-Technical-Facts](../../pidrive/docs/fahrzeug/HU-Technical-Facts.md) |
 
 ## Nicht lesen als Einstieg

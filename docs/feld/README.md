@@ -25,6 +25,7 @@ Lange Reviews / Research / Multi-KI → [`archiv/`](archiv/README.md) (nicht Ein
 |-------|--------|
 | [MSC-HEIMFAHRT.md](MSC-HEIMFAHRT.md) | Heimfahrt-FACTS |
 | [MSC-GROESSENLEITER-GO.md](MSC-GROESSENLEITER-GO.md) | Größenleiter GO |
+| [FELD-2026-11-11-MSC-GROESSENLEITER.md](FELD-2026-11-11-MSC-GROESSENLEITER.md) | Größenleiter Retest 0.3.38 (ops PASS / body FAIL) |
 | [MSC-TUR-MOUNT-FACTS.md](MSC-TUR-MOUNT-FACTS.md) | TUR/Mount |
 
 Normative MSC-Tabelle: PiDrive `HU-Technical-Facts` (nicht die alten Multi-Reviews).

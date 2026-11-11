@@ -1,0 +1,133 @@
+{
+  "date": "2026-11-11",
+  "fw": "0.3.38",
+  "dut": "192.168.178.89",
+  "sequence": "seq_size_ladder",
+  "steps_run": [
+    1,
+    2
+  ],
+  "verdict": "ops_soft_detach_pass_body_replay_fail",
+  "sessions": [
+    {
+      "dir": "20261111-072308_bmw_free",
+      "scenario": "free",
+      "transport": "tcp_live",
+      "fw_version": "0.3.38",
+      "media": "size_158",
+      "started_at": "2026-11-11T07:23:08.805779+01:00",
+      "ended_at": null,
+      "event_types": {
+        "session": 1,
+        "media_layout": 3,
+        "bot_cbw": 258,
+        "bot_csw": 258,
+        "status": 30,
+        "bot_data": 307,
+        "read": 307,
+        "marker": 10,
+        "capture_health": 14
+      },
+      "events": 1188,
+      "capture": {
+        "offline_records": null,
+        "offline_bytes": null,
+        "replay_records": null,
+        "replay_complete": null,
+        "replay_error": null,
+        "upload_status": "streaming",
+        "integrity_pass": true,
+        "complete": true,
+        "end_reason": "active",
+        "end_strategy": null,
+        "persisted": null,
+        "fine_data": null,
+        "published": 1856,
+        "recv_events": 1178,
+        "parse_errors": 0,
+        "collector_parse_errors_total": 104,
+        "tur_count": 155,
+        "tur_burst_n": 93,
+        "tur_idle_n": 60,
+        "transport_epoch_start": null,
+        "transport_epoch_end": null
+      }
+    },
+    {
+      "dir": "20261111-072943_bmw_seq_size_ladder_1r1",
+      "scenario": "seq_size_ladder_1r1",
+      "transport": "ram_offline",
+      "fw_version": "0.3.38",
+      "media": "size_158",
+      "started_at": "2026-11-11T07:31:43.993574+01:00",
+      "ended_at": "2026-11-11T07:31:44.050314+01:00",
+      "event_types": {
+        "session": 2,
+        "media_layout": 3,
+        "capture_health": 2
+      },
+      "events": 7,
+      "capture": {
+        "offline_records": 534,
+        "offline_bytes": 11607,
+        "replay_records": 0,
+        "replay_complete": false,
+        "replay_error": null,
+        "upload_status": "replay_incomplete",
+        "integrity_pass": false,
+        "complete": false,
+        "end_reason": "auto_soft_detach",
+        "end_strategy": "soft_detach",
+        "persisted": false,
+        "fine_data": true,
+        "published": 1874,
+        "recv_events": 7,
+        "parse_errors": 0,
+        "collector_parse_errors_total": 104,
+        "tur_count": 159,
+        "tur_burst_n": 93,
+        "tur_idle_n": 64,
+        "transport_epoch_start": 2,
+        "transport_epoch_end": 4
+      }
+    },
+    {
+      "dir": "20261111-073629_bmw_seq_size_ladder_2r1",
+      "scenario": "seq_size_ladder_2r1",
+      "transport": "ram_offline",
+      "fw_version": "0.3.38",
+      "media": "size_158",
+      "started_at": "2026-11-11T07:38:29.487709+01:00",
+      "ended_at": "2026-11-11T07:38:29.540679+01:00",
+      "event_types": {
+        "session": 2,
+        "media_layout": 3,
+        "capture_health": 2
+      },
+      "events": 7,
+      "capture": {
+        "offline_records": 535,
+        "offline_bytes": 11646,
+        "replay_records": 0,
+        "replay_complete": false,
+        "replay_error": null,
+        "upload_status": "replay_incomplete",
+        "integrity_pass": false,
+        "complete": false,
+        "end_reason": "auto_soft_detach",
+        "end_strategy": "soft_detach",
+        "persisted": false,
+        "fine_data": true,
+        "published": 1881,
+        "recv_events": 7,
+        "parse_errors": 0,
+        "collector_parse_errors_total": 104,
+        "tur_count": 159,
+        "tur_burst_n": 93,
+        "tur_idle_n": 64,
+        "transport_epoch_start": 8,
+        "transport_epoch_end": 10
+      }
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "session": "20261111-072308_bmw_free",
+  "scenario": "free",
+  "fw": "0.3.38",
+  "verdict": "PASS",
+  "capture": {
+    "offline_records": null,
+    "offline_bytes": null,
+    "replay_records": null,
+    "replay_complete": null,
+    "replay_error": null,
+    "upload_status": "streaming",
+    "integrity_pass": true,
+    "complete": true,
+    "end_reason": "active",
+    "end_strategy": null,
+    "persisted": null,
+    "fine_data": null,
+    "published": 1856,
+    "recv_events": 1178,
+    "parse_errors": 0,
+    "collector_parse_errors_total": 104,
+    "tur_count": 155,
+    "tur_burst_n": 93,
+    "tur_idle_n": 60,
+    "transport_epoch_start": null,
+    "transport_epoch_end": null
+  },
+  "event_types": {
+    "session": 1,
+    "media_layout": 3,
+    "bot_cbw": 258,
+    "bot_csw": 258,
+    "status": 30,
+    "bot_data": 307,
+    "read": 307,
+    "marker": 10,
+    "capture_health": 14
+  },
+  "notes": "Live TCP vor Sequenz; HU las Medium (reads in bot_data/read)."
+}

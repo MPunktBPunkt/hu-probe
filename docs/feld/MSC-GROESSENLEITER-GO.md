@@ -6,6 +6,8 @@
 
 **Feld 2026-11-10:** Capture ok (lila, Play), aber RAM-Upload bei `media_hide` → `replay_records=0` / integrity FAIL (Host-TUR-Flut). Ab **0.3.38:** `free` endet mit **`soft_detach`**; Upload detacht bei noch gestecktem Host. Operator-Fallback: OTG ziehen sobald Capture-LED wechselt.
 
+**Feld 2026-11-11:** FW 0.3.38, Schritt 1–2 (`size_158` Fresh+Cycle). Soft-Detach **ops PASS** (HU disconnect), Capture/Play ok — Body-Upload weiterhin **FAIL** (`replay_incomplete`, `replay_records=0`). Bericht: [FELD-2026-11-11-MSC-GROESSENLEITER.md](FELD-2026-11-11-MSC-GROESSENLEITER.md). **Kein weiterer Leiter-Lauf bis Replay-Fix.**
+
 Lab startet OTA + Sequenz, sobald `.89` online ist. Du bedienst HU + BOOT (+ optional OTG).
 
 ---
@@ -64,6 +66,8 @@ Zwischen Stufen wechselt der Runner das Medium (Soft-Remount) → vor jedem **Fr
 - Capture: lila, TRACK1–3 hörbar.
 - Nach Capture: Soft-Detach (kein dauerhaftes Host-Polling); Upload liefert Capture-Body (`replay` / `integrity PASS`), nicht nur `post_finalize`.
 - Falls Host trotzdem pollt: OTG ziehen bis Upload idle, dann wieder stecken für nächsten Schritt.
+
+**Stand 2026-11-11:** Punkte Capture + Soft-Detach-Ops erfüllt; **Body/`integrity PASS` offen** (beide gelaufenen Schritte).
 
 ---
 

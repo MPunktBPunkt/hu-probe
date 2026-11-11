@@ -1,0 +1,35 @@
+{
+  "session": "20261111-073629_bmw_seq_size_ladder_2r1",
+  "scenario": "seq_size_ladder_2r1",
+  "fw": "0.3.38",
+  "verdict": "FAIL_REPLAY",
+  "capture": {
+    "offline_records": 535,
+    "offline_bytes": 11646,
+    "replay_records": 0,
+    "replay_complete": false,
+    "replay_error": null,
+    "upload_status": "replay_incomplete",
+    "integrity_pass": false,
+    "complete": false,
+    "end_reason": "auto_soft_detach",
+    "end_strategy": "soft_detach",
+    "persisted": false,
+    "fine_data": true,
+    "published": 1881,
+    "recv_events": 7,
+    "parse_errors": 0,
+    "collector_parse_errors_total": 104,
+    "tur_count": 159,
+    "tur_burst_n": 93,
+    "tur_idle_n": 64,
+    "transport_epoch_start": 8,
+    "transport_epoch_end": 10
+  },
+  "event_types": {
+    "session": 2,
+    "media_layout": 3,
+    "capture_health": 2
+  },
+  "notes": "RAM-offline Capture z\u00e4hlte Records, Soft-Detach endete Measure; Replay-Body nicht angekommen (replay_records=0)."
+}

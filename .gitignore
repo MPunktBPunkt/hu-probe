@@ -120,6 +120,12 @@ sessions/*
 !sessions/20261022-173030_bmw_drive_home/**
 !sessions/20261027-080529_bmw_seq_size_ladder_1r1/
 !sessions/20261027-080529_bmw_seq_size_ladder_1r1/**
+!sessions/20261111-072308_bmw_free/
+!sessions/20261111-072308_bmw_free/**
+!sessions/20261111-072943_bmw_seq_size_ladder_1r1/
+!sessions/20261111-072943_bmw_seq_size_ladder_1r1/**
+!sessions/20261111-073629_bmw_seq_size_ladder_2r1/
+!sessions/20261111-073629_bmw_seq_size_ladder_2r1/**
 
 sessions/**/collector.*
 sessions/**/derived/
@@ -140,6 +146,12 @@ sessions/**/derived/
 !sessions/20261022-081410_bmw_free/derived/**
 !sessions/20261027-080529_bmw_seq_size_ladder_1r1/derived/
 !sessions/20261027-080529_bmw_seq_size_ladder_1r1/derived/**
+!sessions/20261111-072308_bmw_free/derived/
+!sessions/20261111-072308_bmw_free/derived/**
+!sessions/20261111-072943_bmw_seq_size_ladder_1r1/derived/
+!sessions/20261111-072943_bmw_seq_size_ladder_1r1/derived/**
+!sessions/20261111-073629_bmw_seq_size_ladder_2r1/derived/
+!sessions/20261111-073629_bmw_seq_size_ladder_2r1/derived/**
 
 # Firmware artifacts (only recent release bins under firmware/dist/ — keep ~3)
 firmware/.pio/
