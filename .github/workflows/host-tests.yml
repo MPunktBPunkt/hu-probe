@@ -31,3 +31,6 @@ jobs:
 
       - name: bcl_c1a test + scenario
         run: make -C tools/bcl_c1a clean test scenario
+
+      - name: field_plan
+        run: make -C tools/field_plan clean test

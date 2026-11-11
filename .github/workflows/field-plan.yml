@@ -1,0 +1,29 @@
+# Checks field/plan.json before the probe fetches it from raw.githubusercontent.com.
+# An invalid plan is ignored on the probe (it keeps the last valid one), so a red run here
+# means the car is still driving the previous plan.
+name: field-plan
+
+on:
+  push:
+    paths:
+      - "field/**"
+      - "tools/validate_field_plan.py"
+      - "firmware/src/capture/ExperimentProfiles.h"
+      - "firmware/src/media/MediaPresets.h"
+  pull_request:
+    paths:
+      - "field/**"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate field/plan.json
+        run: python tools/validate_field_plan.py field/plan.json
