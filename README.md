@@ -4,7 +4,7 @@ Messplattform für Head-Unit-USB-Host-Verhalten (BMW NBT Evo als Golden Probe, M
 
 Die Sonde läuft auf einem **ESP32-S3** als USB-Gadget (MSC und/oder AOA-Observe), meldet sich am **esp-hub** (`fwType: hu-probe`), streamt High-Rate-Events per **TCP/JSONL** an einen lokalen Collector und bietet eine schlanke On-Device-WebUI.
 
-**FW im Baum:** **0.3.41** (`-DFW_VERSION` in `firmware/platformio.ini`). Nicht kompiliert, nicht auf Hardware geprüft. Letzter Lauf im Fahrzeug: **0.3.38** (2026-11-11).
+**FW aktuell:** **0.3.41** (`-DFW_VERSION` in `firmware/platformio.ini`). Clean-Build + Web-OTA `.89` + HU-Smoke 2026-11-11 (RAM-Replay `delivered` / PASS). Feldplan weiter `enabled: false`.
 
 ## Repo-Layout
 

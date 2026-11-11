@@ -1,7 +1,9 @@
 # Aktueller Stand — hu-probe
 
-**FW im Feld:** 0.3.38 (free→soft_detach, Upload-Detach bei Host, kein False-delivered) · **Feld zuletzt:** 2026-11-11 Größenleiter (Schritt 1–2)  
-**FW im Baum, nicht kompiliert, nicht im Feld:** 0.3.41 (Feldplan, Hotspot-Schalter) auf 0.3.40 (Detektion) und 0.3.39 (RAM-Replay-Fix). Bauen: [ANWEISUNG-0.3.41](ANWEISUNG-0.3.41.md).  
+**FW im Feld:** **0.3.41** auf Auto-ESP `.89` (Web-OTA 11.11. abends) · Lab `.88` ebenfalls 0.3.41 (Kabel; war Analyzer)  
+**Clean-Build:** `c318b1e3c1c6` · `FW_GIT_DIRTY=0` · Dist `firmware/dist/hu-probe.0.3.41.esp32s3.bin`  
+**Smoke HU:** Session `20261111-174501_bmw_free` — `replay_records=227` (= offline+post_finalize), `replay_complete`, Upload `delivered`, Integrität PASS; `usb_core.hook_live=true`.  
+**Noch offen:** Feldplan-Abnahme (`field/plan.json` bleibt `enabled:false`), Größenleiter neu, Tag/`ota/manifest` nur auf Zuruf. Auftrag: [ANWEISUNG-0.3.41](ANWEISUNG-0.3.41.md).  
 Dies ist der **einzige Einstieg**, wenn du wissen willst, wo wir stehen. Lange Alt-Reviews liegen unter `feld/archiv/` und sind kein Einstieg.
 
 ## Connected (Control Plane)
@@ -26,7 +28,7 @@ Kurze Wire-Belege: [AOA-C1B-P0-NBT](feld/AOA-C1B-P0-NBT.md) · [AOA-EPISTEMIK-EP
 | **Konzept/Schema** | [KONZEPT.md](KONZEPT.md) · [SCHEMA.md](SCHEMA.md) |
 | **Feld-Survivors** | [MSC-HEIMFAHRT](feld/MSC-HEIMFAHRT.md) · [MSC-GROESSENLEITER-GO](feld/MSC-GROESSENLEITER-GO.md) · [FELD-2026-11-11 Größenleiter](feld/FELD-2026-11-11-MSC-GROESSENLEITER.md) · [MSC-TUR-MOUNT-FACTS](feld/MSC-TUR-MOUNT-FACTS.md) |
 
-MSC-Kurz: Soft-Detach ops **PASS**, RAM-Replay-Body weiterhin **FAIL** (`replay_records=0`) — Details im 11.11.-Bericht. **NEXT MSC = Replay-Fix**, nicht Leiter fortsetzen.
+MSC-Kurz: Soft-Detach ops **PASS**; RAM-Replay-Deadlock (0.3.39) im HU-Smoke **behoben**. Alte Größenleiter-Sessions 27.10./11.11. mit `replay_records=0` bleiben ungültig — **NEXT MSC = Leiter mit 0.3.41 neu**, danach Feldplan scharf.
 | **Produkt-Ampel** | PiDrive [MSC-AKTUELL](../../pidrive/docs/betrieb/MSC-AKTUELL.md) · [HU-Technical-Facts](../../pidrive/docs/fahrzeug/HU-Technical-Facts.md) |
 
 ## Nicht lesen als Einstieg
