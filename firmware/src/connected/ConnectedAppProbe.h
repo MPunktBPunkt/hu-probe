@@ -95,6 +95,22 @@ private:
     void publishCaUsb(const char* p0_level, const char* ca_ev, bool hypothesis,
                       bool direct_obs, JsonDocument& extra);
     void drainControlTap();
+
+    /**
+     * @brief Publish queued UsbCoreTap samples (every SETUP, xfer completion, bus event) as ca_usb usb_core.
+     * @note Arduino loop; only while link observing so the boot enumeration waits in the ring.
+     */
+    void drainCoreTap();
+
+    /**
+     * @brief MscBotTap epoch sink for aoa_observe boots: publish as ca_usb usb_epoch.
+     * @param ev      Epoch name from MscBotTap (set_address, mount, umount, ep_stall, ep_clear_halt).
+     * @param tUs     Capture time in µs at the USB callback.
+     * @param epAddr  Endpoint address for stall events, else 0.
+     * @param value   Device address for set_address, else 0.
+     */
+    static void onMscEpoch(const char* ev, int64_t tUs, uint8_t epAddr, uint16_t value);
+
     void drainTransportRaw();
     void resetCounters();
     void drainTransportToFramer();  // lab inject / C1b-0 skeleton only
@@ -119,6 +135,8 @@ private:
     uint32_t runs_ = 0;
     uint32_t link_runs_ = 0;
     uint32_t ca_usb_count_ = 0;
+    uint32_t usb_epoch_count_ = 0;
+    uint32_t usb_core_count_ = 0;
     bool p0_a_ = false;
     bool p0_b_ = false;
     bool p0_c_ = false;

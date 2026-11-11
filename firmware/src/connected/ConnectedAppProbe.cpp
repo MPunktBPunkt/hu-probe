@@ -9,6 +9,8 @@
 #include "connected/bcl/CaC1LabBclStream.h"
 #include "core/DiagLog.h"
 #include "core/ProbeClock.h"
+#include "core/UsbCoreTap.h"
+#include "msc/MscBotTap.h"
 #include "net/EventBus.h"
 #include "session/SessionMetrics.h"
 #include "session/SessionMetricsJson.h"
@@ -46,6 +48,7 @@ void ConnectedAppProbe::begin(Session* session, MscGadget* msc, bool aoa_observe
                                                : (aoa_observe_boot ? "aoa_observe" : "msc");
     state_ = "idle";
     lastErr_ = "";
+    if (aoa_observe_boot_) MscBotTap::setEpochSink(&ConnectedAppProbe::onMscEpoch);
     DiagLog::printf("[CA] ConnectedAppProbe begin (%s gadget=%s)\n",
                     aoa_observe_boot_ ? "C1b-P0 observe" : "C1a.5/C1b-0 msc boot",
                     usb_gadget_.c_str());
@@ -305,9 +308,98 @@ void ConnectedAppProbe::drainControlTap() {
     }
 }
 
+void ConnectedAppProbe::onMscEpoch(const char* ev, int64_t tUs, uint8_t epAddr, uint16_t value) {
+    ConnectedAppProbe& self = instance();
+    self.usb_epoch_count_++;
+    JsonDocument extra;
+    extra["epoch"] = ev;
+    extra["capture_t_us"] = (long long)tUs;
+    if (std::strncmp(ev, "ep_", 3) == 0) extra["ep_addr"] = epAddr;
+    if (std::strcmp(ev, "set_address") == 0) extra["dev_addr"] = value;
+    extra["source"] = "usbd_wrap";
+    self.publishCaUsb("P0-core", "usb_epoch", false, true, extra);
+}
+
+void ConnectedAppProbe::drainCoreTap() {
+    UsbCoreTap::Sample s;
+    while (UsbCoreTap::pop(s)) {
+        usb_core_count_++;
+        JsonDocument extra;
+        extra["capture_t_us"] = (long long)s.tUs;
+        extra["visibility_scope"] = "dcd_event_handler";
+        switch (s.ev) {
+            case UsbCoreTap::Ev::BusReset:
+                extra["core_ev"] = "bus_reset";
+                extra["speed"] = s.speed;
+                break;
+            case UsbCoreTap::Ev::Unplugged:
+                extra["core_ev"] = "unplugged";
+                break;
+            case UsbCoreTap::Ev::Suspend:
+                extra["core_ev"] = "suspend";
+                break;
+            case UsbCoreTap::Ev::Resume:
+                extra["core_ev"] = "resume";
+                break;
+            case UsbCoreTap::Ev::Setup: {
+                const uint8_t bm = s.setup[0];
+                const uint8_t req = s.setup[1];
+                const uint16_t wValue = (uint16_t)(s.setup[2] | (s.setup[3] << 8));
+                const uint8_t type = (bm >> 5) & 0x3;
+                const uint8_t recipient = bm & 0x1F;
+                extra["core_ev"] = "setup";
+                extra["bm_request_type"] = bm;
+                extra["b_request"] = req;
+                extra["w_value"] = wValue;
+                extra["w_index"] = (uint16_t)(s.setup[4] | (s.setup[5] << 8));
+                extra["w_length"] = (uint16_t)(s.setup[6] | (s.setup[7] << 8));
+                extra["direction"] = (bm & 0x80) ? "in" : "out";
+                extra["request_type"] = type == 0   ? "standard"
+                                        : type == 1 ? "class"
+                                        : type == 2 ? "vendor"
+                                                    : "reserved";
+                extra["recipient"] = recipient == 0   ? "device"
+                                     : recipient == 1 ? "interface"
+                                     : recipient == 2 ? "endpoint"
+                                                      : "other";
+                if (type == 0) {
+                    if (const char* name = UsbCoreTap::standardRequestName(req)) {
+                        extra["std_name"] = name;
+                    }
+                    if (req == 6) {
+                        extra["desc_type"] = s.setup[3];
+                        extra["desc_index"] = s.setup[2];
+                        if (const char* d = UsbCoreTap::descriptorTypeName(s.setup[3])) {
+                            extra["desc_name"] = d;
+                        }
+                    }
+                } else if (type == 2) {
+                    if (req == 51) extra["aoa_desk_name"] = "GET_PROTOCOL";
+                    else if (req == 52) extra["aoa_desk_name"] = "SEND_STRING";
+                    else if (req == 53) extra["aoa_desk_name"] = "START";
+                    else if (req == 58) extra["aoa_desk_name"] = "SET_AUDIO_MODE";
+                }
+                break;
+            }
+            case UsbCoreTap::Ev::XferComplete:
+                extra["core_ev"] = "xfer_complete";
+                extra["ep_addr"] = s.epAddr;
+                extra["len"] = s.len;
+                extra["result"] = s.result == XFER_RESULT_SUCCESS   ? "ok"
+                                  : s.result == XFER_RESULT_STALLED ? "stalled"
+                                  : s.result == XFER_RESULT_FAILED  ? "failed"
+                                                                    : "other";
+                break;
+        }
+        publishCaUsb("P0-core", "usb_core", false, true, extra);
+    }
+}
+
 void ConnectedAppProbe::loop() {
     if (aoa_observe_boot_) {
         AoaObserveGadget::instance().loop();
+        // Mount/SET_ADDRESS/STALL wraps fire in every gadget mode; keep their ring empty.
+        MscBotTap::drain(32);
     }
     if (!link_observing_) return;
     aoa_.poll();
@@ -343,6 +435,7 @@ void ConnectedAppProbe::loop() {
             }
         }
         drainControlTap();
+        drainCoreTap();
         // P0: raw bulk only — no BclFramer (C1b-P1).
         const TransportEvent ev = aoa_.lastEvent();
         if (ev != TransportEvent::None && ev != TransportEvent::RxBytes) {
@@ -763,8 +856,13 @@ void ConnectedAppProbe::toStatusJson(JsonObject obj) const {
         tr["vendor_setup_count"] = tap.vendorSetupCount();
         tr["drops"] = tap.dropCount();
         tr["capture_valid"] = tap.captureValid();
-        tr["visibility_scope"] = "usbvendor_onrequest_only";
-        tr["is_full_ep0_trace"] = false;
+        const bool core = UsbCoreTap::hookLive();
+        tr["visibility_scope"] = core ? "dcd_event_handler" : "usbvendor_onrequest_only";
+        // Core hook: every SETUP packet + EP0 completion, not the DATA-stage bytes.
+        tr["is_full_ep0_trace"] = core;
+        tr["usb_epoch_count"] = usb_epoch_count_;
+        tr["usb_core_count"] = usb_core_count_;
+        UsbCoreTap::toJson(tr["usb_core"].to<JsonObject>());
         // Legacy: historically Vendor-SETUPs only (= vendor_setup_count).
         tr["aoa_control_count"] = tap.vendorSetupCount();
         tr["aoa51"] = tap.aoa51Count();

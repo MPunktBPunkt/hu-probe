@@ -56,6 +56,19 @@ void markHealthy();
 void check(const String& manifestUrl, String* info);
 
 /**
+ * @brief HTTPS GET of a small text file (e.g. the field plan) with the embedded CA bundle.
+ *
+ * Follows up to 5 https redirects like check(); same 10 s timeouts.
+ *
+ * @param url        https:// URL.
+ * @param maxBytes   Larger bodies are rejected.
+ * @param[out] body  Response body on success.
+ * @param[out] err   On failure: "no_wifi", "no_url", "no_ca_bundle", "http_<code>" or "too_large".
+ * @return true on HTTP 200 with a body of at most maxBytes.
+ */
+bool fetchSmall(const String& url, size_t maxBytes, String* body, String* err);
+
+/**
  * @brief Compare dotted versions numerically; <0, 0, >0 like strcmp.
  *
  * Non-digit characters are skipped; missing components count as 0 ("1.2" == "1.2.0").

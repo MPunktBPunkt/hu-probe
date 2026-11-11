@@ -105,6 +105,7 @@ void ConfigStore::applyDefaults() {
     wifi2Pass = "";
     autoUpdate = true;
     otaManifestUrl = OTA_MANIFEST_URL_DEFAULT;
+    fieldPlanUrl = FIELD_PLAN_URL_DEFAULT;
     usbGadget = "msc";
 }
 
@@ -145,6 +146,7 @@ void ConfigStore::load() {
         wifi2Pass = prefs.getString("wifi2_pass", wifi2Pass);
         autoUpdate = prefs.getBool("auto_upd", autoUpdate);
         otaManifestUrl = prefs.getString("ota_url", otaManifestUrl);
+        fieldPlanUrl = prefs.getString("plan_url", fieldPlanUrl);
         // Legacy key — only used if dedicated hpgad namespace is empty.
         const String legacy = prefs.getString("usb_gadget", "");
         if (gadgetModeValid(legacy)) {
@@ -201,6 +203,7 @@ bool ConfigStore::save() {
         prefs.putString("wifi2_pass", wifi2Pass);
         prefs.putBool("auto_upd", autoUpdate);
         prefs.putString("ota_url", otaManifestUrl);
+        prefs.putString("plan_url", fieldPlanUrl);
         prefs.end();
     } else {
         ok = false;
@@ -250,6 +253,7 @@ void ConfigStore::toJson(JsonObject obj) const {
     obj["wifi2PassSet"] = wifi2Pass.length() > 0;
     obj["autoUpdate"] = autoUpdate;
     obj["otaManifestUrl"] = otaManifestUrl;
+    obj["fieldPlanUrl"] = fieldPlanUrl;
     obj["usbGadget"] = usbGadget;
     obj["fwVersion"] = FW_VERSION;
     obj["fwType"] = FW_TYPE;
@@ -288,6 +292,7 @@ bool ConfigStore::fromJson(JsonVariantConst obj) {
         wifi2Pass = obj["wifi2Pass"].as<String>();
     if (!obj["autoUpdate"].isNull()) autoUpdate = obj["autoUpdate"].as<bool>();
     if (obj["otaManifestUrl"].is<const char*>()) otaManifestUrl = obj["otaManifestUrl"].as<String>();
+    if (obj["fieldPlanUrl"].is<const char*>()) fieldPlanUrl = obj["fieldPlanUrl"].as<String>();
     if (obj["usbGadget"].is<const char*>()) {
         String g = obj["usbGadget"].as<String>();
         if (gadgetModeValid(g)) usbGadget = g;

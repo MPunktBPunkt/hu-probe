@@ -53,6 +53,8 @@ public:
     String wifi2Pass;
     bool autoUpdate = true;
     String otaManifestUrl = OTA_MANIFEST_URL_DEFAULT;
+    /** Field plan (drive-mode job queue); empty = off. */
+    String fieldPlanUrl = FIELD_PLAN_URL_DEFAULT;
 
     /**
      * @brief USB gadget boot mode (C1b-P0 isolation / C1 identity gate).

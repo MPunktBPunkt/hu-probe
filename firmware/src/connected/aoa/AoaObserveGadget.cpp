@@ -6,6 +6,7 @@
 #include "connected/aoa/AoaObserveGadget.h"
 #include "connected/aoa/AoaControlTap.h"
 #include "core/DiagLog.h"
+#include "core/UsbCoreTap.h"
 #include "session/SessionMetrics.h"
 
 #include "USB.h"
@@ -106,6 +107,7 @@ void AoaObserveGadget::begin(Session* session, bool startDetached, AoaIdentityPr
         sm.setIdentity(vid_, pid_, identity_note_);
     }
 
+    UsbCoreTap::setRingEnabled(true);
     USB.onEvent(onUsbEvent);
     g_vendor.onRequest(onVendorControl);
     g_vendor.begin();

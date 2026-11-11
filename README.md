@@ -4,7 +4,7 @@ Messplattform für Head-Unit-USB-Host-Verhalten (BMW NBT Evo als Golden Probe, M
 
 Die Sonde läuft auf einem **ESP32-S3** als USB-Gadget (MSC und/oder AOA-Observe), meldet sich am **esp-hub** (`fwType: hu-probe`), streamt High-Rate-Events per **TCP/JSONL** an einen lokalen Collector und bietet eine schlanke On-Device-WebUI.
 
-**FW aktuell:** **0.3.38** (`-DFW_VERSION` in `firmware/platformio.ini`).
+**FW im Baum:** **0.3.41** (`-DFW_VERSION` in `firmware/platformio.ini`). Nicht kompiliert, nicht auf Hardware geprüft. Letzter Lauf im Fahrzeug: **0.3.38** (2026-11-11).
 
 ## Repo-Layout
 
@@ -37,7 +37,17 @@ pio run -e huprobe-s3
 pio run -e huprobe-s3 -t upload
 ```
 
-OTA-Artifact-Name: `hu-probe.<semver>.esp32s3.bin` → Hub-`firmware/`. SoftAP-Setup: `ESP-HuProbe-Setup`.
+OTA-Artifact-Name (Hub): `hu-probe.<semver>.esp32s3.bin` → Hub-`firmware/`. SoftAP-Setup: `ESP-HuProbe-Setup`.
+
+GitHub-Update (ab 0.3.0, im Fahrzeug ungetestet): Tag `v<FW_VERSION>` lässt `firmware.yml` das Manifest `ota/manifest.json` schreiben; installiert wird erst bei `enabled: true`. Ablauf und Freigabe: [docs/FIRMWARE-ABLAUF.md](docs/FIRMWARE-ABLAUF.md).
+
+## Pendelfahrt (ab 0.3.41)
+
+Messaufträge stehen in [`field/plan.json`](field/plan.json) (nur lesend, ohne Token). Mit `online_only` ist der Handy-Hotspot der Schalter: Hotspot an und RST bei laufender HU startet die nächste Messung, Hotspot aus misst nicht. Fahrten bleiben im Flash und gehen im Heimnetz an den Collector. Eine neue `plan`-ID setzt den Planzähler auf 0; dieselbe ID zählt weiter (Messung 4, 5, 6 …). GitHub liefert die Raw-Datei bis zu etwa 5 min aus dem Cache. Ein Job kann eine READ10-Bremse mitbringen (`"stall"`, wie `/api/stall`), z. B. Live-Tempo über ganze Dateien als Messung für den PiDrive-Live-Slot ([docs/SEQ-STALL.md](docs/SEQ-STALL.md)).
+
+LED im Auto: lila (weißer Blitz alle 2 s) oder grün = Messung läuft, RST würde das Ende abschneiden. Gelb oder orange blinkend = Fahrt ist im Flash, RST ist unbedenklich. Vor dem RST einer Folgemessung BOOT lang und den Farbwechsel abwarten (bis ~25 s).
+
+Bedienung und Abnahme: [docs/ANWEISUNG-0.3.41.md](docs/ANWEISUNG-0.3.41.md) · Technik: [docs/FIRMWARE-ABLAUF.md](docs/FIRMWARE-ABLAUF.md) (Abschnitt Feldplan).
 
 ## Dokumentation (Kurz)
 
@@ -51,7 +61,9 @@ OTA-Artifact-Name: `hu-probe.<semver>.esp32s3.bin` → Hub-`firmware/`. SoftAP-S
 
 Sibling: `pidrive` (Produkt/HU-Facts) · `usb-analyzer` · `technology-audit`.
 
-## Status (0.3.37)
+## Status
+
+Feldstand bleibt 0.3.38. Im Baum, aber nicht kompiliert und nicht im Fahrzeug: 0.3.39 (RAM-Replay-Fix), 0.3.40 (DCD-Hook, AOA-Epochs), 0.3.41 (Feldplan). Kein PASS dafür.
 
 - **MSC:** Golden Path + SynthFat/Media-Variation; USB-`iProduct` = `hu-probe` (0.3.37); GATE-01 Lab-Kern PASS, Wire-Paketebene UNKNOWN
 - **Connected:** I-303A Feld + Reval erledigt; nächster Engpass **FIELD-CONNECTED-REAL-01** (P1)

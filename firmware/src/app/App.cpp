@@ -7,6 +7,7 @@
 #include "app/DriveMode.h"
 #include "capture/TripStore.h"
 #include "core/DiagLog.h"
+#include "core/FieldPlan.h"
 #include "core/GithubOta.h"
 #include "BuildFlags.h"
 #include "BuildId.h"
@@ -17,6 +18,7 @@
 #include "core/ProbeClock.h"
 #include "core/PanicTail.h"
 #include "core/PhaseGate.h"
+#include "core/UsbCoreTap.h"
 #include "msc/MscBotTap.h"
 #include "connected/ConnectedAppProbe.h"
 #include "connected/aoa/AoaControlTap.h"
@@ -180,6 +182,7 @@ void App::begin() {
     HwInfo::begin();
     led_.begin();
     config_.begin();
+    FieldPlan::begin(config_.vehicleId);
     EventBus::instance().begin();
     session_.begin();
     instrument_.begin(&session_);
@@ -256,6 +259,14 @@ void App::begin() {
         DriveMode::instance().bootPhase();
     } else {
         GithubOta::markHealthy();
+        if (!aoaObserve && WiFi.status() == WL_CONNECTED) {
+            FieldPlan::refresh(config_.fieldPlanUrl, nullptr);
+            if (FieldPlan::active() && !config_.autoCapture) {
+                config_.autoCapture = true;
+                config_.save();
+                DiagLog::printf("[PLAN] autoCapture enabled by field plan (from next boot)\n");
+            }
+        }
         if (!aoaObserve) {
             // Auto-session for field use: plug → measure without opening the UI first.
             session_.start(config_.vehicleId, config_.scenarioId, config_.profileId,
@@ -344,6 +355,7 @@ void App::emitCaptureHealth() {
     doc["msc_control_other_stage_count"] = MscBotTap::controlOtherStageCount();
     doc["msc_capture_valid"] = MscBotTap::captureValid();
     doc["msc_reads"] = msc_.readCount();
+    UsbCoreTap::toJson(doc["usb_core"].to<JsonObject>());
     doc["transport"] = session_.transport();
     // AOA boots: transport_epoch from AoaObserveGadget; MSC boots: MscGadget.
     if (config_.isAoaObserve()) {

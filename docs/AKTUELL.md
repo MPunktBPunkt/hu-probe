@@ -1,6 +1,7 @@
 # Aktueller Stand — hu-probe
 
-**FW:** 0.3.38 (free→soft_detach, Upload-Detach bei Host, kein False-delivered) · **Feld zuletzt:** 2026-11-11 Größenleiter (Schritt 1–2)  
+**FW im Feld:** 0.3.38 (free→soft_detach, Upload-Detach bei Host, kein False-delivered) · **Feld zuletzt:** 2026-11-11 Größenleiter (Schritt 1–2)  
+**FW im Baum, nicht kompiliert, nicht im Feld:** 0.3.41 (Feldplan, Hotspot-Schalter) auf 0.3.40 (Detektion) und 0.3.39 (RAM-Replay-Fix). Bauen: [ANWEISUNG-0.3.41](ANWEISUNG-0.3.41.md).  
 Dies ist der **einzige Einstieg**, wenn du wissen willst, wo wir stehen. Lange Alt-Reviews liegen unter `feld/archiv/` und sind kein Einstieg.
 
 ## Connected (Control Plane)

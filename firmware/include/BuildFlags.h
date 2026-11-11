@@ -78,6 +78,12 @@
     "https://raw.githubusercontent.com/MPunktBPunkt/hu-probe/main/ota/manifest.json"
 #endif
 
+/** @brief Default field plan URL (drive-mode job queue, read-only). */
+#ifndef FIELD_PLAN_URL_DEFAULT
+#define FIELD_PLAN_URL_DEFAULT \
+    "https://raw.githubusercontent.com/MPunktBPunkt/hu-probe/main/field/plan.json"
+#endif
+
 /** @brief Default POSIX TZ string (Central European time with DST). */
 #ifndef TZ_DEFAULT
 #define TZ_DEFAULT "CET-1CEST,M3.5.0,M10.5.0/3"

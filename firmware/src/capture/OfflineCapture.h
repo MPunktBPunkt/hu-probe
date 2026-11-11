@@ -512,6 +512,16 @@ private:
      */
     bool replayFail(const char* why);
 
+    /**
+     * @brief Live offline replay made no TCP progress for kUploadStallMs: log and go to Health.
+     *
+     * Sets replayError_ "replay_stalled" so the capture_health footer keeps the cause
+     * (the Drain phase later overwrites uploadStatus_ with "replay_incomplete").
+     *
+     * @param why  Log reason ("no_link" or "no_tx_progress").
+     */
+    void stallReplay(const char* why);
+
     /** @brief True if every stored record was replayed, none malformed. */
     bool replayComplete() const;
 
@@ -606,7 +616,7 @@ private:
     static constexpr uint32_t kStoredAbortMs = 35000;
     static constexpr uint32_t kStoredReplayHbMs = 3000;
     static constexpr uint32_t kWifiReconnectEveryMs = 10000;
-    /** @brief Cap ring depth during stored replay — high pending starved WiFi/HTTP. */
+    /** @brief Cap ring depth during replay (stored and live) — high pending starved WiFi/HTTP. */
     static constexpr size_t kReplayMaxPending = 4;
     static constexpr uint32_t kCheckpointEveryMs = 60000;
     static constexpr uint32_t kCheckpointForceMs = 90000;  // no idle gap for this long
@@ -694,6 +704,16 @@ private:
     uint32_t replaySeq_ = 0;
     const char* replayError_ = nullptr;
     uint32_t timeRangeDropped_ = 0;
+    /** MscBotTap::pendingOverflow() at beginCapture(); the delta is BOT events lost in the USB ring. */
+    uint32_t botOverflowStart_ = 0;
+    /** Sum of `bot_ovf:N` markers found when a stored trip was loaded. */
+    uint32_t storedBotLost_ = 0;
+
+    /**
+     * @brief BOT events the MscBotTap ring dropped during the run being uploaded.
+     * @return Live delta since beginCapture(), or the `bot_ovf` marker sum for a stored trip.
+     */
+    uint32_t botOverflowSinceStart() const;
 
     /** Same instant on both clocks: maps capture_t_us to UTC (0 = no NTP time). */
     int64_t anchorUnixUs_ = 0;

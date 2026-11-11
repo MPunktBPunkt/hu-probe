@@ -75,6 +75,17 @@ Experiment `s5_busy_budget` mit den BOOT-Markern `play_start` → `menu_open` �
 
 Die Schritte 5–7 überschreiten den vermuteten Timeout absichtlich. **Nur im Stand.** Erst fahren, wenn 1–4 sauber waren.
 
+## Über den Feldplan (ab 0.3.41)
+
+Die Sequenz lädt über den RAM-Weg hoch, der bis 0.3.38 festhing (I8, Fix 0.3.39 ungetestet). Ein Job in `field/plan.json` kann dieselbe Konfiguration als `"stall"` mitbringen; die Fahrt geht dann über das Flash-Journal und wird im Heimnetz hochgeladen. Vorlage `pace` (Live-Tempo über ganze Dateien, nur Body, wie der PiDrive-Live-Slot):
+
+```json
+{"id":"pace","experiment":"drive_home","media":"drive_mix","fine":true,"measure_s":1200,"repeat":2,
+ "stall":{"regions":["body"],"pace":"realtime","count":0}}
+```
+
+Die Timeout-Leiter (ein Kommando 30/60/120 s) bleibt **nur im Stand**; `tools/validate_field_plan.py` warnt ab 20 s. Marker `stall_on` / `read_stall` / `stall_abandon` / `stall_off` landen im Offline-Ringpuffer und damit im Flash-Journal (je Konfiguration höchstens 64 `read_stall`).
+
 ## Auswertung (`tools/analyze_session.py` → `read_stalls`)
 
 - Pro READ10 mit mindestens 0,5 s Haltezeit (CBW bis erstes `bot_data` desselben Tags):
@@ -92,5 +103,7 @@ Die Schritte 5–7 überschreiten den vermuteten Timeout absichtlich. **Nur im S
 - **Timeout-Grenze:** Daraus folgt, wie lange PiDrive bei hängendem Stream höchstens BUSY senden darf, bevor es auf Stille umschalten muss (heute `stallMaxMs` ≤ 15 s als Firmware-Grenze).
 - **Reaktion bei Überschreitung:** Daraus folgt, ob ein überzogener Stall den Stick kostet (Reset/Remount) oder nur einen Track.
 - **Menü-Test und Live-Tempo:** Sie zeigen, ob die Abhilfe gegen den UI-Freeze „Vorlauf ≥ 1 CBW“ oder „höhere Bitrate“ heißt, und wie groß Ring und PSRAM dafür sein müssen.
+
+Für Variante B ist seit der Nachrechnung 11.11. die Frage „trägt Live-Tempo über eine **ganze** Datei“ die wichtigste: Die HU fordert beim Spielstart die ganze Datei an (Facts R53), ein Live-Slot muss über seine volle Länge gebremst werden.
 
 Keine dieser Fragen ist durch die HU-Probe bisher gemessen. Die PiDrive-Befunde E7/R29/R35 bleiben die einzige Feldevidenz.

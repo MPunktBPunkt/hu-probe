@@ -151,9 +151,9 @@ dann darf `superviseWifi` nicht neu verbinden oder neu starten.
 stateDiagram-v2
     [*] --> Off
     Off --> Boot: autoCapture + begin
-    Boot --> WaitHost: kein Heimnetz — Capture scharf
+    Boot --> WaitHost: kein Heimnetz — Capture scharf\n(oder Heimnetz + Feldplan arm_at_home)
     Boot --> Normal: Heimnetz (Upload/OTA, ggf. autoCapture aus)\noder Arm fehlgeschlagen
-    Boot --> CarIdle: Journal voll ohne WLAN
+    Boot --> CarIdle: Journal voll ohne WLAN\noder Feldplan online_only ohne WLAN
     WaitHost --> Capturing: Host gemountet
     WaitHost --> Normal: 20 s kein Host, Lauf verworfen
     Capturing --> Normal: Aufnahme vorbei, WLAN da
@@ -163,6 +163,46 @@ stateDiagram-v2
 Stromverlust (Zündung aus) ist das normale Ende einer Fahrt: das Image startet neu, lädt
 beim nächsten **Heimnetz** die Flash-Fahrt hoch und setzt `autoCapture` zurück, wenn nichts
 mehr aussteht. Am Hotspot/ohne WLAN arm't es erneut.
+
+### Feldplan (`FieldPlan`, ab 0.3.41)
+
+Messaufträge für Pendelfahrten stehen in [`field/plan.json`](../field/plan.json) im Repo und
+werden bei jedem Start mit WLAN (Heimnetz **oder** Hotspot) von `raw.githubusercontent.com`
+gelesen — nur lesend, ohne Token. Die Messdaten gehen weiter über das Flash-Journal und beim
+nächsten Start im Heimnetz an den Collector.
+
+```json
+{"schema":1,"plan":"2026-11-12a","vehicle":"bmw","enabled":true,"arm_at_home":true,
+ "jobs":[{"id":"mix","experiment":"drive_home","media":"drive_mix","fine":false,
+          "measure_s":1800,"repeat":4}]}
+```
+
+- Eine Fahrt (Start mit Host-Mount) verbraucht einen Lauf; Job k läuft `repeat`-mal, dann
+  Job k+1. Szenario der Session: `fp_<plan>_<job>_r<n>`.
+- Gezählt wird erst beim Host-Mount; ein Start am Ladegerät (20 s kein Host) verbraucht nichts.
+- Plan und Zähler liegen im NVS (`fplan`); ohne Netz gilt der zuletzt geladene Plan. Neue
+  `plan`-ID = Zähler auf 0, gleiche ID = Zähler bleibt (z. B. um `enabled` umzuschalten).
+- Aktiver Plan (gültig, `enabled`, `vehicle` = `vehicleId`, Läufe übrig): `autoCapture` bleibt an.
+  Im Normalbetrieb schaltet ein aktiver Plan `autoCapture` ab dem nächsten Start ein.
+  Abschalten: `enabled:false` im Plan oder Feldplan-URL in der WebUI leeren.
+- `arm_at_home`: misst auch im Heimnetz (Auto vor dem Haus = Hinfahrt). Ohne das Flag bleibt
+  das Heimnetz Upload/Normalbetrieb.
+- `online_only`: gemessen wird nur, wenn der Plan bei **diesem** Start geladen wurde. Der
+  Handy-Hotspot ist damit der Schalter: Hotspot an + RST bei laufender HU = Messung; Hotspot
+  aus = keine Messung (Stick normal sichtbar, Funkmodul aus). Gilt auch, wenn die Läufe des
+  Plans aufgebraucht sind (dann misst die Probe mit den WebUI-Standardwerten, aber nur online).
+- `stall` je Job (optional): Konfiguration der READ10-Bremse wie `POST /api/stall`
+  ([SEQ-STALL](SEQ-STALL.md)), höchstens 127 Zeichen als kompaktes JSON. `DriveMode::armCapture`
+  übergibt sie nach dem Medienwechsel an `ReadStall::configure`; die Bremse endet mit der
+  Aufnahme (auch bei „kein Host“). Lehnt `ReadStall` die Konfiguration ab, läuft die Aufnahme
+  ohne Bremse weiter, `drive.error = stall_config:<grund>`, der Lauf wird **nicht** gezählt.
+  `count` ist ohne Angabe 1; für Live-Tempo über ganze Dateien `"count":0`.
+- Mehrere Messungen hintereinander: BOOT lang (Aufnahme sauber beenden), dann RST. RST mitten
+  in der Aufnahme wirkt wie Stromverlust: gesichert ist nur bis zum letzten Checkpoint (≤ ~90 s
+  fehlen).
+- Ungültiger oder nicht erreichbarer Plan: der alte bleibt. Prüfen vor dem Push:
+  `python tools/validate_field_plan.py` (läuft auch als Workflow `field-plan`).
+- Status: WebUI „Heimfahrt-Modus“ bzw. `/api/status` → `drive.field_plan`.
 
 ## Sequenz (`SequenceRunner`)
 

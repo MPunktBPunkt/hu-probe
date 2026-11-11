@@ -447,16 +447,30 @@ def mutation_reactions(cmds: list[dict], times: list[float], eps: list[dict],
     return out
 
 
-def first_data_us(events: list[dict]) -> dict:
-    """bot_tag -> capture time (µs) of its first bot_data (end of a BUSY hold)."""
+def data_times_us(events: list[dict]) -> dict:
+    """bot_tag -> sorted capture times (µs) of all its bot_data records.
+
+    Tags restart after every enumeration, so one tag maps to several commands.
+    """
     out: dict = {}
     for e in events:
         if e.get("ev") != "bot_data" or e.get("bot_tag") is None:
             continue
         t = _raw_time_us(e)
-        if t is not None and e["bot_tag"] not in out:
-            out[e["bot_tag"]] = t
+        if t is not None:
+            out.setdefault(e["bot_tag"], []).append(t)
+    for v in out.values():
+        v.sort()
     return out
+
+
+def first_data_after(times_by_tag: dict, tag, t_us: int):
+    """First DATA time of `tag` at or after `t_us`, or None."""
+    ts = times_by_tag.get(tag)
+    if not ts:
+        return None
+    i = bisect_right(ts, t_us - 1)
+    return ts[i] if i < len(ts) else None
 
 
 def read_stalls(cmds: list[dict], times: list[float], events: list[dict], mm: MediaMap,
@@ -469,7 +483,7 @@ def read_stalls(cmds: list[dict], times: list[float], events: list[dict], mm: Me
     """
     if time_source not in ("t_us", "capture_t_us"):
         return {"available": False, "reason": f"time_base={time_source}"}
-    data_us = first_data_us(events)
+    data_us = data_times_us(events)
     raw = [_raw_time_us(c) for c in cmds]
     rows = []
     for i, c in enumerate(cmds):
@@ -477,7 +491,7 @@ def read_stalls(cmds: list[dict], times: list[float], events: list[dict], mm: Me
             continue
         nxt = next((j for j in range(i + 1, len(cmds)) if cmds[j]["kind"] in ("cbw", "usb")), None)
         t_next = raw[nxt] if nxt is not None else None
-        d = data_us.get(c.get("bot_tag"))
+        d = first_data_after(data_us, c.get("bot_tag"), raw[i])
         served = d is not None and d >= raw[i] and (t_next is None or d <= t_next)
         hold_us = (d - raw[i]) if served else ((t_next - raw[i]) if t_next is not None else None)
         if hold_us is None or hold_us < STALL_MIN_HOLD_US:

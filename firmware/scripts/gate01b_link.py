@@ -42,6 +42,8 @@ def _prepare(env):
             "-Wl,--wrap=usbd_edpt_clear_stall",
             # 0.2.18: expand MODE_SENSE6 IN to CBW length (avoid TinyUSB Case-5 stall)
             "-Wl,--wrap=usbd_edpt_xfer",
+            # 0.3.40: DCD core hook — every SETUP/xfer/bus event (UsbCoreTap)
+            "-Wl,--wrap=dcd_event_handler",
         ]
     )
 

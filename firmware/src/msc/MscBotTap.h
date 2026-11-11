@@ -35,6 +35,25 @@ public:
     static ReadInstrument* instrument();
 
     /**
+     * @brief Callback for USB epoch events when no MSC instrument is attached.
+     * @param ev     Epoch name: set_address, mount, umount, ep_stall or ep_clear_halt.
+     * @param tUs    Capture time in µs at the USB callback.
+     * @param epAddr Endpoint address for ep_stall / ep_clear_halt, else 0.
+     * @param value  Device address for set_address, else 0.
+     */
+    using EpochSink = void (*)(const char* ev, int64_t tUs, uint8_t epAddr, uint16_t value);
+
+    /**
+     * @brief Route epoch events to a sink while no instrument is attached (aoa_observe boot).
+     *
+     * The mount/umount/SET_ADDRESS/STALL wraps are linked in every gadget mode; without a
+     * sink drain() discards them.
+     *
+     * @param sink  Callback run from drain() on the Arduino loop; nullptr disables routing.
+     */
+    static void setEpochSink(EpochSink sink);
+
+    /**
      * @brief Set the probe serial reported in mount-time identity events.
      *
      * Soft identity string for mount-drain gadget_identity events.
@@ -122,7 +141,8 @@ public:
      * @brief Flush pending BOT/USB events to EventBus (bounded).
      *
      * During an offline capture the events go to OfflineCapture instead of the instrument.
-     * Yields every 8 events so WiFi/lwIP keeps running. Without an instrument the ring is dropped.
+     * Yields every 8 events so WiFi/lwIP keeps running. Without an instrument, epoch events go
+     * to the setEpochSink() callback and everything else is dropped.
      *
      * @param maxEvents  Maximum number of events to publish in this call.
      * @note Arduino loop task only.
@@ -318,6 +338,7 @@ private:
     static void clearBotEpoch();
 
     static ReadInstrument* instrument_;
+    static EpochSink epochSink_;
     static uint32_t lastCbwTag_;
     static bool cswPending_;
     static bool needResetArmed_;

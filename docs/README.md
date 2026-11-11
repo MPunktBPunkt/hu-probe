@@ -1,6 +1,6 @@
 # hu-probe — Dokumentationsindex
 
-**Stand:** 2026-11-10 · FW **0.3.37**  
+**Stand:** 2026-11-11 · Feld **0.3.38** · Baum **0.3.41** (nicht kompiliert, [ANWEISUNG-0.3.41](ANWEISUNG-0.3.41.md))  
 **Einstieg Stand:** [`AKTUELL.md`](AKTUELL.md) · Root-[`README.md`](../README.md)  
 Lange Alt-Reviews: nur unter [`feld/archiv/`](feld/archiv/README.md) — nicht Einstieg.
 
@@ -21,6 +21,7 @@ Zwei Instrumente, eine Sonde: **Storage** (USB-MSC) und **Control** (Connected A
 | [MEDIA_VARIATION.md](MEDIA_VARIATION.md) | SynthFat / Presets |
 | [OFFLINE-CAPTURE.md](OFFLINE-CAPTURE.md) | Offline-Messlauf |
 | [FIRMWARE-ABLAUF.md](FIRMWARE-ABLAUF.md) | Boot/Loop-Ablauf |
+| [ANWEISUNG-0.3.41.md](ANWEISUNG-0.3.41.md) | Nächster Build (0.3.41, Instanz zuhause) |
 | [HARDWARE-YD-ESP32-S3.md](HARDWARE-YD-ESP32-S3.md) | Board |
 | [KOMMENTARSTANDARD.md](KOMMENTARSTANDARD.md) | Code-Kommentare |
 | [SEQ-STALL.md](SEQ-STALL.md) | Stall/BUSY-Sequenzen |

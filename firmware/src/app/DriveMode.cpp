@@ -9,8 +9,10 @@
 #include "capture/TripStore.h"
 #include "core/ConfigStore.h"
 #include "core/DiagLog.h"
+#include "core/FieldPlan.h"
 #include "core/GithubOta.h"
 #include "media/ProbeMedia.h"
+#include "msc/ReadStall.h"
 #include "msc/MscGadget.h"
 #include "net/TcpStreamer.h"
 #include "session/Session.h"
@@ -170,10 +172,14 @@ void DriveMode::bootPhase() {
         }
         ts.resetIfDone();
     }
-    // One-shot Heimfahrt: at home with collector, upload then clear the flag so the next
-    // boot is normal probe mode. Hotspot / no WLAN → keep measuring (arm below).
+    if (wifi) FieldPlan::refresh(config_->fieldPlanUrl, nullptr);
+    const bool plan = FieldPlan::active();
+    // Without a field plan: one-shot Heimfahrt — at home with collector, upload then clear the
+    // flag so the next boot is normal probe mode. Hotspot / no WLAN → keep measuring (arm below).
     if (home) {
-        if (collectorSeen_ && ts.pendingCount() == 0) {
+        if (plan) {
+            DiagLog::printf("[DRIVE] home, field plan active — keep autoCapture\n");
+        } else if (collectorSeen_ && ts.pendingCount() == 0) {
             disableAutoCapture("home_collector_done");
         } else if (collectorSeen_) {
             DiagLog::printf("[DRIVE] home but %u trip(s) still pending — keep autoCapture\n",
@@ -181,19 +187,30 @@ void DriveMode::bootPhase() {
         } else {
             DiagLog::printf("[DRIVE] home WLAN, collector unreachable — keep autoCapture\n");
         }
-        if (wifi && config_->autoUpdate) {
-            led_->showDrivePhase(StatusLed::DrivePhase::Ota);
-            GithubOta::check(config_->otaManifestUrl, &otaInfo_);  // restarts on update
-        }
-        led_->showDrivePhase(StatusLed::DrivePhase::Check);
-        toNormal();
-        return;
     }
     if (wifi && config_->autoUpdate) {
         led_->showDrivePhase(StatusLed::DrivePhase::Ota);
         GithubOta::check(config_->otaManifestUrl, &otaInfo_);  // restarts on update
     }
     led_->showDrivePhase(StatusLed::DrivePhase::Check);
+    if (FieldPlan::armBlocked()) {
+        DiagLog::printf("[DRIVE] field plan online_only, not fetched this boot — no capture\n");
+        if (wifi) {
+            toNormal();
+            return;
+        }
+        esp_wifi_stop();
+        msc_->softAttach();
+        state_ = State::CarIdle;
+        return;
+    }
+    // Home WLAN normally means desk/charger; arm_at_home records the outbound trip when the
+    // car is parked within reach of it. No host mount within kHostWaitMs drops the run.
+    if (home && !FieldPlan::armAtHome()) {
+        toNormal();
+        return;
+    }
+    if (home) DiagLog::printf("[DRIVE] home WLAN, field plan arm_at_home — arming\n");
     ts.preErase(kPreEraseBytes, kPreEraseMaxMs);
     armCapture();
 }
@@ -210,7 +227,9 @@ void DriveMode::armCapture() {
         state_ = WiFi.status() == WL_CONNECTED ? State::Normal : State::CarIdle;
         return;
     }
-    const ExperimentProfile* exp = findExperiment(config_->autoExperiment.c_str());
+    const huprobe::PlanJob* job = FieldPlan::currentJob();
+    const ExperimentProfile* exp =
+        findExperiment(job ? job->experiment : config_->autoExperiment.c_str());
     if (!exp) exp = findExperiment("drive_home");
     if (!exp) exp = findExperiment("free");
     if (!exp) {
@@ -218,12 +237,11 @@ void DriveMode::armCapture() {
         toNormal();
         return;
     }
-    if (config_->autoMedia.length() &&
-        strcmp(ProbeMedia::instance().variantId(), config_->autoMedia.c_str()) != 0) {
+    const String media = (job && job->media[0]) ? String(job->media) : config_->autoMedia;
+    if (media.length() && strcmp(ProbeMedia::instance().variantId(), media.c_str()) != 0) {
         String err;
-        if (!msc_->switchMedia(config_->autoMedia.c_str(), nullptr, false, &err, true)) {
-            DiagLog::printf("[DRIVE] media %s failed: %s\n", config_->autoMedia.c_str(),
-                            err.c_str());
+        if (!msc_->switchMedia(media.c_str(), nullptr, false, &err, true)) {
+            DiagLog::printf("[DRIVE] media %s failed: %s\n", media.c_str(), err.c_str());
         }
     }
     oc.setWifiConnector(&DriveMode::connectThunk);
@@ -235,22 +253,40 @@ void DriveMode::armCapture() {
         state_ = State::Normal;
         return;
     }
-    uint32_t measure = exp->measureMs;
+    uint32_t measure = (job && job->measureS) ? job->measureS * 1000UL : exp->measureMs;
     if (measure > OfflineCapture::maxCaptureMs()) measure = OfflineCapture::maxCaptureMs();
+    char planScenario[32];
+    planRun_ = job && FieldPlan::currentScenario(planScenario, sizeof(planScenario));
+    const String scenario = planRun_ ? String(planScenario) : String(exp->scenario);
+    const bool fine = job ? job->fine : config_->autoFine;
     // softUsb=true: MSC is detached, so the re-enum is the HU's first sight of the stick.
-    if (!oc.beginCapture(config_->vehicleId, exp->scenario, config_->profileId, true, measure,
+    if (!oc.beginCapture(config_->vehicleId, scenario, config_->profileId, true, measure,
                          exp->endStrategy, exp->markers, exp->markerCount,
-                         !exp->keepOnUnmount, exp->freeMarkers, config_->autoFine)) {
+                         !exp->keepOnUnmount, exp->freeMarkers, fine)) {
         lastError_ = "begin_failed";
+        planRun_ = false;
         oc.requestStop("begin_failed");
         state_ = State::Capturing;
         return;
     }
+    const bool stall = job && job->stall[0];
+    if (stall) {
+        // Configured after the media switch: a file filter resolves against the new medium.
+        JsonDocument sd;
+        String err;
+        if (deserializeJson(sd, job->stall)) err = "json";
+        if (err.length() || !ReadStall::instance().configure(sd.as<JsonVariantConst>(), &err)) {
+            lastError_ = String("stall_config:") + err;
+            planRun_ = false;
+            DiagLog::printf("[DRIVE] plan stall rejected (%s) — run not counted\n", err.c_str());
+        }
+    }
     led_->setDriveCapture(true);
     hostDeadlineMs_ = millis() + kHostWaitMs;
     state_ = State::WaitHost;
-    DiagLog::printf("[DRIVE] capture armed exp=%s media=%s fine=%d trip=%u\n", exp->id,
-                    ProbeMedia::instance().variantId(), config_->autoFine ? 1 : 0,
+    DiagLog::printf("[DRIVE] capture armed exp=%s scenario=%s media=%s fine=%d stall=%d trip=%u\n",
+                    exp->id, scenario.c_str(), ProbeMedia::instance().variantId(), fine ? 1 : 0,
+                    stall && ReadStall::instance().enabled() ? 1 : 0,
                     (unsigned)TripStore::instance().currentTripId());
 }
 
@@ -270,9 +306,12 @@ void DriveMode::poll() {
             if (msc_->plugged()) {
                 state_ = State::Capturing;
                 DiagLog::printf("[DRIVE] host mounted — trip running\n");
+                if (planRun_) FieldPlan::advance();
+                planRun_ = false;
             } else if (!oc.capturing()) {
                 state_ = State::Capturing;
             } else if ((long)(millis() - hostDeadlineMs_) >= 0) {
+                planRun_ = false;
                 oc.abortNoHost();
                 led_->setDriveCapture(false);
                 toNormal();
@@ -311,6 +350,7 @@ void DriveMode::toJson(JsonObject obj) const {
     obj["trips_uploaded"] = uploaded_;
     obj["auto_capture"] = config_ ? config_->autoCapture : false;
     if (otaInfo_.length()) obj["ota"] = otaInfo_;
+    FieldPlan::toJson(obj["field_plan"].to<JsonObject>());
     if (lastError_.length()) obj["error"] = lastError_;
     const TripStore& ts = TripStore::instance();
     obj["trips_pending"] = ts.pendingCount();

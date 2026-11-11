@@ -253,6 +253,41 @@ void check(const String& manifestUrl, String* info) {
     ESP.restart();
 }
 
+bool fetchSmall(const String& url, size_t maxBytes, String* body, String* err) {
+    if (WiFi.status() != WL_CONNECTED) {
+        *err = "no_wifi";
+        return false;
+    }
+    if (!url.startsWith("https://")) {
+        *err = "no_url";
+        return false;
+    }
+    if (!caBundleAvailable()) {
+        *err = "no_ca_bundle";
+        return false;
+    }
+    WiFiClientSecure client;
+    client.setCACertBundle(ca_bundle_start);
+    HTTPClient http;
+    int code = 0;
+    if (!openGet(client, http, url, kManifestTimeoutMs, &code)) {
+        *err = String("http_") + code;
+        return false;
+    }
+    if (http.getSize() > (int)maxBytes) {
+        http.end();
+        *err = "too_large";
+        return false;
+    }
+    *body = http.getString();
+    http.end();
+    if (body->length() > maxBytes) {
+        *err = "too_large";
+        return false;
+    }
+    return true;
+}
+
 void toJson(JsonObject obj) {
     obj["result"] = lastResult;
     if (lastRemote.length()) obj["remote"] = lastRemote;

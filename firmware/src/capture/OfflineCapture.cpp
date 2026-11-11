@@ -13,6 +13,7 @@
 #include "core/ProbeClock.h"
 #include "core/PanicTail.h"
 #include "core/PhaseGate.h"
+#include "core/UsbCoreTap.h"
 #include "media/MediaLayout.h"
 #include "msc/MscBotTap.h"
 #include "net/EventBus.h"
@@ -22,6 +23,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <climits>
+#include <cstdlib>
 #include <cstring>
 
 namespace {
@@ -473,6 +475,11 @@ void OfflineCapture::saveLastRun(bool complete, uint32_t dropped) {
     lastRun_.integrityPass = (overflow_ == 0) && (dropped == 0) && complete;
 }
 
+uint32_t OfflineCapture::botOverflowSinceStart() const {
+    if (replayingStored_) return storedBotLost_;
+    return MscBotTap::pendingOverflow() - botOverflowStart_;
+}
+
 bool OfflineCapture::beginCapture(const String& vehicle, const String& scenario,
                                   const String& profileId, bool softUsb,
                                   uint32_t autoDetachMs, const String& endStrategy,
@@ -511,6 +518,7 @@ bool OfflineCapture::beginCapture(const String& vehicle, const String& scenario,
     ckptRunning_ = false;
     lastCbwMs_ = millis();
     lastCheckpointMs_ = millis();
+    botOverflowStart_ = MscBotTap::pendingOverflow();
     snprintf(captureFw_, sizeof(captureFw_), "%s", FW_VERSION);
     if (persist_) {
         // Before the re-enum: the meta write must not overlap host traffic.
@@ -688,6 +696,7 @@ bool OfflineCapture::replayStored(Session* session, MscGadget* msc, ReadInstrume
     recordCount_ = 0;
     postFinalizeRecords_ = 0;
     checkpoints_ = 0;
+    storedBotLost_ = 0;
     while (used_ + kRecHdr <= cap_) {
         const uint8_t len = buf_[used_ + 1];
         if (len < kRecHdr || used_ + len > cap_) break;
@@ -696,6 +705,13 @@ bool OfflineCapture::replayStored(Session* session, MscGadget* msc, ReadInstrume
         if (buf_[used_] == kKindMarker && len > kRecHdr + 5 &&
             memcmp(buf_ + used_ + kRecHdr, "ckpt:", 5) == 0) {
             checkpoints_++;
+        }
+        if (buf_[used_] == kKindMarker && len > kRecHdr + 8 &&
+            memcmp(buf_ + used_ + kRecHdr, "bot_ovf:", 8) == 0) {
+            char num[kMarkerNameLen] = {0};
+            const size_t n = len - kRecHdr - 8;
+            memcpy(num, buf_ + used_ + kRecHdr + 8, n < sizeof(num) - 1 ? n : sizeof(num) - 1);
+            storedBotLost_ += (uint32_t)strtoul(num, nullptr, 10);
         }
         used_ += len;
     }
@@ -967,6 +983,20 @@ bool OfflineCapture::replayFail(const char* why) {
     return false;
 }
 
+void OfflineCapture::stallReplay(const char* why) {
+    EventBus& bus = EventBus::instance();
+    replayError_ = "replay_stalled";
+    uploadStatus_ = "replay_stalled";
+    DiagLog::printf(
+        "[OFFLINE] replay stalled (%s) off=%u/%u seq=%u pending=%u tx_ok=%u tx_fail=%u "
+        "wifi=%d tcp=%d\n",
+        why, (unsigned)replayOff_, (unsigned)used_, (unsigned)replaySeq_,
+        (unsigned)bus.pending(), (unsigned)bus.tcpTxOk(), (unsigned)bus.tcpTxFail(),
+        WiFi.status() == WL_CONNECTED ? 1 : 0, tcp_ && tcp_->connected() ? 1 : 0);
+    uploadPhase_ = UploadPhase::Health;
+    uploadPhaseSinceMs_ = millis();
+}
+
 bool OfflineCapture::replayComplete() const {
     return !replayError_ && replayOff_ == used_ &&
            replaySeq_ == recordCount_ + postFinalizeRecords_;
@@ -1205,8 +1235,11 @@ void OfflineCapture::publishOfflineHealth(bool final) {
     health["upload_status"] = uploadStatus_;
     const uint32_t dropped = EventBus::instance().dropped();
     const bool drained = EventBus::instance().pending() == 0;
+    const uint32_t botLost = botOverflowSinceStart();
+    health["bot_pending_overflow"] = botLost;
+    if (!replayingStored_) UsbCoreTap::toJson(health["usb_core"].to<JsonObject>());
     const bool complete = final && overflow_ == 0 && dropped == 0 && drained &&
-                          timeRangeDropped_ == 0 && replayComplete();
+                          timeRangeDropped_ == 0 && botLost == 0 && replayComplete();
     health["dropped"] = dropped;
     health["published"] = EventBus::instance().published();
     health["complete"] = complete;
@@ -1232,6 +1265,14 @@ void OfflineCapture::beginFinalize(MscGadget* msc) {
     // Flush capture-window events while still Capturing; after media_hide the host's
     // reaction is tagged post_finalize.
     MscBotTap::drain(256);
+    // Stored replay has no live counter: the loss must travel inside the persisted stream.
+    if (const uint32_t lost = botOverflowSinceStart()) {
+        char name[kMarkerNameLen];
+        snprintf(name, sizeof(name), "bot_ovf:%u", (unsigned)lost);
+        appendMarkerRec(ProbeClock::nowUs(), name);
+        DiagLog::printf("[OFFLINE] MscBotTap ring overflow during capture: %u events lost\n",
+                        (unsigned)lost);
+    }
     finalPersist();
     state_ = State::Finalizing;
     msc_ = msc ? msc : msc_;
@@ -1431,18 +1472,12 @@ void OfflineCapture::pollUpload() {
                 if (!wifiUp) reconnectWifiThrottled();
                 pumpTcp(200);
                 yield();
-                if (now - uploadPhaseSinceMs_ > stallMs) {
-                    uploadStatus_ = "replay_stalled";
-                    uploadPhase_ = UploadPhase::Health;
-                    uploadPhaseSinceMs_ = now;
-                }
+                if (now - uploadPhaseSinceMs_ > stallMs) stallReplay("no_link");
                 break;
             }
             if (tcpEverOk && lastOkAge < 2000UL) uploadPhaseSinceMs_ = now;
             if (now - uploadPhaseSinceMs_ > stallMs) {
-                uploadStatus_ = "replay_stalled";
-                uploadPhase_ = UploadPhase::Health;
-                uploadPhaseSinceMs_ = now;
+                stallReplay("no_tx_progress");
                 break;
             }
             if (bus.pending() < kReplayMaxPending) {
@@ -1453,7 +1488,9 @@ void OfflineCapture::pollUpload() {
                     }
                 }
             }
-            pumpTcpWhilePending(200, 16);
+            // App::loop skips tcp_.loop() while active(): this pump must start at the replay
+            // gate, otherwise pending in [kReplayMaxPending, keepBelow) blocks both sides.
+            pumpTcpWhilePending(200, kReplayMaxPending);
             yield();
             break;
         }
@@ -1533,7 +1570,9 @@ void OfflineCapture::pollUpload() {
                 }
                 if (replayingStored_) PhaseGate::pass(PhaseGate::StoredOcDrain);
                 const uint32_t dropped = bus.dropped();
-                saveLastRun(bodyOk && overflow_ == 0 && dropped == 0 && timeRangeDropped_ == 0,
+                const uint32_t botLost = botOverflowSinceStart();
+                saveLastRun(bodyOk && overflow_ == 0 && dropped == 0 && timeRangeDropped_ == 0 &&
+                                botLost == 0,
                             dropped);
                 finishRun(bodyOk);
             }

@@ -48,6 +48,7 @@ static uint32_t readLe32(const uint8_t* p) {
 }
 
 ReadInstrument* MscBotTap::instrument_ = nullptr;
+MscBotTap::EpochSink MscBotTap::epochSink_ = nullptr;
 uint32_t MscBotTap::lastCbwTag_ = 0xFFFFFFFFu;
 bool MscBotTap::cswPending_ = false;
 bool MscBotTap::needResetArmed_ = false;
@@ -72,6 +73,8 @@ void MscBotTap::begin(ReadInstrument* instrument) {
 }
 
 ReadInstrument* MscBotTap::instrument() { return instrument_; }
+
+void MscBotTap::setEpochSink(EpochSink sink) { epochSink_ = sink; }
 
 void MscBotTap::setProbeSerial(const char* serial) {
     if (!serial) return;
@@ -275,7 +278,23 @@ void MscBotTap::afterMscdXfer() {
 
 void MscBotTap::drain(int maxEvents) {
     if (!instrument_) {
-        pendingHead_ = pendingTail_ = pendingCount_ = 0;
+        if (!epochSink_) {
+            pendingHead_ = pendingTail_ = pendingCount_ = 0;
+            return;
+        }
+        for (int i = 0; i < maxEvents && pendingCount_ > 0; i++) {
+            Pending p = pending_[pendingHead_];
+            pendingHead_ = (pendingHead_ + 1) % kPendingRing;
+            pendingCount_--;
+            switch (p.kind) {
+                case Kind::SetAddress: epochSink_("set_address", p.tUs, 0, p.wValue); break;
+                case Kind::Mount: epochSink_("mount", p.tUs, 0, 0); break;
+                case Kind::Umount: epochSink_("umount", p.tUs, 0, 0); break;
+                case Kind::EpStall: epochSink_("ep_stall", p.tUs, p.epAddr, 0); break;
+                case Kind::EpClearHalt: epochSink_("ep_clear_halt", p.tUs, p.epAddr, 0); break;
+                default: break;
+            }
+        }
         return;
     }
     const bool offline = OfflineCapture::instance().acceptsPending();
@@ -659,6 +678,7 @@ void tud_msc_scsi_complete_cb(uint8_t lun, uint8_t const scsi_cmd[16]) {
 
 void MscBotTap::begin(ReadInstrument*) {}
 ReadInstrument* MscBotTap::instrument() { return nullptr; }
+void MscBotTap::setEpochSink(EpochSink) {}
 void MscBotTap::setProbeSerial(const char*) {}
 void MscBotTap::emitCbwIfNew(int64_t) {}
 void MscBotTap::emitDataChunk(int64_t, uint32_t, uint32_t, uint32_t, uint32_t, const char*,
@@ -683,6 +703,7 @@ uint32_t MscBotTap::currentHostTag() { return 0; }
 uint32_t MscBotTap::currentHostXferLen() { return 0; }
 
 ReadInstrument* MscBotTap::instrument_ = nullptr;
+MscBotTap::EpochSink MscBotTap::epochSink_ = nullptr;
 uint32_t MscBotTap::lastCbwTag_ = 0;
 bool MscBotTap::cswPending_ = false;
 bool MscBotTap::needResetArmed_ = false;

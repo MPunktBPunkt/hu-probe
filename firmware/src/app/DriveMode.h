@@ -20,14 +20,17 @@ class StatusLed;
  *
  * Drive mode (0.3.0, config autoCapture): every boot is a potential trip until home clear.
  *   Boot      MSC soft-detached; WLAN (home or phone hotspot, no portal) for ≤15 s;
- *             upload stored trips if the collector answers; GitHub update check.
- *             Home WLAN: no new capture; if collector ok and journal empty → clear
- *             autoCapture (one-shot) and go Normal. Else (hotspot / no WLAN): pre-erase
- *             and arm the offline capture with flash journal.
+ *             upload stored trips if the collector answers; field plan fetch; GitHub
+ *             update check.
+ *             Home WLAN: no new capture unless the field plan sets arm_at_home; without an
+ *             active plan, collector ok and journal empty → clear autoCapture (one-shot) and
+ *             go Normal. Else (hotspot / no WLAN): pre-erase and arm the offline capture with
+ *             flash journal, using the plan's next job if a plan is active.
  *   WaitHost  capture runs, soft re-enum done; no host mount within 20 s → charger,
  *             drop the run and continue as a normal (WLAN) probe.
  *   Capturing until power loss, max duration or stop; then upload or keep it in flash.
- *   CarIdle   run ended without WLAN: WiFi stays off (no restart loop in the car).
+ *   CarIdle   run ended (or online_only plan blocked it) without WLAN: WiFi stays off (no
+ *             restart loop in the car).
  *   Normal    regular probe behaviour (live session, App WiFi supervision).
  */
 class DriveMode {
@@ -94,11 +97,14 @@ public:
      *
      * Marks the OTA image healthy first (pulling the plug during an upload must not trigger a
      * rollback), waits up to 3 s for NTP, uploads pending trips if the collector is reachable,
-     * runs the GitHub update check if autoUpdate is set (restarts on update).
+     * refreshes the field plan, runs the GitHub update check if autoUpdate is set (restarts on
+     * update).
      *
-     * On **home WLAN**: never arms a new capture (charger / desk). If the collector was reached
-     * and the trip journal has nothing pending, clears config autoCapture (one-shot Heimfahrt)
-     * and falls through to normal probe mode. Hotspot or no WLAN still arms the offline capture.
+     * On **home WLAN**: arms a new capture only if the active field plan sets arm_at_home
+     * (car parked within reach of the home WLAN); otherwise normal probe mode. Without an
+     * active plan, a reached collector and an empty journal clear config autoCapture (one-shot
+     * Heimfahrt). Hotspot or no WLAN arms the offline capture, unless the plan sets online_only
+     * and was not fetched on this boot: then no capture (CarIdle without WLAN, else normal mode).
      */
     void bootPhase();
 
@@ -165,8 +171,11 @@ private:
     /**
      * @brief Arm the persistent offline capture for the configured experiment and enter WaitHost.
      *
-     * Falls back to "drive_home", then "free" if autoExperiment is unknown; switches media to
-     * autoMedia if needed. On a full trip journal, missing experiment or arm failure, MSC is
+     * An active field plan supplies experiment, media, fine mode, measure time and the
+     * scenario "fp_<plan>_<job>_r<rep>" instead of the config, and optionally a READ10 brake
+     * (ReadStall, ends with the capture; a rejected brake config leaves the run uncounted).
+     * Falls back to "drive_home",
+     * then "free" if the experiment is unknown; switches media if needed. On a full trip journal, missing experiment or arm failure, MSC is
      * reattached and the state becomes Normal/CarIdle (lastError_ set accordingly). The capture
      * uses soft USB re-enum, so it is the HU's first sight of the stick.
      */
@@ -196,6 +205,7 @@ private:
     String otaInfo_;
     String lastError_;
     bool collectorSeen_ = false;
+    bool planRun_ = false;  // armed capture belongs to the field plan; counted on host mount
     uint8_t uploaded_ = 0;
     unsigned long hostDeadlineMs_ = 0;
 };
