@@ -1,0 +1,160 @@
+{
+  "schema": 2,
+  "session_id": "20261112-075621_bmw_seq_size_ladder_1r1",
+  "started_at": "2026-11-12T07:56:21.576615+01:00",
+  "ended_at": "2026-11-12T07:56:27.587844+01:00",
+  "vehicle": "bmw",
+  "profile_id": "bmw_nbt_evo",
+  "scenario": "seq_size_ladder_1r1",
+  "fw_version": "0.3.41",
+  "transport": "ram_offline",
+  "fw_type": "hu-probe",
+  "fw_sha": "c318b1e3c1c6",
+  "mac": "68:b6:b3:2b:c5:68",
+  "clock": {
+    "domain": "probe_monotonic_us",
+    "source": "esp_timer"
+  },
+  "capture": {
+    "dropped": 0,
+    "queue_highwater": 0,
+    "tcp_disconnects": 0,
+    "published": 1416,
+    "stream_lost": 0,
+    "tcp_tx_fail": 0,
+    "msc_sample_overflow": 0,
+    "recv_seq_gaps": [],
+    "recv_events": 698,
+    "parse_errors": 0,
+    "complete": true,
+    "bot_pending_overflow": 0,
+    "reset_reason": "power_on",
+    "restart_cause": "none",
+    "boot_generation": 1,
+    "uptime_ms": 644333,
+    "fine_data": true,
+    "persisted": false,
+    "transport": "ram_offline",
+    "transport_epoch": 7,
+    "transport_epoch_start": 5,
+    "transport_epoch_end": 7,
+    "end_reason": "auto_soft_detach",
+    "end_strategy": "soft_detach",
+    "upload_status": "delivered",
+    "offline_records": 532,
+    "offline_bytes": 11572,
+    "offline_overflow": 0,
+    "offline_post_finalize_records": 1,
+    "offline_post_finalize_dropped": 0,
+    "replay_clock": "capture_t_us",
+    "record_size": 22,
+    "record_format": "compact/1",
+    "replay_records": 533,
+    "replay_complete": true,
+    "offline_time_range_dropped": 0,
+    "offline_anchor_unix_us": 1794466299203380,
+    "offline_anchor_capture_t_us": 356020936,
+    "capacity_bytes": 1048576,
+    "arm_heap_free": 172280,
+    "arm_heap_max_alloc": 118772,
+    "heap_free": 167316,
+    "heap_min_free": 123368,
+    "psram_bytes": 2094703,
+    "hw_module": "N8R2",
+    "tur_count": 137,
+    "tur_burst_n": 30,
+    "tur_idle_n": 64,
+    "tur_idle_p10_ms": 2238,
+    "tur_idle_median_ms": 2238,
+    "tur_idle_p90_ms": 2238,
+    "collector_parse_errors_total": 17,
+    "integrity_pass": true
+  },
+  "gates": [
+    "HU-PROBE-GATE-01"
+  ],
+  "notes": "",
+  "fw_build_id": "c318b1e3c1c6-20261111T141319Z",
+  "fw_dirty": false,
+  "usb_host_kind": "bmw_nbt_evo",
+  "usb_host_role": "vehicle_hu",
+  "probe_identity": {
+    "mac": "68:b6:b3:2b:c5:68",
+    "usb_serial": "HP0A01",
+    "volume_label": "HUPROBE",
+    "board": "ESP32-S3",
+    "hw_type": "esp32s3"
+  },
+  "media": {
+    "variant": "size_158",
+    "label": "P0 Leiter: 3x ~155 KiB @128k (Kontrolle Atom/Fresh)",
+    "synthetic": true,
+    "hash": "0x5778a9f3",
+    "fs": "FAT16",
+    "sector_count": 32768,
+    "spc": 8,
+    "reserved": 1,
+    "fat_sectors": 16,
+    "root_lba": 33,
+    "data_lba": 65,
+    "cluster_count": 4087,
+    "volume_id": "0x48500131",
+    "fs_label": "HUPROBE",
+    "usb_serial_override": "HP0A01",
+    "nodes": 3,
+    "truncated": false,
+    "mutation_gen": 0,
+    "ua_pending": false,
+    "ua_sent": 0
+  },
+  "media_layout": [
+    {
+      "node": 0,
+      "path": "TRACK1.MP3",
+      "dir": false,
+      "size": 158593,
+      "kbps": 128,
+      "dur_ms": 9926,
+      "seed": 1,
+      "flags": 16,
+      "extents": [
+        [
+          65,
+          312
+        ]
+      ]
+    },
+    {
+      "node": 1,
+      "path": "TRACK2.MP3",
+      "dir": false,
+      "size": 158593,
+      "kbps": 128,
+      "dur_ms": 9926,
+      "seed": 2,
+      "flags": 16,
+      "extents": [
+        [
+          377,
+          312
+        ]
+      ]
+    },
+    {
+      "node": 2,
+      "path": "TRACK3.MP3",
+      "dir": false,
+      "size": 158593,
+      "kbps": 128,
+      "dur_ms": 9926,
+      "seed": 3,
+      "flags": 16,
+      "extents": [
+        [
+          689,
+          312
+        ]
+      ]
+    }
+  ]
+}

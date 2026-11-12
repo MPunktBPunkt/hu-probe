@@ -1,0 +1,28 @@
+{
+  "date": "2026-11-12",
+  "fw": "0.3.41",
+  "fw_sha": "c318b1e3c1c6",
+  "verdict": "PASS_STEP1_FRESH_158",
+  "ladder_complete": false,
+  "steps_done": 1,
+  "steps_total": 8,
+  "aborted_reason": "operator_left_after_step1",
+  "sessions": [
+    {
+      "id": "20261112-075621_bmw_seq_size_ladder_1r1",
+      "scenario": "seq_size_ladder_1r1",
+      "media": "size_158",
+      "offline_records": 532,
+      "replay_records": 533,
+      "upload_status": "delivered",
+      "integrity_pass": true,
+      "end_reason": "auto_soft_detach",
+      "recv_events": 698,
+      "dropped": 0
+    }
+  ],
+  "vs_2026_11_11": {
+    "then": "replay_records=0 replay_incomplete FAIL",
+    "now": "replay_records=533 delivered integrity PASS"
+  }
+}
