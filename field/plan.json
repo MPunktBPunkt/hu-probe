@@ -1,14 +1,11 @@
 {
   "schema": 1,
-  "plan": "2026-11-12a",
+  "plan": "2026-11-12b",
   "vehicle": "bmw",
-  "enabled": false,
+  "enabled": true,
   "arm_at_home": false,
   "online_only": true,
   "jobs": [
-    {"id": "big16", "experiment": "drive_home", "media": "size_16m", "fine": true, "measure_s": 1200, "repeat": 2},
-    {"id": "pace", "experiment": "drive_home", "media": "drive_mix", "fine": true, "measure_s": 1200, "repeat": 2,
-     "stall": {"regions": ["body"], "pace": "realtime", "count": 0}},
-    {"id": "mix", "experiment": "drive_home", "media": "drive_mix", "fine": false, "measure_s": 1800, "repeat": 4}
+    {"id": "short", "experiment": "drive_home", "media": "drive_mix", "fine": true, "measure_s": 600, "repeat": 1}
   ]
 }
