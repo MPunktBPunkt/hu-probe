@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "plan": "2026-11-13a",
+  "plan": "2026-11-17a",
   "vehicle": "bmw",
   "enabled": true,
-  "arm_at_home": false,
+  "arm_at_home": true,
   "online_only": false,
   "jobs": [
     {"id": "s158", "experiment": "drive_home", "media": "size_158", "fine": true, "measure_s": 600, "repeat": 1},
