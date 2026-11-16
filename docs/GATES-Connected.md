@@ -22,13 +22,13 @@ G4  SAS Authentication
     └── danach: RHMI / CDS / AV / AM
 ```
 
-| Gate | Inhalt | hu-probe Messfläche (0.3.36) |
-|------|--------|------------------------------|
-| **G1** | USB Identity/Class (VID/PID, Descriptors, MSC vs Vendor-only) | **ja** — I-303A, sticky Modes |
-| **G2** | Transport: AOA/BT + **BCL knock/handshake** (Connected-Peer) | AOA-Callback teilweise; BCL-Wire **nein** |
-| **G3** | App-Tunnel: Phone localhost TCP → BCL→Etch | **nein** (Phone-Seite) |
-| **G4** | SAS Authentication (P7B → Challenge → Signatur → `sas_login`) | **nein** — Keys; Signierweg modern **UNKNOWN** |
-| *(danach)* | Nutzung: AM / RHMI / AV / CDS | **nein** — keine Gate-Nummer |
+| Gate | Inhalt | hu-probe USB-Messfläche | F20 Gesamtstand (inkl. `bt-analyzer` 2026-11-16) |
+|------|--------|-------------------------|--------------------------------------------------|
+| **G1** | USB Identity/Class (VID/PID, Descriptors, MSC vs Vendor-only vs MTP `0x06`) | **ja** — I-303A PASS | Vendor-only `0xFF` abgelehnt; HU erwartet vor AOA `51` MTP (`0x06`, `_ENT_MTP_OFF=false`) |
+| **G2** | Transport: AOA/BT + **BCL knock/handshake** | USB-AOA-Wire noch offen | **BT `SCN 6` FIELD PASS** (`INIT 12345678` → `HS v5/iid14/0x4000` → `SP2\|SP4` → `OPEN 5001` + WD) |
+| **G3** | App-Tunnel: Phone localhost (`:4004` USB / `:4007` BT) → BCL→Etch (`DEADBEEF`) | Phone-Seite | **BT FIELD PASS** (`(src=10..19, dst=4004)` richtungsinvariant; USB `:4004` in Bimmer-Logcat belegt) |
+| **G4** | SAS Authentication (P7B → 16-B-Challenge → RSA-4096 `MD5withRSA` → `sas_login`) | keine Keys auf ESP | **BT FIELD PASS** (`_result_sas_certificate` + `559 B` `sas_login` + `_result_sas_login`; MyBMW JNI `SecurityModule`) |
+| *(danach)* | Nutzung: AM / RHMI / AV / CDS | Cross-Plane-Orakel für **GATE-01** | **BT FIELD PASS** (`rhmi_getCapabilities` 5306 B, AM, RHMI, CDS inkl. `54: entertainment.multimedia`) |
 
 Feinere Desk-Lesart (BimmerGestalt Lifecycle): BCL gehört zu **G2** (Transport-Peer), nicht „Bulk = fertig“. Etch-Tunnel = **G3**.  
 PiDrive-Abgleich: [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK.md) · [HU-BESCHREIBUNG §5.1](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-BESCHREIBUNG.md) · [HU-Technical-Facts §10](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-Technical-Facts.md).

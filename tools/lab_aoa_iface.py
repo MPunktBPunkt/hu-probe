@@ -48,7 +48,11 @@ VID_PH, PID_PH = 0x04E8, 0x6860
 # AOA string indices (AOSP): manufacturer, model, description, version, URI, serial
 STRING_PROFILES = {
     "lab": ("LabHost", "hu-probe-lab", "Lab AOA Host", "0.1", "https://local/lab", "LAB001"),
-    # Hypothesis strings for Connected-stack experiments — NOT measured NBT values.
+    # Exact OEM strings from BimmerGestalt IDriveExperiments/logcat.crash (lines 34789-34794)
+    # required to trigger MyBMW's UsbAccessoryLaunchActivity -> BCL on 127.0.0.1:4004!
+    "bmw_real": ("BMW Group", "BMW", " ", "1.0", "market://details?id=com.bmwgroup.connected.bmw", "VIN"),
+    "mini_real": ("BMW Group", "MINI", " ", "1.0", "market://details?id=com.bmwgroup.connected.mini", "VIN"),
+    # Legacy hypothesis strings (matched AAIdrive UsbStatus contains("BMW"), but missed MyBMW filter):
     "bmw_lab": ("BMW", "NBT", "Headunit", "1.0", "http://www.bmw.com", "HU-PROBE-LAB"),
     "minimal": ("Android", "AOA", "Accessory", "1.0", "http://localhost", "1"),
 }

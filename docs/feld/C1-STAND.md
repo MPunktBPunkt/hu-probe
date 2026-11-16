@@ -86,16 +86,17 @@ Auf MSC-Plane: Plug/Unplug, SCSI-Opcode-Histogramm (`tur`, `inquiry`, `mode_sens
 
 ---
 
-## NEXT
+## NEXT (aktualisiert 2026-11-16 nach BT-Durchbruch & Bimmer-AOA-Aufklärung)
 
-**Phase:** G1-Identity (I-303A) **feld-dokumentiert** → Real-Phone-Transport.
+**Querverweis (`bt-analyzer` `DEEP_FORENSIC_ETCH_SAS_20261116.md` + PiDrive `C-D32`/`C-D33`):**
+- Auf **Bluetooth (`SCN 6`)** sind BCL, Etch (`DEADBEEF`), SAS (16-B-Challenge + 559-B-RSA-4096-Login) und AM/RHMI/CDS am F20 vollständig bewiesen (**FX-G3-01 über BT erledigt**).
+- Die drei offenen Oktober-Fragen auf USB sind durch `Bimmer/` erklärt: (1) `aoa_phone_like` (`04E8:6860`) hatte `bDeviceClass=0xFF` statt MTP (`0x06`, `_ENT_MTP_OFF=false`); (2) Lab 30.10. nutzte `"BMW"`/`"NBT Evo"` statt der exakten MyBMW-Filterstrings `"BMW Group"`/`"BMW"` (`tools/lab_aoa_iface.py --profile bmw_real` jetzt ergänzt!); (3) `CDS 54: entertainment.multimedia` + `636–642: entertainment.md.*` über BT liefern das elektronische Abspiel-Orakel für **MSC `HU-PROBE-GATE-01`**.
 
 | Prio | Handlung |
 |------|----------|
 | ~~P0~~ | ~~I-303A~~ — erledigt ([Feldnotiz](I303A-FELD-2026-11-07.md)) |
-| **P1** | **FIELD-CONNECTED-REAL-01** — Phone×MyBMW/AAIdrive×F20×Analyzer ([Plan](FIELD-CONNECTED-REAL-01.md)) |
-| **P2** | **FX-G3-01** — wenn Bulk da: `sas_*`-Sequenz korrelieren |
-| **P3** | ESP-Nachbau nur mit REAL-PHONE-Referenz |
+| **P0 (MSC)** | **0.3.41 BUSY-Realtime-Pacing + BT-CDS-Orakel (`GATE-01`)** — `hu-probe` als Stick am F20, parallel BT-Connected (`entertainment.multimedia`) mitschneiden |
+| **P1 (USB-Check)** | **1-Minuten-Diskriminator F20-USB:** OnePlus mit **BT OFF** per USB an F20 → öffnet MyBMW `127.0.0.1:4004`? (Am Lab-PC: `lab_aoa_iface.py host-handshake --profile bmw_real`) |
 
 **Freeze:** Blind-Knock · BCL-on-ESP · SAS-FW · L0 als Blocker · weitere Identity-Matrix · Desk ohne Feldartefakt.
 

@@ -7,7 +7,7 @@
 | **Nicht-Ziel** | „AAIdrive funktioniert“ · ESP-Emulation · weitere Blind-Knocks · L0-Analyzer-Bau · SAS selbst implementieren |
 | **Desk** | [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK.md) · Audit [SAS PR #34](https://github.com/MPunktBPunkt/technology-audit/pull/34) |
 
-**Phase:** Protokoll-Doku ist ausreichend. Engpass = Grenze **Android-Connected-Stack ↔ BMW-HU-Transport**.
+**Phase (Update 2026-11-16):** Über **Bluetooth (`SCN 6`)** ist **FX-G3-01 bereits vollständig erreicht** (`esp32.bt-analyzer` `DEEP_FORENSIC_ETCH_SAS_20261116.md`: `HS v5` → `sas_certificate` → 16-B-Challenge → 559-B-RSA-4096-`sas_login` → `_result_sas_login` → `rhmi_getCapabilities` + AM/RHMI/CDS). Außerdem zeigt `Bimmer/IDriveExperiments/logcat.crash` (Z. 34789–40412) die echten OEM-AOA-Strings (`"BMW Group"`, `"BMW"|"MINI"`, `" "`, `"1.0"`, `"market://details?id=com.bmwgroup.connected.*"`, `"VIN"` → `127.0.0.1:4004`), womit auch der Lab-Bulk-Timeout vom 30.10. erklärt ist (`tools/lab_aoa_iface.py` hat jetzt `--profile bmw_real`). Für das Fahrzeug reicht damit ein minimaler **1-Minuten-Check**: OnePlus mit **ausgeschaltetem Bluetooth** per USB-Kabel an den F20 stecken und prüfen, ob AAIdrive/MyBMW `127.0.0.1:4004` öffnet.
 
 ---
 
