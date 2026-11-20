@@ -27,8 +27,8 @@ G4  SAS Authentication
 | **G1** | USB Identity/Class (VID/PID, Descriptors, MSC vs Vendor-only vs MTP `0x06`) | **ja** — I-303A PASS | Vendor-only `0xFF` abgelehnt; HU erwartet vor AOA `51` MTP (`0x06`, `_ENT_MTP_OFF=false`) |
 | **G2** | Transport: AOA/BT + **BCL knock/handshake** | USB-AOA-Wire noch offen | **BT `SCN 6` FIELD PASS** (`INIT 12345678` → `HS v5/iid14/0x4000` → `SP2\|SP4` → `OPEN 5001` + WD) |
 | **G3** | App-Tunnel: Phone localhost (`:4004` USB / `:4007` BT) → BCL→Etch (`DEADBEEF`) | Phone-Seite | **BT FIELD PASS** (`(src=10..19, dst=4004)` richtungsinvariant; USB `:4004` in Bimmer-Logcat belegt) |
-| **G4** | SAS Authentication (P7B → 16-B-Challenge → RSA-4096 `MD5withRSA` → `sas_login`) | keine Keys auf ESP | **BT FIELD PASS** (`_result_sas_certificate` + `559 B` `sas_login` + `_result_sas_login`; MyBMW JNI `SecurityModule`) |
-| *(danach)* | Nutzung: AM / RHMI / AV / CDS | Cross-Plane-Orakel für **GATE-01** | **BT FIELD PASS** (`rhmi_getCapabilities` 5306 B, AM, RHMI, CDS inkl. `54: entertainment.multimedia`) |
+| **G4** | SAS Authentication (P7B → 16-B-Challenge → pad `MD5(0x02000000)` → XOR → MD5 → RSA-4096 PKCS#1 → `sas_login`) | keine Keys auf ESP | **BT FIELD PASS** (OEM); Crypto **Wire FACT** Lab 8/8; **Gate B** (unser Cert-Kontext) **OPEN** |
+| *(danach)* | Nutzung: AM / RHMI / AV / CDS | Cross-Plane-Orakel für **GATE-01** | **BT FIELD PASS** (`rhmi_getCapabilities` 5306 B, AM, RHMI, CDS inkl. `54` / `636–642`); nächster MSC-Test = **U1 USB↔CDS** |
 
 Feinere Desk-Lesart (BimmerGestalt Lifecycle): BCL gehört zu **G2** (Transport-Peer), nicht „Bulk = fertig“. Etch-Tunnel = **G3**.  
 PiDrive-Abgleich: [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK.md) · [HU-BESCHREIBUNG §5.1](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-BESCHREIBUNG.md) · [HU-Technical-Facts §10](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-Technical-Facts.md).
@@ -37,7 +37,7 @@ PiDrive-Abgleich: [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pid
 
 - AOA erkannt (G1) ≠ Connected-Transport/BCL (G2) ≠ Etch-Tunnel (G3) ≠ SAS (G4); RHMI/AV erst **danach**.
 - Direct-ESP `18D1:2D00` = USB-Accessory-Identity, **nicht** Connected-Peer-Rolle.
-- BclCarLink kann BCL-Link ersetzen helfen; **nicht** SAS. Classic Connected ≤5.1 exportierte `.SECURITY_SERVICE`; **MyBMW / Connected ≥5.1 nicht** — moderne Signierung **UNKNOWN** (Altstand „MyBMW liefert signChallenge“ **REJECTED** als Default).
+- BclCarLink kann BCL-Link ersetzen helfen; **nicht** SAS. Classic Connected ≤5.1 exportierte `.SECURITY_SERVICE`; MyBMW ≥5.1: Signierung lokal CASE A (`libaudio.so`) = **CLOSED**; F20-Accept unseres Kontexts = Gate B **OPEN**.
 - CarAPI ≠ AAIdrive-Call-Graph: Connected kann `sas_*` **stellvertretend** ausführen; Wire trotzdem BCL/Etch-Tunnel (Cleartext laut Analysis — FX-G3-01).
 - „BCL/Etch/SAS auf echtem HU-USB = 0“ ist **Scope**, kein Firmware-Qualitätsdefizit.
 - Feld-Priorität: **P0 I-303A** (G1) → **P1 [FIELD-CONNECTED-REAL-01](feld/FIELD-CONNECTED-REAL-01.md)** (G2→G3) → **P2 FX-G3-01** → **P3** ESP-Nachbau nur mit Phone-Referenz.

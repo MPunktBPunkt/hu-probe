@@ -1,6 +1,9 @@
 # Connected-App Probe Path (Control Plane)
 
-**Status (2026-11-16 Cross-Repo-Nachzug / FW 0.3.41):** Auf **Bluetooth (`SCN 6`)** ist die komplette Connected-Kette **G2 → G3 → G4 (SAS) → AM/RHMI/CDS** am echten F20 inzwischen durchgehend feldbelegt (`esp32.bt-analyzer` `DEEP_FORENSIC_ETCH_SAS_20261116.md`, PiDrive `HU-Technical-Facts.md` `C-BT23`–`C-BT46`, `C-D31`–`C-D33`): Etch-Magic **`DEADBEEF`**, sdbm-Seed-5381-Type-IDs, 16-B-SAS-Challenge (`_result_sas_certificate`), 559-B-RSA-4096-`sas_login` (MyBMW JNI `SecurityModule` + `BMWTouchCommand_Connection_00.00.10` `APP_AUTH`) und `rhmi_getCapabilities` (5306 B, inkl. `_ENT_MTP_OFF=false`). Für **USB** löst der lokale Bimmer-Logcat (`logcat.crash` Z. 34789–40412) die drei Oktober-Rätsel auf: (1) MyBMWs `UsbAccessoryLaunchActivity` wacht nur bei `manufacturer="BMW Group"`, `model="BMW"|"MINI"` auf (Lab 30.10. schickte `"BMW"`/`"NBT Evo"` → nur AAIdrives UI-Check grün, kein Bulk-Reader!), (2) vor `bRequest=51` erwartet die HU ein echtes **MTP-Interface (`0x06`)** statt Vendor-only `0xFF` (`aoa_phone_like`), (3) für `HU-PROBE-GATE-01` (MSC Play-Intent vs. Eager-Read) liefern **`CDS 54: entertainment.multimedia`** und **`636–642: entertainment.md.*`** über den parallelen BT-Connected-Kanal ab sofort ein elektronisches Live-Orakel!  
+**Status (2026-11-20 Cross-Repo / FW 0.3.41+):** BT Connected **G2→G4→AM/RHMI/CDS** am F20 = FIELD FACT. **SAS-Crypto = CLOSED** (Pad `MD5(0x02000000)` → XOR → MD5 → RSA-4096 PKCS#1 v1.5; Wire RSA-VERIFY 8/8 Lab) — [`SAS_STATUS_CRYPTO_CLOSED_20261120`](../../bt-analyzer/docs/analysis/SAS_STATUS_CRYPTO_CLOSED_20261120.md), PiDrive `C-D3`/`C-D34`. **Offen:** Gate B = unser Credential-Kontext am F20; USB-AOA→BCL an dieser Buchse.  
+**MSC / GATE-01:** Storage Plane weitgehend geschlossen (`USB-STORAGE-PLANE`); **READ10 ≠ Play Intent**. Nächster Test = **U1 USB↔CDS** (BT Connected aktiv, AOA aus, kein BUSY zuerst) — Orakel `CDS 54` / `636–642` (C-D33).  
+**USB-AOA-Desk (unverändert):** MyBMW wacht nur bei `manufacturer="BMW Group"`, `model="BMW"|"MINI"`; vor `51` erwartet HU MTP `0x06` (`_ENT_MTP_OFF=false`).  
+
 **Vorstand USB (2026-11-07 / FW 0.3.36):** C1a + C1a.5 + C1b-0 **PASS**. **C1b-P0 PARTIAL** am NBT (P0-0/A/C/D PASS, P0-E ABSENT) — Details [GATES-Connected](GATES-Connected.md), **I-303A** ([Stand](feld/C1-STAND.md)).  
 **Desk-Basis:** technology-audit `usb-aoa-bmw-connected-2026-desk` (EVID-AOA-…-001…026; B1/B2 Messfragen).  
 **Schichtenregel:** Storage Plane (USB-MSC) und Control Plane (Connected App) bleiben **getrennte** Instrumente. BimmerGestalt überschreibt keine MSC-FACTS ([technology-audit CROSSREF](../../technology-audit/audits/bimmergestalt-idrive-2026-foreign/CROSSREF.md)).
@@ -13,12 +16,12 @@ Gates: [GATES-Connected.md](GATES-Connected.md). MSC-Integrität bleibt [GATES.m
 G1  USB Identity / Class              ← hu-probe (I-303A)
 G2  AOA / BT Transport + BCL          ← Callback teilweise; BCL-Wire nein
 G3  Phone → localhost TCP → BCL→Etch  ← Phone / Connected
-G4  SAS Auth (Cert + Challenge)       ← Keys; modernes MyBMW-Signieren UNKNOWN
-    └── danach: RHMI / CDS / AV / AM  ← Nutzung, keine Gate-ID G5
+G4  SAS Auth (Cert + Challenge)       ← Crypto CLOSED; F20 Gate B Credential OPEN
+    └── danach: RHMI / CDS / AV / AM  ← Nutzung + Cross-Plane-Orakel für MSC GATE-01
 ```
 
-Quellen: PiDrive [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK.md) · [HU-BESCHREIBUNG](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-BESCHREIBUNG.md) · [Authentication](https://bimmergestalt.github.io/BMWConnectedAnalysis/authentication/) · [app-behavior](https://bimmergestalt.github.io/BMWConnectedAnalysis/app-behavior/).  
-**REJECTED:** „AOA-Zubehör / Bulk ⇒ Connected-App offen.“ · Parallelmodell mit Gate **G5** für RHMI. · „MyBMW exportiert SECURITY_SERVICE / liefert signChallenge“ (nur Classic ≤5.1 **[D]**). · „Jede Connected-App ist direkter Etch-Client“ (CarAPI: Connected führt `sas_*` stellvertretend).
+Quellen: PiDrive [CONNECTED-AAIDRIVE-STACK](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/CONNECTED-AAIDRIVE-STACK.md) · [USB-STORAGE-PLANE](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/USB-STORAGE-PLANE.md) · [HU-BESCHREIBUNG](https://github.com/MPunktBPunkt/pidrive/blob/main/docs/fahrzeug/HU-BESCHREIBUNG.md) · bt-analyzer [SAS_STATUS](https://github.com/MPunktBPunkt/esp32.bt-analyzer/blob/main/docs/analysis/SAS_STATUS_CRYPTO_CLOSED_20261120.md).  
+**REJECTED:** „AOA-Zubehör / Bulk ⇒ Connected-App offen.“ · „Bluetooth erklärt MSC.“ · „MyBMW exportiert SECURITY_SERVICE“ (Default). · VIN→Key · PKCS#12-Unwrap als nächster Schritt.
 
 Desk-Nachzug technology-audit [PR #34](https://github.com/MPunktBPunkt/technology-audit/pull/34) / [bmw-connected-sas-auth-2026-11-06](https://github.com/MPunktBPunkt/technology-audit/tree/main/audits/bmw-connected-sas-auth-2026-11-06): Cleartext-Claim („Nothing is encrypted“) → FX-G3-01 wertvoll sobald BCL/Etch sichtbar; AIDL-Namen (`createSecurityContext`/`loadAppCert`) vor Mermaid; AAIdrive `MainService` wartet auf Security connected.
 

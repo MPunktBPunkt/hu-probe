@@ -95,7 +95,7 @@ Auf MSC-Plane: Plug/Unplug, SCSI-Opcode-Histogramm (`tur`, `inquiry`, `mode_sens
 | Prio | Handlung |
 |------|----------|
 | ~~P0~~ | ~~I-303A~~ — erledigt ([Feldnotiz](I303A-FELD-2026-11-07.md)) |
-| **P0 (MSC)** | **0.3.41 BUSY-Realtime-Pacing + BT-CDS-Orakel (`GATE-01`)** — `hu-probe` als Stick am F20, parallel BT-Connected (`entertainment.multimedia`) mitschneiden |
+| **P0 (MSC)** | **U1 USB↔CDS** (GATE-01): `hu-probe` Stick + paralleles BT-Connected CDS (`54` / `639 statusPlayback`); **ohne** langen BUSY zuerst. SAS-Crypto CLOSED → Orakel-Kanal nutzbar. Danach U2 Cache / U3 Prefetch / U4 4–8‑MiB BUSY |
 | **P1 (USB-Check)** | **1-Minuten-Diskriminator F20-USB:** OnePlus mit **BT OFF** per USB an F20 → öffnet MyBMW `127.0.0.1:4004`? (Am Lab-PC: `lab_aoa_iface.py host-handshake --profile bmw_real`) |
 
 **Freeze:** Blind-Knock · BCL-on-ESP · SAS-FW · L0 als Blocker · weitere Identity-Matrix · Desk ohne Feldartefakt.
