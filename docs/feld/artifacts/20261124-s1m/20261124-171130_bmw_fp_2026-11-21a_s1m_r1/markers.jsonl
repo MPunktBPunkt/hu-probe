@@ -1,0 +1,12 @@
+{"v":2,"sid":"20261124-171130_bmw_fp_2026-11-21a_s1m_r1","seq":234,"t_us":47854525,"t_ms":47854,"ev":"marker","name":"mount_done","note":"offline","origin":"offline","capture_t_us":47854525,"capture_seq":188}
+{"v":2,"sid":"20261124-171130_bmw_fp_2026-11-21a_s1m_r1","seq":237,"t_us":47987912,"t_ms":47987,"ev":"marker","name":"first_read","note":"offline","origin":"offline","capture_t_us":47987912,"capture_seq":191}
+{"v":2,"sid":"20261124-171130_bmw_fp_2026-11-21a_s1m_r1","seq":286,"t_us":48073292,"t_ms":48073,"ev":"marker","name":"next_track_read","note":"offline","origin":"offline","capture_t_us":48073292,"capture_seq":219}
+{"v":2,"sid":"20261124-171130_bmw_fp_2026-11-21a_s1m_r1","seq":335,"t_us":48172993,"t_ms":48172,"ev":"marker","name":"next_track_read","note":"offline","origin":"offline","capture_t_us":48172993,"capture_seq":247}
+{"v":2,"sid":"20261124-171130_bmw_fp_2026-11-21a_s1m_r1","seq":384,"t_us":48405324,"t_ms":48405,"ev":"marker","name":"next_track_read","note":"offline","origin":"offline","capture_t_us":48405324,"capture_seq":275}
+{"v":2,"sid":"20261124-171130_bmw_fp_2026-11-21a_s1m_r1","seq":922,"t_us":105467305,"t_ms":105467,"ev":"marker","name":"ckpt:47:14","note":"offline","origin":"offline","capture_t_us":105467305,"capture_seq":578}
+{"v":2,"sid":"20261124-171130_bmw_fp_2026-11-21a_s1m_r1","seq":977,"t_us":165518304,"t_ms":165518,"ev":"marker","name":"ckpt:3:1","note":"offline","origin":"offline","capture_t_us":165518304,"capture_seq":633}
+{"v":2,"sid":"20261124-171130_bmw_fp_2026-11-21a_s1m_r1","seq":1020,"t_us":225522310,"t_ms":225522,"ev":"marker","name":"ckpt:2:1","note":"offline","origin":"offline","capture_t_us":225522310,"capture_seq":675}
+{"v":2,"sid":"20261124-171130_bmw_fp_2026-11-21a_s1m_r1","seq":1250,"t_us":245445550,"t_ms":245445,"ev":"marker","name":"mount_done","note":"offline","origin":"offline","capture_t_us":245445550,"capture_seq":864}
+{"v":2,"sid":"20261124-171130_bmw_fp_2026-11-21a_s1m_r1","seq":1255,"t_us":249763679,"t_ms":249763,"ev":"marker","name":"first_read","note":"offline","origin":"offline","capture_t_us":249763679,"capture_seq":869}
+{"v":2,"sid":"20261124-171130_bmw_fp_2026-11-21a_s1m_r1","seq":1821,"t_us":285525305,"t_ms":285525,"ev":"marker","name":"ckpt:45:13","note":"offline","origin":"offline","capture_t_us":285525305,"capture_seq":1179}
+{"v":2,"sid":"20261124-171130_bmw_fp_2026-11-21a_s1m_r1","seq":1840,"t_us":345573312,"t_ms":345573,"ev":"marker","name":"ckpt:1:0","note":"offline","origin":"offline","capture_t_us":345573312,"capture_seq":1197}

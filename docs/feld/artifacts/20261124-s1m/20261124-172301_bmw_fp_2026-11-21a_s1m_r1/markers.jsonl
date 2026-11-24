@@ -1,0 +1,3 @@
+{"v":2,"sid":"20261124-172301_bmw_fp_2026-11-21a_s1m_r1","seq":238,"t_us":49177821,"t_ms":49177,"ev":"marker","name":"mount_done","note":"offline","origin":"offline","capture_t_us":49177821,"capture_seq":191}
+{"v":2,"sid":"20261124-172301_bmw_fp_2026-11-21a_s1m_r1","seq":241,"t_us":49287955,"t_ms":49287,"ev":"marker","name":"first_read","note":"offline","origin":"offline","capture_t_us":49287955,"capture_seq":194}
+{"v":2,"sid":"20261124-172301_bmw_fp_2026-11-21a_s1m_r1","seq":793,"t_us":106957751,"t_ms":106957,"ev":"marker","name":"ckpt:42:12","note":"offline","origin":"offline","capture_t_us":106957751,"capture_seq":489}

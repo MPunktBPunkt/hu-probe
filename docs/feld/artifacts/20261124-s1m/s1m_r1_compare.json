@@ -1,0 +1,73 @@
+{
+  "schema": "hu-probe-analysis/1+compare",
+  "sessions": [
+    {
+      "session": "20261124-171130_bmw_fp_2026-11-21a_s1m_r1",
+      "vehicle": "bmw",
+      "media": "size_1m",
+      "time_base": "capture_t_us",
+      "tur_idle_median_s": 2.2388,
+      "mount_ref_matches": 0,
+      "mounts": 2,
+      "next_track_reads": 3,
+      "lag_after_start_s": [
+        0.09,
+        0.1,
+        0.23
+      ],
+      "lead_before_end_s": [
+        65.58,
+        65.57,
+        65.44
+      ],
+      "selection_latency_s": [],
+      "tail_then_head": "1/5",
+      "tur_period_ms": 2238.56,
+      "plug_to_first_read_s": [
+        1.8919,
+        14.8224
+      ],
+      "atom_end_to_next_read_s": [
+        0.010332,
+        0.025391,
+        0.15787
+      ],
+      "media_loss_detect_s": null
+    },
+    {
+      "session": "20261124-172301_bmw_fp_2026-11-21a_s1m_r1",
+      "vehicle": "bmw",
+      "media": "size_1m",
+      "time_base": "capture_t_us",
+      "tur_idle_median_s": 2.2388,
+      "mount_ref_matches": 0,
+      "mounts": 1,
+      "next_track_reads": 0,
+      "lag_after_start_s": [],
+      "lead_before_end_s": [],
+      "selection_latency_s": [],
+      "tail_then_head": "1/1",
+      "tur_period_ms": 2238.81,
+      "plug_to_first_read_s": [
+        1.6971
+      ],
+      "atom_end_to_next_read_s": [],
+      "media_loss_detect_s": null
+    }
+  ],
+  "summary": {
+    "tur_idle_median_s": 2.2388,
+    "lead_before_end_s": {
+      "min": 65.44,
+      "max": 65.58,
+      "n": 3
+    },
+    "lag_after_start_s": {
+      "min": 0.09,
+      "max": 0.23,
+      "n": 3
+    },
+    "lead_spread_s": 0.14,
+    "lag_spread_s": 0.14
+  }
+}
