@@ -1,0 +1,216 @@
+{
+  "schema": "hu-probe-analysis/1+compare",
+  "sessions": [
+    {
+      "session": "20261125-213213_bmw_fp_2026-11-21a_s1m_r1",
+      "vehicle": "bmw",
+      "media": "size_1m",
+      "time_base": "capture_t_us",
+      "tur_idle_median_s": 2.2388,
+      "mount_ref_matches": 0,
+      "mounts": 1,
+      "next_track_reads": 2,
+      "lag_after_start_s": [
+        0.09,
+        0.09
+      ],
+      "lead_before_end_s": [
+        65.58,
+        65.58
+      ],
+      "selection_latency_s": [],
+      "tail_then_head": "0/3",
+      "tur_period_ms": 2238.79,
+      "plug_to_first_read_s": [
+        1.7628
+      ],
+      "atom_end_to_next_read_s": [
+        0.011028,
+        0.011908
+      ],
+      "media_loss_detect_s": null
+    },
+    {
+      "session": "20261124-171130_bmw_fp_2026-11-21a_s1m_r1",
+      "vehicle": "bmw",
+      "media": "size_1m",
+      "time_base": "capture_t_us",
+      "tur_idle_median_s": 2.2388,
+      "mount_ref_matches": 0,
+      "mounts": 2,
+      "next_track_reads": 3,
+      "lag_after_start_s": [
+        0.09,
+        0.1,
+        0.23
+      ],
+      "lead_before_end_s": [
+        65.58,
+        65.57,
+        65.44
+      ],
+      "selection_latency_s": [],
+      "tail_then_head": "1/5",
+      "tur_period_ms": 2238.56,
+      "plug_to_first_read_s": [
+        1.8919,
+        14.8224
+      ],
+      "atom_end_to_next_read_s": [
+        0.010332,
+        0.025391,
+        0.15787
+      ],
+      "media_loss_detect_s": null
+    },
+    {
+      "session": "20261117-172704_bmw_fp_2026-11-17a_s158_r1",
+      "vehicle": "bmw",
+      "media": "size_158",
+      "time_base": "capture_t_us",
+      "tur_idle_median_s": 2.2388,
+      "mount_ref_matches": 0,
+      "mounts": 1,
+      "next_track_reads": 5,
+      "lag_after_start_s": [
+        0.08,
+        0.09,
+        0.3,
+        2.25,
+        9.93
+      ],
+      "lead_before_end_s": [
+        9.84,
+        9.84,
+        9.62,
+        7.67,
+        -0.0
+      ],
+      "selection_latency_s": [],
+      "tail_then_head": "0/6",
+      "tur_period_ms": 2238.78,
+      "plug_to_first_read_s": [
+        1.6804
+      ],
+      "atom_end_to_next_read_s": [
+        0.00897,
+        0.009876,
+        0.227766,
+        2.187884,
+        9.863938
+      ],
+      "media_loss_detect_s": null
+    },
+    {
+      "session": "12917_bmw_drive_home",
+      "vehicle": "bmw",
+      "media": "size_158",
+      "time_base": "capture_t_us",
+      "tur_idle_median_s": 2.2388,
+      "mount_ref_matches": 0,
+      "mounts": 1,
+      "next_track_reads": 2,
+      "lag_after_start_s": [
+        10.33,
+        4.24
+      ],
+      "lead_before_end_s": [
+        -0.4,
+        5.68
+      ],
+      "selection_latency_s": [],
+      "tail_then_head": "2/3",
+      "tur_period_ms": 2238.79,
+      "plug_to_first_read_s": [
+        1.9134
+      ],
+      "atom_end_to_next_read_s": [
+        10.18159,
+        4.093512
+      ],
+      "media_loss_detect_s": null
+    },
+    {
+      "session": "20261125-211129_bmw_drive_home",
+      "vehicle": "bmw",
+      "media": "size_158",
+      "time_base": "capture_t_us",
+      "tur_idle_median_s": 2.2388,
+      "mount_ref_matches": 0,
+      "mounts": 1,
+      "next_track_reads": 2,
+      "lag_after_start_s": [
+        0.08,
+        0.09
+      ],
+      "lead_before_end_s": [
+        9.84,
+        9.84
+      ],
+      "selection_latency_s": [],
+      "tail_then_head": "0/3",
+      "tur_period_ms": 2238.79,
+      "plug_to_first_read_s": [
+        1.531
+      ],
+      "atom_end_to_next_read_s": [
+        0.008922,
+        0.009807
+      ],
+      "media_loss_detect_s": null
+    },
+    {
+      "session": "20261126-173225_bmw_drive_home",
+      "vehicle": "bmw",
+      "media": "size_158",
+      "time_base": "capture_t_us",
+      "tur_idle_median_s": 2.2388,
+      "mount_ref_matches": 0,
+      "mounts": 1,
+      "next_track_reads": 5,
+      "lag_after_start_s": [
+        0.09,
+        0.09,
+        0.23,
+        2.25,
+        9.92
+      ],
+      "lead_before_end_s": [
+        9.84,
+        9.84,
+        9.69,
+        7.67,
+        0.01
+      ],
+      "selection_latency_s": [],
+      "tail_then_head": "0/6",
+      "tur_period_ms": 2238.78,
+      "plug_to_first_read_s": [
+        1.5831
+      ],
+      "atom_end_to_next_read_s": [
+        0.009826,
+        0.008281,
+        0.160484,
+        2.185406,
+        9.851551
+      ],
+      "media_loss_detect_s": null
+    }
+  ],
+  "summary": {
+    "tur_idle_median_s": 2.2388,
+    "lead_before_end_s": {
+      "min": -0.4,
+      "max": 65.58,
+      "n": 19
+    },
+    "lag_after_start_s": {
+      "min": 0.08,
+      "max": 10.33,
+      "n": 19
+    },
+    "lead_spread_s": 65.98,
+    "lag_spread_s": 10.25
+  }
+}

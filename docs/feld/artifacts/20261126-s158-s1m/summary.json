@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-26",
+  "fw": "0.3.41",
+  "dut": "192.168.178.89",
+  "plan_done": "2026-11-21a / s1m (operator accept)",
+  "plan_next": "2026-11-26a / s4m",
+  "verdict": "body_pass_prefetch_lead_scales_with_track_duration_tur_2238ms",
+  "facts": {
+    "tur_idle_median_s": 2.2388,
+    "neighbor_prefetch_gap_s": [0.083, 0.1],
+    "first_atom_blocks": 160,
+    "lead_s": {
+      "size_158": [9.8, 9.9],
+      "size_1m": [65.4, 65.6]
+    },
+    "integrity_replay": "pass_both_sizes"
+  },
+  "reference_sessions": [
+    "20261125-213213_bmw_fp_2026-11-21a_s1m_r1",
+    "20261124-171130_bmw_fp_2026-11-21a_s1m_r1",
+    "20261117-172704_bmw_fp_2026-11-17a_s158_r1",
+    "12917_bmw_drive_home",
+    "20261125-211129_bmw_drive_home",
+    "20261126-173225_bmw_drive_home"
+  ],
+  "caveat_sessions": [
+    "20261126-173143_bmw_fp_2026-11-21a_s1m_r1"
+  ]
+}
