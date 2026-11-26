@@ -1,12 +1,11 @@
 {
   "schema": 1,
-  "plan": "2026-11-21a",
+  "plan": "2026-11-26a",
   "vehicle": "bmw",
   "enabled": true,
   "arm_at_home": true,
   "online_only": false,
   "jobs": [
-    {"id": "s1m",  "experiment": "drive_home", "media": "size_1m",  "fine": true, "measure_s": 600, "repeat": 3},
     {"id": "s4m",  "experiment": "drive_home", "media": "size_4m",  "fine": true, "measure_s": 600, "repeat": 3},
     {"id": "s16m", "experiment": "drive_home", "media": "size_16m", "fine": true, "measure_s": 600, "repeat": 3}
   ]
