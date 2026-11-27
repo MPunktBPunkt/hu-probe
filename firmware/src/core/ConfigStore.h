@@ -67,6 +67,17 @@ public:
      */
     String usbGadget = "msc";
 
+    // Optional WireGuard overlay (never required for MSC/capture).
+    bool wgEnable = false;
+    String wgPrivateKey;
+    String wgPublicKey;
+    String wgPresharedKey;
+    String wgAddress;
+    String wgAllowedIps;
+    String wgEndpointHost;
+    uint16_t wgEndpointPort = 51820;
+    uint16_t wgKeepalive = 25;
+
     /** @brief Initialize the store by loading the configuration from NVS (calls load()). */
     void begin();
 

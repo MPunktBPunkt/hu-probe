@@ -89,6 +89,11 @@
 #define TZ_DEFAULT "CET-1CEST,M3.5.0,M10.5.0/3"
 #endif
 
+/** @brief WireGuard transport (0 = stub, no esp_wireguard link). */
+#ifndef HUPROBE_ENABLE_WIREGUARD
+#define HUPROBE_ENABLE_WIREGUARD 0
+#endif
+
 /** @brief Board identity (id, label, hardware type) derived from the IDF target; not overridable. */
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
 #define HUPROBE_BOARD_ID "esp32-s3"

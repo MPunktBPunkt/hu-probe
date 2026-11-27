@@ -23,6 +23,7 @@
 #include "msc/MscGadget.h"
 #include "msc/ReadStall.h"
 #include "net/EventBus.h"
+#include "net/WireGuardTransport.h"
 #include <Update.h>
 #include <WiFi.h>
 
@@ -1039,6 +1040,25 @@ void WebUi::handleStatus() {
     doc["ip"] = WiFi.localIP().toString();
     doc["hub_ok"] = hub_ ? hub_->lastOk() : false;
     doc["tcp_ok"] = tcp_ ? tcp_->connected() : false;
+    {
+        // Transport evidence only — no WG Web-UI. Optional overlay status.
+        JsonObject wg = doc["wg"].to<JsonObject>();
+        wg["enable"] = cfg_ ? cfg_->wgEnable : false;
+#if HUPROBE_ENABLE_WIREGUARD
+        wg["linked"] = true;
+#else
+        wg["linked"] = false;
+#endif
+        if (WireGuardTransport* t = WireGuardTransport::current()) {
+            wg["active"] = t->active();
+            wg["peer_up"] = t->peerUp();
+            wg["err"] = t->lastError();
+        } else {
+            wg["active"] = false;
+            wg["peer_up"] = false;
+            wg["err"] = "";
+        }
+    }
     {
         JsonObject wifi = doc["wifi"].to<JsonObject>();
         const bool up = WiFi.status() == WL_CONNECTED;

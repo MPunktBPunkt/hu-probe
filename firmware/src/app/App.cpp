@@ -246,12 +246,22 @@ void App::begin() {
         tzset();
     }
 
+    wireGuard_.begin(&config_);
+
     hub_.begin(&config_);
     hub_.setPayloadBuilder(buildHeartbeat);
     tcp_.begin(&config_);
     web_.begin(&config_, &session_, &instrument_, aoaObserve ? nullptr : &msc_, &hub_, &tcp_);
     if (!aoaObserve) {
         SequenceRunner::instance().begin(&session_, &msc_, &instrument_, &tcp_);
+    }
+    // Optional WG after HTTP is up — connect failure must not brick lab control.
+    if (WiFi.status() == WL_CONNECTED && config_.wgEnable && config_.wgPrivateKey.length() > 0 &&
+        config_.wgPublicKey.length() > 0) {
+        if (!wireGuard_.enable()) {
+            DiagLog::printf("[WG] optional transport failed: %s (MSC/capture continue)\n",
+                            wireGuard_.lastError());
+        }
     }
     if (WiFi.status() == WL_CONNECTED) hub_.sendNow();
 
@@ -614,6 +624,66 @@ void App::superviseWifi() {
 }
 
 void App::loop() {
+    // USB-serial lab: "LAB WIFI <ssid>|<password>" — persistent(false), guest/WAN tests.
+    while (Serial.available()) {
+        static String labLine;
+        const char c = (char)Serial.read();
+        if (c == '\r') continue;
+        if (c != '\n') {
+            if (labLine.length() < 192) labLine += c;
+            continue;
+        }
+        labLine.trim();
+        if (labLine.startsWith("LAB WIFI ")) {
+            String rest = labLine.substring(9);
+            const int bar = rest.indexOf('|');
+            if (bar > 0) {
+                String ssid = rest.substring(0, bar);
+                String pass = rest.substring(bar + 1);
+                ssid.trim();
+                pass.trim();
+                Serial.printf("[LAB] WIFI join ssid=%s (persistent=false)\n", ssid.c_str());
+                WiFi.persistent(false);
+                WiFi.disconnect(false, false);
+                delay(50);
+                WiFi.begin(ssid.c_str(), pass.c_str());
+                const unsigned long t0 = millis();
+                while (WiFi.status() != WL_CONNECTED && millis() - t0 < 20000UL) delay(200);
+                if (WiFi.status() == WL_CONNECTED) {
+                    Serial.printf("[LAB] WIFI ok ip=%s ssid=%s\n",
+                                  WiFi.localIP().toString().c_str(), WiFi.SSID().c_str());
+                    // Re-request WG if still enabled — new STA path (e.g. guest→WAN).
+                    wireGuard_.disable();
+                    if (config_.wgEnable) wireGuard_.enable();
+                } else {
+                    Serial.println("[LAB] WIFI FAIL timeout");
+                }
+            } else {
+                Serial.println("[LAB] WIFI usage: LAB WIFI ssid|password");
+            }
+        } else if (labLine == "LAB WG OFF") {
+            config_.wgEnable = false;
+            config_.save();
+            wireGuard_.disable();
+            Serial.println("[LAB] WG disabled (runtime + NVS)");
+        } else if (labLine == "LAB WG ON") {
+            config_.wgEnable = true;
+            config_.save();
+            wireGuard_.enable();
+            Serial.println("[LAB] WG enable requested");
+        } else if (labLine == "LAB WG STATUS") {
+            Serial.printf("[LAB] WG enable=%d active=%d peer_up=%d err=%s ip=%s ssid=%s\n",
+                          config_.wgEnable ? 1 : 0, wireGuard_.active() ? 1 : 0,
+                          wireGuard_.peerUp() ? 1 : 0, wireGuard_.lastError(),
+                          WiFi.localIP().toString().c_str(), WiFi.SSID().c_str());
+        } else if (labLine == "LAB HUB NOW") {
+            hub_.sendNow();
+            Serial.printf("[LAB] hub sendNow lastOk=%d\n", hub_.lastOk() ? 1 : 0);
+        }
+        labLine = "";
+    }
+
+    wireGuard_.loop();
     // WiFi/coex soft-detach runs in wifiCoexTask (loop starves under USB Bulk).
     // Drain Capture-tUs BOT/read before loop-now status/health (keeps t_us non-decreasing).
     if (!config_.isAoaObserve()) msc_.loop();

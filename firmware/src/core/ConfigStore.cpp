@@ -21,6 +21,74 @@ static bool gadgetModeValid(const String &g) {
     return huprobe::gadgetModeValid(g.c_str());
 }
 
+static String trimKv(String s) {
+    s.trim();
+    return s;
+}
+
+/** @brief wg-quick blob import for Web UI paste (secrets stay in RAM/NVS only). */
+static bool importWgQuickBlob(const String& text, ConfigStore& cfg) {
+    enum class Sec : uint8_t { None, Interface, Peer };
+    Sec sec = Sec::None;
+    bool sawInterface = false;
+    bool sawPeer = false;
+
+    int start = 0;
+    while (start <= (int)text.length()) {
+        int end = text.indexOf('\n', start);
+        if (end < 0) end = text.length();
+        String line = text.substring(start, end);
+        if (line.endsWith("\r")) line.remove(line.length() - 1);
+        start = end + 1;
+
+        String t = trimKv(line);
+        if (t.length() == 0 || t.startsWith("#") || t.startsWith(";")) continue;
+
+        if (t.equalsIgnoreCase("[Interface]")) {
+            sec = Sec::Interface;
+            sawInterface = true;
+            continue;
+        }
+        if (t.equalsIgnoreCase("[Peer]")) {
+            sec = Sec::Peer;
+            sawPeer = true;
+            continue;
+        }
+        if (t.startsWith("[")) return false;
+
+        const int eq = t.indexOf('=');
+        if (eq <= 0) return false;
+        String key = trimKv(t.substring(0, eq));
+        String value = trimKv(t.substring(eq + 1));
+
+        if (sec == Sec::Interface) {
+            if (key.equalsIgnoreCase("PrivateKey")) cfg.wgPrivateKey = value;
+            else if (key.equalsIgnoreCase("Address")) cfg.wgAddress = value;
+        } else if (sec == Sec::Peer) {
+            if (key.equalsIgnoreCase("PublicKey")) cfg.wgPublicKey = value;
+            else if (key.equalsIgnoreCase("PresharedKey")) cfg.wgPresharedKey = value;
+            else if (key.equalsIgnoreCase("AllowedIPs")) cfg.wgAllowedIps = value;
+            else if (key.equalsIgnoreCase("Endpoint")) {
+                const int colon = value.lastIndexOf(':');
+                if (colon > 0) {
+                    cfg.wgEndpointHost = trimKv(value.substring(0, colon));
+                    cfg.wgEndpointPort = (uint16_t)trimKv(value.substring(colon + 1)).toInt();
+                } else {
+                    cfg.wgEndpointHost = value;
+                }
+            } else if (key.equalsIgnoreCase("PersistentKeepalive")) {
+                cfg.wgKeepalive = (uint16_t)value.toInt();
+            }
+        }
+    }
+    if (!sawInterface || !sawPeer) return false;
+    String allowed = cfg.wgAllowedIps;
+    allowed.replace(" ", "");
+    if (allowed.indexOf("0.0.0.0/0") >= 0) return false;
+    return cfg.wgPrivateKey.length() > 0 && cfg.wgPublicKey.length() > 0 && cfg.wgAddress.length() > 0 &&
+           cfg.wgAllowedIps.length() > 0 && cfg.wgEndpointHost.length() > 0;
+}
+
 bool ConfigStore::isAoaObserve() const {
     return huprobe::gadgetModeIsAoaVendorOnly(usbGadget.c_str());
 }
@@ -107,6 +175,15 @@ void ConfigStore::applyDefaults() {
     otaManifestUrl = OTA_MANIFEST_URL_DEFAULT;
     fieldPlanUrl = FIELD_PLAN_URL_DEFAULT;
     usbGadget = "msc";
+    wgEnable = false;
+    wgPrivateKey = "";
+    wgPublicKey = "";
+    wgPresharedKey = "";
+    wgAddress = "";
+    wgAllowedIps = "";
+    wgEndpointHost = "";
+    wgEndpointPort = 51820;
+    wgKeepalive = 25;
 }
 
 void ConfigStore::begin() {
@@ -147,6 +224,15 @@ void ConfigStore::load() {
         autoUpdate = prefs.getBool("auto_upd", autoUpdate);
         otaManifestUrl = prefs.getString("ota_url", otaManifestUrl);
         fieldPlanUrl = prefs.getString("plan_url", fieldPlanUrl);
+        wgEnable = prefs.getBool("wg_en", wgEnable);
+        wgPrivateKey = prefs.getString("wg_priv", wgPrivateKey);
+        wgPublicKey = prefs.getString("wg_pub", wgPublicKey);
+        wgPresharedKey = prefs.getString("wg_psk", wgPresharedKey);
+        wgAddress = prefs.getString("wg_addr", wgAddress);
+        wgAllowedIps = prefs.getString("wg_allow", wgAllowedIps);
+        wgEndpointHost = prefs.getString("wg_ep_h", wgEndpointHost);
+        wgEndpointPort = (uint16_t)prefs.getUShort("wg_ep_p", wgEndpointPort);
+        wgKeepalive = (uint16_t)prefs.getUShort("wg_ka", wgKeepalive);
         // Legacy key — only used if dedicated hpgad namespace is empty.
         const String legacy = prefs.getString("usb_gadget", "");
         if (gadgetModeValid(legacy)) {
@@ -204,6 +290,15 @@ bool ConfigStore::save() {
         prefs.putBool("auto_upd", autoUpdate);
         prefs.putString("ota_url", otaManifestUrl);
         prefs.putString("plan_url", fieldPlanUrl);
+        prefs.putBool("wg_en", wgEnable);
+        prefs.putString("wg_priv", wgPrivateKey);
+        prefs.putString("wg_pub", wgPublicKey);
+        prefs.putString("wg_psk", wgPresharedKey);
+        prefs.putString("wg_addr", wgAddress);
+        prefs.putString("wg_allow", wgAllowedIps);
+        prefs.putString("wg_ep_h", wgEndpointHost);
+        prefs.putUShort("wg_ep_p", wgEndpointPort);
+        prefs.putUShort("wg_ka", wgKeepalive);
         prefs.end();
     } else {
         ok = false;
@@ -255,6 +350,15 @@ void ConfigStore::toJson(JsonObject obj) const {
     obj["otaManifestUrl"] = otaManifestUrl;
     obj["fieldPlanUrl"] = fieldPlanUrl;
     obj["usbGadget"] = usbGadget;
+    obj["wgEnable"] = wgEnable;
+    obj["wgPrivateKeySet"] = wgPrivateKey.length() > 0;
+    obj["wgPublicKeySet"] = wgPublicKey.length() > 0;
+    obj["wgPresharedKeySet"] = wgPresharedKey.length() > 0;
+    obj["wgAddress"] = wgAddress;
+    obj["wgAllowedIps"] = wgAllowedIps;
+    obj["wgEndpointHost"] = wgEndpointHost;
+    obj["wgEndpointPort"] = wgEndpointPort;
+    obj["wgKeepalive"] = wgKeepalive;
     obj["fwVersion"] = FW_VERSION;
     obj["fwType"] = FW_TYPE;
     obj["board"] = HUPROBE_BOARD_LABEL;
@@ -296,6 +400,28 @@ bool ConfigStore::fromJson(JsonVariantConst obj) {
     if (obj["usbGadget"].is<const char*>()) {
         String g = obj["usbGadget"].as<String>();
         if (gadgetModeValid(g)) usbGadget = g;
+    }
+    if (!obj["wgEnable"].isNull()) wgEnable = obj["wgEnable"].as<bool>();
+    if (obj["wgPrivateKey"].is<const char*>() && obj["wgPrivateKey"].as<String>().length())
+        wgPrivateKey = obj["wgPrivateKey"].as<String>();
+    if (obj["wgPublicKey"].is<const char*>() && obj["wgPublicKey"].as<String>().length())
+        wgPublicKey = obj["wgPublicKey"].as<String>();
+    if (obj["wgPresharedKey"].is<const char*>() && obj["wgPresharedKey"].as<String>().length())
+        wgPresharedKey = obj["wgPresharedKey"].as<String>();
+    if (obj["wgAddress"].is<const char*>()) wgAddress = obj["wgAddress"].as<String>();
+    if (obj["wgAllowedIps"].is<const char*>()) wgAllowedIps = obj["wgAllowedIps"].as<String>();
+    if (obj["wgEndpointHost"].is<const char*>()) wgEndpointHost = obj["wgEndpointHost"].as<String>();
+    if (!obj["wgEndpointPort"].isNull()) wgEndpointPort = (uint16_t)obj["wgEndpointPort"].as<int>();
+    if (!obj["wgKeepalive"].isNull()) wgKeepalive = (uint16_t)obj["wgKeepalive"].as<int>();
+    if (obj["wgConfigText"].is<const char*>()) {
+        const String blob = obj["wgConfigText"].as<String>();
+        if (blob.length()) {
+            if (!importWgQuickBlob(blob, *this)) {
+                Serial.println("[CFG] wgConfigText import failed");
+            } else {
+                wgEnable = true;
+            }
+        }
     }
     return true;
 }
