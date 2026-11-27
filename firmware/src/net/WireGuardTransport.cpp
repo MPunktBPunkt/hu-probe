@@ -8,6 +8,7 @@
 
 #include <WiFi.h>
 #include <string.h>
+#include <time.h>
 
 #ifndef HUPROBE_ENABLE_WIREGUARD
 #define HUPROBE_ENABLE_WIREGUARD 0
@@ -17,7 +18,6 @@
 #include <esp_wireguard.h>
 #include <lwip/ip4_addr.h>
 #include <lwip/netif.h>
-#include <lwip/priv/tcpip_priv.h>
 #include <lwip/tcpip.h>
 #endif
 
@@ -101,20 +101,18 @@ bool gHasPeerAllowed = false;
 
 esp_err_t gTcpipErr = ESP_FAIL;
 
-err_t tcpipCallbackWait(tcpip_callback_fn fn, void* ctx) {
-    sys_sem_t sem;
-    if (sys_sem_new(&sem, 0) != ERR_OK) return ERR_MEM;
-    const err_t err = tcpip_send_msg_wait_sem(fn, ctx, &sem);
-    sys_sem_free(&sem);
-    return err;
-}
-
+/**
+ * Run WG/netif work under the lwIP core lock.
+ * Arduino-ESP32 2.x (PlatformIO espressif32@6.4) has no tcpip_callback_wait;
+ * a naive tcpip_send_msg_wait_sem without a signalling trampoline deadlocks
+ * forever (lab brick before HTTP). LOCK_TCPIP_CORE matches the proven
+ * esp32.wireguard path once the endpoint is already an IPv4 literal.
+ */
 bool runOnTcpip(tcpip_callback_fn fn) {
     gTcpipErr = ESP_FAIL;
-    if (tcpipCallbackWait(fn, nullptr) != ERR_OK) {
-        gErr = "tcpip_cb_fail";
-        return false;
-    }
+    LOCK_TCPIP_CORE();
+    fn(nullptr);
+    UNLOCK_TCPIP_CORE();
     return true;
 }
 
@@ -291,17 +289,29 @@ bool stackPeerUp() {
 #endif  // HUPROBE_ENABLE_WIREGUARD
 
 static constexpr unsigned long kPeerPollMs = 5000;
+static constexpr time_t kMinEpoch = 1640995200;  // 2022-01-01 — WireGuard needs absolute time
+
+bool timeValid() {
+    return time(nullptr) > kMinEpoch;
+}
 
 }  // namespace
 
-void WireGuardTransport::begin(ConfigStore* cfg) { cfg_ = cfg; }
+WireGuardTransport* WireGuardTransport::current_ = nullptr;
+
+WireGuardTransport* WireGuardTransport::current() { return current_; }
+
+void WireGuardTransport::begin(ConfigStore* cfg) {
+    cfg_ = cfg;
+    current_ = this;
+}
 
 bool WireGuardTransport::enable() {
 #if !HUPROBE_ENABLE_WIREGUARD
     return false;
 #else
-    if (!cfg_ || !cfg_->wgEnable || attempted_) return false;
-    attempted_ = true;
+    if (!cfg_ || !cfg_->wgEnable) return false;
+    if (active_ || connectRequested_) return true;
     if (WiFi.status() != WL_CONNECTED) {
         gErr = "wifi_down";
         Serial.println("[WG] skip enable: WiFi not connected");
@@ -313,6 +323,22 @@ bool WireGuardTransport::enable() {
         Serial.println("[WG] skip enable: incomplete config");
         return false;
     }
+    connectRequested_ = true;
+    gErr = timeValid() ? "" : "waiting_sntp";
+    if (!timeValid()) Serial.println("[WG] enable deferred until SNTP");
+    return true;
+#endif
+}
+
+bool WireGuardTransport::tryConnect() {
+#if !HUPROBE_ENABLE_WIREGUARD
+    return false;
+#else
+    WgParams p;
+    if (!paramsFromConfig(*cfg_, p)) {
+        gErr = "incomplete_config";
+        return false;
+    }
     if (!stackInit(p) || !stackConnect()) {
         Serial.printf("[WG] enable failed: %s\n", gErr ? gErr : "?");
         stackDisconnect();
@@ -322,7 +348,7 @@ bool WireGuardTransport::enable() {
     }
     active_ = true;
     peerUp_ = stackPeerUp();
-    Serial.printf("[WG] enabled peer_up=%d\n", peerUp_ ? 1 : 0);
+    Serial.printf("[WG] enabled peer_up=%d time=%ld\n", peerUp_ ? 1 : 0, (long)time(nullptr));
     return true;
 #endif
 }
@@ -332,18 +358,35 @@ void WireGuardTransport::disable() {
     stackDisconnect();
     gErr = "";
 #endif
+    connectRequested_ = false;
     active_ = false;
     peerUp_ = false;
-    attempted_ = false;
 }
 
 void WireGuardTransport::loop() {
 #if HUPROBE_ENABLE_WIREGUARD
+    if (connectRequested_ && !active_) {
+        if (WiFi.status() != WL_CONNECTED) return;
+        if (!timeValid()) {
+            const unsigned long now = millis();
+            if (now - lastSntpLogMs_ > 10000) {
+                lastSntpLogMs_ = now;
+                Serial.printf("[WG] waiting SNTP (epoch=%ld)\n", (long)time(nullptr));
+            }
+            return;
+        }
+        connectRequested_ = false;
+        tryConnect();
+    }
     if (!active_) return;
     const unsigned long now = millis();
     if (now - lastPeerPollMs_ < kPeerPollMs) return;
     lastPeerPollMs_ = now;
+    const bool was = peerUp_;
     peerUp_ = stackPeerUp();
+    if (peerUp_ != was) {
+        Serial.printf("[WG] peer_up=%d\n", peerUp_ ? 1 : 0);
+    }
 #endif
 }
 

@@ -12,12 +12,13 @@ class ConfigStore;
 /**
  * @brief Thin adapter around vendored esp_wireguard (only when HUPROBE_ENABLE_WIREGUARD=1).
  *
- * enable() is best-effort; failures are logged only. loop() polls peer state periodically.
+ * enable() is best-effort and may defer until SNTP is valid; failures are logged only.
+ * loop() completes a deferred connect and polls peer state periodically.
  */
 class WireGuardTransport {
 public:
     void begin(ConfigStore* cfg);
-    /** @brief Init + connect from ConfigStore (no-op when disabled or unconfigured). */
+    /** @brief Request init+connect from ConfigStore (no-op when disabled or unconfigured). */
     bool enable();
     void disable();
     void loop();
@@ -25,10 +26,18 @@ public:
     bool peerUp() const;
     const char* lastError() const;
 
+    /** @brief Most recently begun instance (for /api/status); may be null. */
+    static WireGuardTransport* current();
+
 private:
+    bool tryConnect();
+
     ConfigStore* cfg_ = nullptr;
-    bool attempted_ = false;
+    bool connectRequested_ = false;
     bool active_ = false;
     bool peerUp_ = false;
     unsigned long lastPeerPollMs_ = 0;
+    unsigned long lastSntpLogMs_ = 0;
+
+    static WireGuardTransport* current_;
 };
