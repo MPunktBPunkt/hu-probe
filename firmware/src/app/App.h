@@ -11,6 +11,7 @@
 #include "msc/MscGadget.h"
 #include "msc/ReadInstrument.h"
 #include "net/TcpStreamer.h"
+#include "net/WireGuardTransport.h"
 #include "net/EventBus.h"
 #include "web/WebUi.h"
 #include "ui/StatusLed.h"
@@ -184,6 +185,7 @@ private:
     TcpStreamer tcp_;
     WebUi web_;
     StatusLed led_;
+    WireGuardTransport wireGuard_;
     unsigned long lastStatusMs_ = 0;
     unsigned long lastCaptureHealthMs_ = 0;
     unsigned long lastNvsTailMs_ = 0;

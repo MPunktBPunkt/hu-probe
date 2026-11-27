@@ -246,6 +246,15 @@ void App::begin() {
         tzset();
     }
 
+    wireGuard_.begin(&config_);
+    if (WiFi.status() == WL_CONNECTED && config_.wgEnable && config_.wgPrivateKey.length() > 0 &&
+        config_.wgPublicKey.length() > 0) {
+        if (!wireGuard_.enable()) {
+            DiagLog::printf("[WG] optional transport failed: %s (MSC/capture continue)\n",
+                            wireGuard_.lastError());
+        }
+    }
+
     hub_.begin(&config_);
     hub_.setPayloadBuilder(buildHeartbeat);
     tcp_.begin(&config_);
@@ -614,6 +623,7 @@ void App::superviseWifi() {
 }
 
 void App::loop() {
+    wireGuard_.loop();
     // WiFi/coex soft-detach runs in wifiCoexTask (loop starves under USB Bulk).
     // Drain Capture-tUs BOT/read before loop-now status/health (keeps t_us non-decreasing).
     if (!config_.isAoaObserve()) msc_.loop();
