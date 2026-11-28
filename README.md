@@ -1,5 +1,10 @@
 # hu-probe
 
+![Version](https://img.shields.io/badge/version-0.3.41-blue)
+
+
+`MPunktBPunkt ESP32 · LAB / VEHICLE`
+
 Messplattform für Head-Unit-USB-Host-Verhalten (BMW NBT Evo als Golden Probe, Mazda CX-30 als Discovery-Ziel).
 
 Die Sonde läuft auf einem **ESP32-S3** als USB-Gadget (MSC und/oder AOA-Observe), meldet sich am **esp-hub** (`fwType: hu-probe`), streamt High-Rate-Events per **TCP/JSONL** an einen lokalen Collector und bietet eine schlanke On-Device-WebUI.
@@ -68,3 +73,24 @@ Feldstand bleibt 0.3.38. Im Baum, aber nicht kompiliert und nicht im Fahrzeug: 0
 - **MSC:** Golden Path + SynthFat/Media-Variation; USB-`iProduct` = `hu-probe` (0.3.37); GATE-01 Lab-Kern PASS, Wire-Paketebene UNKNOWN
 - **Connected:** I-303A Feld + Reval erledigt; nächster Engpass **FIELD-CONNECTED-REAL-01** (P1)
 - **Nicht claimen:** AOA erkannt ≠ BCL ≠ SAS ≠ RHMI-Menü
+
+
+## Technical Evidence
+
+Investigation, validation and evidence:
+[MPunktBPunkt/technology-audit — hu-probe](https://github.com/MPunktBPunkt/technology-audit/tree/main/projects/hu-probe).
+
+The audit holds facts, lab evidence, limits, procedures and open questions.
+
+## Releases
+
+Version history: [GitHub Releases](https://github.com/MPunktBPunkt/hu-probe/releases).
+
+Current version: **0.3.41**
+## License & Support
+
+See repository for licensing details.
+
+If this project is useful, you can support development:
+
+[![Donate](https://img.shields.io/badge/Donate-PayPal-00457C.svg?logo=paypal)](https://www.paypal.com/donate/?business=martin%40bchmnn.de&currency_code=EUR)
