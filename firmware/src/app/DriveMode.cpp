@@ -65,10 +65,19 @@ void DriveMode::begin(ConfigStore* config, Session* session, MscGadget* msc,
 }
 
 bool DriveMode::hasCredentials() const {
-    return homeSsid_.length() || config_->wifi2Ssid.length();
+    return homeSsid_.length() || config_->wifi2Ssid.length() || config_->wifi3Ssid.length();
 }
 
 bool DriveMode::connectThunk(uint32_t timeoutMs) { return instance().connectWifi(timeoutMs); }
+
+void DriveMode::releaseToNormal() {
+    if (state_ == State::Off) return;
+    state_ = State::Normal;
+    led_->showDrivePhase(StatusLed::DrivePhase::None);
+    DiagLog::printf("[DRIVE] wifi-only boot → normal (no arm) wifi=%d ssid=%s\n",
+                    WiFi.status() == WL_CONNECTED ? 1 : 0,
+                    WiFi.status() == WL_CONNECTED ? WiFi.SSID().c_str() : "-");
+}
 
 bool DriveMode::connectWifi(uint32_t timeoutMs) {
     if (WiFi.status() == WL_CONNECTED) return true;
@@ -82,6 +91,8 @@ bool DriveMode::connectWifi(uint32_t timeoutMs) {
     if (homeSsid_.length()) multi.addAP(homeSsid_.c_str(), homePass_.c_str());
     if (config_->wifi2Ssid.length())
         multi.addAP(config_->wifi2Ssid.c_str(), config_->wifi2Pass.c_str());
+    if (config_->wifi3Ssid.length())
+        multi.addAP(config_->wifi3Ssid.c_str(), config_->wifi3Pass.c_str());
     const unsigned long t0 = millis();
     uint8_t st = multi.run(timeoutMs);
     while (st != WL_CONNECTED && millis() - t0 < timeoutMs) {

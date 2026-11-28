@@ -217,18 +217,39 @@ void App::begin() {
         DiagLog::printf("[USB] gadget=msc msc_interface=1 vendor=0\n");
     }
 
-    if (drive) {
+    // WiFiMulti (home + wifi2 hotspot + wifi3 guest) lives in DriveMode::connectWifi.
+    // WiFiManager.autoConnect alone only knows the home NVS STA — in the car that never
+    // joins esp-hotspot. So always prefer Multi when credentials exist, even if
+    // autoCapture is off (interactive WG / remote control without measuring).
+    {
         pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);
         const bool forcePortal = digitalRead(RESET_BUTTON_PIN) == LOW;
-        if (forcePortal) setupWifi(true);
         DriveMode& dm = DriveMode::instance();
-        dm.begin(&config_, &session_, &msc_, &instrument_, &tcp_, &led_);
-        if (WiFi.status() != WL_CONNECTED) {
-            if (dm.hasCredentials()) dm.connectWifi(15000);
-            else setupWifi(true);
+        if (!aoaObserve) {
+            dm.begin(&config_, &session_, &msc_, &instrument_, &tcp_, &led_);
         }
-    } else {
-        setupWifi();
+        if (forcePortal && drive) {
+            setupWifi(true);
+        } else if (WiFi.status() != WL_CONNECTED) {
+            if (!aoaObserve && dm.hasCredentials()) {
+                dm.connectWifi(20000);
+            }
+            if (WiFi.status() != WL_CONNECTED) {
+                if (drive) {
+                    if (!dm.hasCredentials()) setupWifi(true);
+                    // else: stay offline — bootPhase may still arm a flash trip
+                } else {
+                    // Interactive field boot: do NOT open portal / restart-loop.
+                    // Portal would only help at the desk; on the road it bricks reachability.
+                    DiagLog::printf(
+                        "[WIFI] no STA after Multi (home/hotspot/guest) — continue offline "
+                        "(autoCapture=0, no portal)\n");
+                }
+            }
+        }
+        if (!drive && !aoaObserve && dm.enabled()) {
+            dm.releaseToNormal();
+        }
     }
     if (WiFi.status() == WL_CONNECTED) setupMdns();
 

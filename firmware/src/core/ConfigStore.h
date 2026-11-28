@@ -51,6 +51,9 @@ public:
     /** Second WLAN (phone hotspot); the home WLAN stays in the WiFiManager store. */
     String wifi2Ssid;
     String wifi2Pass;
+    /** Third WLAN (e.g. Fritz guest); optional WiFiMulti candidate. */
+    String wifi3Ssid;
+    String wifi3Pass;
     bool autoUpdate = true;
     String otaManifestUrl = OTA_MANIFEST_URL_DEFAULT;
     /** Field plan (drive-mode job queue); empty = off. */

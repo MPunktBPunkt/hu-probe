@@ -93,6 +93,14 @@ public:
     bool connectWifi(uint32_t timeoutMs);
 
     /**
+     * @brief After a WiFi-only boot (autoCapture off): leave State::Boot without arming capture.
+     *
+     * So ownsWifi() becomes false and App::superviseWifi can run. Does not start a session
+     * or change MSC attach state.
+     */
+    void releaseToNormal();
+
+    /**
      * @brief Blocking part after the WLAN attempt: uploads, update, arm — or one-shot clear.
      *
      * Marks the OTA image healthy first (pulling the plug during an upload must not trigger a

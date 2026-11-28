@@ -171,6 +171,8 @@ void ConfigStore::applyDefaults() {
     autoFine = true;
     wifi2Ssid = "";
     wifi2Pass = "";
+    wifi3Ssid = "";
+    wifi3Pass = "";
     autoUpdate = true;
     otaManifestUrl = OTA_MANIFEST_URL_DEFAULT;
     fieldPlanUrl = FIELD_PLAN_URL_DEFAULT;
@@ -221,6 +223,8 @@ void ConfigStore::load() {
         autoFine = prefs.getBool("auto_fine", autoFine);
         wifi2Ssid = prefs.getString("wifi2_ssid", wifi2Ssid);
         wifi2Pass = prefs.getString("wifi2_pass", wifi2Pass);
+        wifi3Ssid = prefs.getString("wifi3_ssid", wifi3Ssid);
+        wifi3Pass = prefs.getString("wifi3_pass", wifi3Pass);
         autoUpdate = prefs.getBool("auto_upd", autoUpdate);
         otaManifestUrl = prefs.getString("ota_url", otaManifestUrl);
         fieldPlanUrl = prefs.getString("plan_url", fieldPlanUrl);
@@ -245,8 +249,8 @@ void ConfigStore::load() {
     const char* stickyC = nullptr;
     if (loadUsbGadgetNvs(sticky)) stickyC = sticky.c_str();
     usbGadget = huprobe::resolveGadgetMode(stickyC, usbGadget.c_str(), "msc");
-    Serial.printf("[CFG] load usbGadget=%s enableHub=%d\n", usbGadget.c_str(),
-                  (int)enableHub);
+    Serial.printf("[CFG] load usbGadget=%s enableHub=%d wg_ep=%s\n", usbGadget.c_str(),
+                  (int)enableHub, wgEndpointHost.length() ? wgEndpointHost.c_str() : "-");
 }
 
 bool ConfigStore::save() {
@@ -268,9 +272,24 @@ bool ConfigStore::save() {
         ok = false;
     }
     if (prefs.begin(kNsHuProbe, false)) {
+        // Rewrite cleanly — fragmented/full namespaces drop trailing putString (e.g. wg_ep_h).
+        prefs.clear();
         // Write usb_gadget early inside this namespace too (legacy readers).
         prefs.putString("usb_gadget", usbGadget);
         prefs.putUChar("ver", kConfigVersion);
+        // Small / critical fields first. Preferences putString can fail silently when the
+        // namespace is full — never put large WG key blobs before wifi2 / wg_ep_h.
+        prefs.putBool("auto_cap", autoCapture);
+        prefs.putString("wifi2_ssid", wifi2Ssid);
+        prefs.putString("wifi2_pass", wifi2Pass);
+        prefs.putString("wifi3_ssid", wifi3Ssid);
+        prefs.putString("wifi3_pass", wifi3Pass);
+        prefs.putBool("wg_en", wgEnable);
+        prefs.putString("wg_ep_h", wgEndpointHost);
+        prefs.putUShort("wg_ep_p", wgEndpointPort);
+        prefs.putUShort("wg_ka", wgKeepalive);
+        prefs.putString("wg_addr", wgAddress);
+        prefs.putString("wg_allow", wgAllowedIps);
         prefs.putString("col_host", collectorHost);
         prefs.putInt("col_port", collectorPort);
         prefs.putBool("col_en", enableCollector);
@@ -281,24 +300,27 @@ bool ConfigStore::save() {
         prefs.putBool("ntp", enableNtp);
         prefs.putString("ntp_srv", ntpServer);
         prefs.putString("tz", tz);
-        prefs.putBool("auto_cap", autoCapture);
         prefs.putString("auto_exp", autoExperiment);
         prefs.putString("auto_media", autoMedia);
         prefs.putBool("auto_fine", autoFine);
-        prefs.putString("wifi2_ssid", wifi2Ssid);
-        prefs.putString("wifi2_pass", wifi2Pass);
         prefs.putBool("auto_upd", autoUpdate);
         prefs.putString("ota_url", otaManifestUrl);
         prefs.putString("plan_url", fieldPlanUrl);
-        prefs.putBool("wg_en", wgEnable);
         prefs.putString("wg_priv", wgPrivateKey);
         prefs.putString("wg_pub", wgPublicKey);
         prefs.putString("wg_psk", wgPresharedKey);
-        prefs.putString("wg_addr", wgAddress);
-        prefs.putString("wg_allow", wgAllowedIps);
-        prefs.putString("wg_ep_h", wgEndpointHost);
-        prefs.putUShort("wg_ep_p", wgEndpointPort);
-        prefs.putUShort("wg_ka", wgKeepalive);
+        const String epCheck = prefs.getString("wg_ep_h", "");
+        const String w2Check = prefs.getString("wifi2_ssid", "");
+        if (wgEndpointHost.length() && epCheck != wgEndpointHost) {
+            Serial.printf("[CFG] wg_ep_h NVS mismatch want=%s got=%s\n", wgEndpointHost.c_str(),
+                          epCheck.c_str());
+            ok = false;
+        }
+        if (wifi2Ssid.length() && w2Check != wifi2Ssid) {
+            Serial.printf("[CFG] wifi2_ssid NVS mismatch want=%s got=%s\n", wifi2Ssid.c_str(),
+                          w2Check.c_str());
+            ok = false;
+        }
         prefs.end();
     } else {
         ok = false;
@@ -346,6 +368,8 @@ void ConfigStore::toJson(JsonObject obj) const {
     obj["autoFine"] = autoFine;
     obj["wifi2Ssid"] = wifi2Ssid;
     obj["wifi2PassSet"] = wifi2Pass.length() > 0;
+    obj["wifi3Ssid"] = wifi3Ssid;
+    obj["wifi3PassSet"] = wifi3Pass.length() > 0;
     obj["autoUpdate"] = autoUpdate;
     obj["otaManifestUrl"] = otaManifestUrl;
     obj["fieldPlanUrl"] = fieldPlanUrl;
@@ -394,6 +418,9 @@ bool ConfigStore::fromJson(JsonVariantConst obj) {
     // Empty or missing keeps the stored password (it is never sent back to the UI).
     if (obj["wifi2Pass"].is<const char*>() && obj["wifi2Pass"].as<String>().length())
         wifi2Pass = obj["wifi2Pass"].as<String>();
+    if (obj["wifi3Ssid"].is<const char*>()) wifi3Ssid = obj["wifi3Ssid"].as<String>();
+    if (obj["wifi3Pass"].is<const char*>() && obj["wifi3Pass"].as<String>().length())
+        wifi3Pass = obj["wifi3Pass"].as<String>();
     if (!obj["autoUpdate"].isNull()) autoUpdate = obj["autoUpdate"].as<bool>();
     if (obj["otaManifestUrl"].is<const char*>()) otaManifestUrl = obj["otaManifestUrl"].as<String>();
     if (obj["fieldPlanUrl"].is<const char*>()) fieldPlanUrl = obj["fieldPlanUrl"].as<String>();
